@@ -36,7 +36,7 @@ Leadseal supports PostgreSQL, MariaDB, SQL Server and SQLite.
      <dependency>
        <groupId>dev.horizon</groupId>
        <artifactId>leadseal-protobuf</artifactId>
-       <version>0.1.0-SNAPSHOT</version>
+       <version>0.1.0</version>
        <scope>provided</scope>
      </dependency>
    </dependencies>
@@ -84,14 +84,14 @@ Leadseal supports PostgreSQL, MariaDB, SQL Server and SQLite.
    <plugin>
      <groupId>io.github.ascopes</groupId>
      <artifactId>protobuf-maven-plugin</artifactId>
-     <version>5.1.7</version>
+     <version>0.1.0</version>
      <configuration>
-       <protoc>4.36.2</protoc>
+       <protoc>0.1.0</protoc>
        <plugins>
          <plugin kind="jvm-maven">
            <groupId>dev.horizon</groupId>
            <artifactId>leadseal-protoc</artifactId>
-           <version>0.1.0-SNAPSHOT</version>
+           <version>0.1.0</version>
            <options>migrations=${project.basedir}/src/main/resources/db/migration,dialect=postgresql</options>
            <outputDirectory>${project.basedir}/src/main/resources/db/migration</outputDirectory>
            <registerAsCompilationRoot>false</registerAsCompilationRoot>
