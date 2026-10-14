@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package leadseal.invalid;
+
+import "leadseal/v1/options.proto";
+
+option java_multiple_files = true;
+option java_package = "dev.horizon.leadseal.protobuf.invalid.nokey";
+
+message NoPrimaryKey {
+  option (leadseal.v1.table) = {};
+
+  int64 id = 1;
+}
