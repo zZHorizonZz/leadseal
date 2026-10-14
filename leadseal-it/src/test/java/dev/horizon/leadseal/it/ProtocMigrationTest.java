@@ -30,7 +30,7 @@ class ProtocMigrationTest {
   }
 
   private static String version(Path step) {
-    return step.getFileName().toString().split("_", 2)[0];
+    return step.getFileName().toString();
   }
 
   private static int migrate(Database database, Database.Location location, Path step) {
@@ -80,9 +80,10 @@ class ProtocMigrationTest {
 
     assertThat(steps).hasSize(3);
     for (Path step : steps) {
-      String[] folder = step.getFileName().toString().split("_", 2);
+      String version = step.getFileName().toString();
+      assertThat(version).matches("\\d{14}");
       for (Database database : Database.values()) {
-        assertThat(step.resolve(database.dialect()).resolve("V" + folder[0] + "__" + folder[1] + ".sql")).exists();
+        assertThat(step.resolve(database.dialect()).resolve("V" + version + ".sql")).exists();
       }
     }
   }

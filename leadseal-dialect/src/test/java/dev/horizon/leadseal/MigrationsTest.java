@@ -54,13 +54,13 @@ class MigrationsTest {
   void writesTheFirstMigration() throws IOException {
     Migrations.Result result = migrations("postgresql", "sqlite").generate(FIRST);
 
-    Path folder = directory.resolve("20261014070000_create_orders");
-    assertThat(result.migration()).contains(Path.of("20261014070000_create_orders"));
+    Path folder = directory.resolve("20261014070000");
+    assertThat(result.migration()).contains(Path.of("20261014070000"));
     assertThat(folder.resolve("migration.json")).content().contains("\"version\" : \"20261014070000\"")
         .contains("\"change\" : \"create_table\"");
-    assertThat(folder.resolve("postgresql/V20261014070000__create_orders.sql")).content()
+    assertThat(folder.resolve("postgresql/V20261014070000.sql")).content()
         .startsWith("CREATE TABLE \"orders\"");
-    assertThat(folder.resolve("sqlite/V20261014070000__create_orders.sql")).exists();
+    assertThat(folder.resolve("sqlite/V20261014070000.sql")).exists();
     assertThat(directory.resolve("snapshots").resolve(hash(FIRST)).resolve("contract.json")).content()
         .contains("\"schemaVersion\" : \"1\"").contains("\"storageHash\" : \"" + hash(FIRST) + "\"");
     assertThat(Files.readString(folder.resolve("migration.json"))).contains("\"to\" : \"" + hash(FIRST) + "\"")
@@ -78,8 +78,8 @@ class MigrationsTest {
     Migrations.Result result = migrations("postgresql").plan(FIRST);
 
     assertThat(result.files()).extracting(file -> file.path().toString().replace('\\', '/')).containsExactly(
-        "snapshots/" + hash(FIRST) + "/contract.json", "20261014070000_create_orders/migration.json",
-        "20261014070000_create_orders/postgresql/V20261014070000__create_orders.sql");
+        "snapshots/" + hash(FIRST) + "/contract.json", "20261014070000/migration.json",
+        "20261014070000/postgresql/V20261014070000.sql");
     try (Stream<Path> files = Files.list(directory)) {
       assertThat(files).isEmpty();
     }
@@ -101,8 +101,8 @@ class MigrationsTest {
 
     Path second = directory.resolve(migrations("postgresql").generate(SECOND).migration().orElseThrow());
 
-    assertThat(second.getFileName().toString()).isEqualTo("20261014070001_add_orders_note");
-    assertThat(second.resolve("postgresql/V20261014070001__add_orders_note.sql")).content()
+    assertThat(second.getFileName().toString()).isEqualTo("20261014070001");
+    assertThat(second.resolve("postgresql/V20261014070001.sql")).content()
         .isEqualTo("ALTER TABLE \"orders\" ADD COLUMN \"note\" TEXT;\n");
     assertThat(Files.readString(second.resolve("migration.json"))).contains("\"from\" : \"" + hash(FIRST) + "\"");
   }
@@ -110,7 +110,7 @@ class MigrationsTest {
   @Test
   void neverRewritesAnExistingMigration() throws IOException {
     Path first = directory.resolve(migrations("postgresql").generate(FIRST).migration().orElseThrow());
-    Path file = first.resolve("postgresql/V20261014070000__create_orders.sql");
+    Path file = first.resolve("postgresql/V20261014070000.sql");
     Files.writeString(file, "-- edited by hand\n");
 
     migrations("postgresql").generate(SECOND);
@@ -149,7 +149,7 @@ class MigrationsTest {
 
     assertThat(result.migration()).isEmpty();
     assertThat(result.files()).hasSize(2).allSatisfy(file -> assertThat(file.path().toString()).contains("mariadb"));
-    assertThat(directory.resolve("20261014070001_add_orders_note/mariadb/V20261014070001__add_orders_note.sql"))
+    assertThat(directory.resolve("20261014070001/mariadb/V20261014070001.sql"))
         .exists();
   }
 
@@ -157,20 +157,20 @@ class MigrationsTest {
   void rejectsTwoBranches() throws IOException {
     migrations("postgresql").generate(FIRST);
     migrations("postgresql").generate(SECOND);
-    Path second = directory.resolve("20261014070001_add_orders_note");
-    Path copy = Files.createDirectories(directory.resolve("20261014070002_add_orders_note"));
+    Path second = directory.resolve("20261014070001");
+    Path copy = Files.createDirectories(directory.resolve("20261014070002"));
     Files.writeString(copy.resolve("migration.json"), Files.readString(second.resolve("migration.json"))
         .replace("20261014070001", "20261014070002"));
 
     assertThatThrownBy(() -> migrations("postgresql").generate(SECOND)).isInstanceOf(SchemaException.class)
-        .hasMessageContaining("but the migration before it, 20261014070001_add_orders_note, creates the schema");
+        .hasMessageContaining("but the migration before it, 20261014070001, creates the schema");
   }
 
   @Test
   void rejectsAMissingParent() throws IOException {
     migrations("postgresql").generate(FIRST);
     migrations("postgresql").generate(SECOND);
-    try (Stream<Path> files = Files.walk(directory.resolve("20261014070000_create_orders"))) {
+    try (Stream<Path> files = Files.walk(directory.resolve("20261014070000"))) {
       files.sorted(Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
     }
 
@@ -184,7 +184,7 @@ class MigrationsTest {
     Files.move(first, directory.resolve("20261014070000_orders"));
 
     assertThatThrownBy(() -> migrations("postgresql").generate(SECOND)).isInstanceOf(SchemaException.class)
-        .hasMessageContaining("Rename the folder to 20261014070000_create_orders");
+        .hasMessageContaining("Rename the folder to 20261014070000");
   }
 
   @Test

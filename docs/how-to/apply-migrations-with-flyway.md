@@ -39,7 +39,7 @@ Flyway also needs its module for the database: `flyway-database-postgresql`, `fl
 ## Scripts that run outside a transaction
 
 Some SQLite migrations must run outside a transaction. Leadseal writes a Flyway script configuration file next to
-such a script, for example `V20261014081951__rename_customers_to_clients_and_3_more.sql.conf`, with this content:
+such a script, for example `V20261014081951.sql.conf`, with this content:
 
 ```properties
 executeInTransaction=false

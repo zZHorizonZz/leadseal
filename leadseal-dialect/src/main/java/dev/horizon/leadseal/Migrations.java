@@ -27,12 +27,12 @@ import java.util.stream.Stream;
  * The migrations of a directory.
  *
  * <p>
- * Each migration is a folder named {@code <yyyyMMddHHmmss>_<name>}, with these files:
+ * Each migration is a folder named {@code <yyyyMMddHHmmss>}, with these files:
  *
  * <ul>
  * <li>{@code migration.json}: the migration name, the hashes of the schemas before and after it, its creation time and
  * its changes.</li>
- * <li>{@code <dialect>/V<yyyyMMddHHmmss>__<name>.sql}: the SQL of each dialect, in Flyway's naming format. A script
+ * <li>{@code <dialect>/V<yyyyMMddHHmmss>.sql}: the SQL of each dialect, in Flyway's naming format. A script
  * that must run outside a transaction also has a {@code .sql.conf} file with {@code executeInTransaction=false}.</li>
  * </ul>
  *

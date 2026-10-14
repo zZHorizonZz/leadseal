@@ -9,8 +9,8 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * A migration, as its {@code migration.json} file stores it. The migration is the folder {@code <version>_<name>} of a
- * migration directory, with the SQL of each dialect in {@code <dialect>/V<version>__<name>.sql}.
+ * A migration, as its {@code migration.json} file stores it. The migration is the folder {@code <version>} of a
+ * migration directory, with the SQL of each dialect in {@code <dialect>/V<version>.sql}.
  *
  * @param version the Flyway version of the migration: its time in UTC, for example {@code 20261014070000}
  * @param name the name of the migration, for example {@code create_orders}
@@ -61,10 +61,10 @@ record Migration(String version, String name, String from, String to, String cre
   /**
    * Returns the folder of the migration.
    *
-   * @return the folder, relative to the migration directory, for example {@code 20261014070000_create_orders}
+   * @return the folder, relative to the migration directory, for example {@code 20261014070000}
    */
   Path folder() {
-    return Path.of(version + "_" + name);
+    return Path.of(version);
   }
 
   /**
@@ -72,9 +72,9 @@ record Migration(String version, String name, String from, String to, String cre
    *
    * @param dialect the dialect name
    * @return the file, relative to the migration directory, for example
-   * {@code 20261014070000_create_orders/postgresql/V20261014070000__create_orders.sql}
+   * {@code 20261014070000/postgresql/V20261014070000.sql}
    */
   Path script(String dialect) {
-    return folder().resolve(dialect).resolve("V" + version + "__" + name + ".sql");
+    return folder().resolve(dialect).resolve("V" + version + ".sql");
   }
 }

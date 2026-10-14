@@ -117,13 +117,13 @@ Leadseal supports PostgreSQL, MariaDB, SQL Server and SQLite.
 
    ```txt
    src/main/resources/db/migration/
-     20261014104830_create_orders/
+     20261014104830/
        migration.json
-       postgresql/V20261014104830__create_orders.sql
+       postgresql/V20261014104830.sql
      snapshots/298c2267bb456adc/contract.json
    ```
 
-   `V20261014104830__create_orders.sql` contains:
+   `V20261014104830.sql` contains:
 
    ```sql
    CREATE TABLE "orders" ("id" bigint NOT NULL, "state" varchar(20) NOT NULL, "note" text, CONSTRAINT "pk_orders" PRIMARY KEY ("id"));

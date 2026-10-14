@@ -7,14 +7,14 @@ Leadseal reads this directory each time it runs, so it only needs your current t
 
 ```txt
 db/migration/
-  20261014104830_create_orders/
+  20261014104830/
     migration.json
-    postgresql/V20261014104830__create_orders.sql
-    sqlite/V20261014104830__create_orders.sql
-  20261014104833_add_orders_total/
+    postgresql/V20261014104830.sql
+    sqlite/V20261014104830.sql
+  20261014104833/
     migration.json
-    postgresql/V20261014104833__add_orders_total.sql
-    sqlite/V20261014104833__add_orders_total.sql
+    postgresql/V20261014104833.sql
+    sqlite/V20261014104833.sql
   snapshots/
     298c2267bb456adc/contract.json
     e1ef0ebd6b8b8350/contract.json
@@ -25,8 +25,8 @@ Each migration folder has these files:
 | File                                    | Contents                                                                                              |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `migration.json`                        | The version, the name, the schema hashes before and after, the time, and the changes of the migration |
-| `<dialect>/V<version>__<name>.sql`      | The SQL of one database, in the Flyway file name format                                               |
-| `<dialect>/V<version>__<name>.sql.conf` | Only for a script that must run outside a transaction. Refer to [Dialects](../reference/dialects.md)  |
+| `<dialect>/V<version>.sql`              | The SQL of one database, in the Flyway file name format                                               |
+| `<dialect>/V<version>.sql.conf`         | Only for a script that must run outside a transaction. Refer to [Dialects](../reference/dialects.md)  |
 
 The folder name is the version of the migration, followed by a name that leadseal builds from the changes. The version
 is the time of the migration in UTC, such as `20261014104830`, and the SQL file names use it as their Flyway version.

@@ -9,7 +9,7 @@ import java.nio.file.Path;
  * A file of a migration directory.
  *
  * @param path the path, relative to the migration directory, for example
- * {@code 20261014070000_create_orders/postgresql/V20261014070000__create_orders.sql}
+ * {@code 20261014070000/postgresql/V20261014070000.sql}
  * @param content the file content
  */
 public record MigrationFile(Path path, String content) {
