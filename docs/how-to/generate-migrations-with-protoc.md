@@ -34,7 +34,7 @@ Separate options with commas, for example `migrations=db/migration,dialect=postg
    <plugin>
      <groupId>io.github.ascopes</groupId>
      <artifactId>protobuf-maven-plugin</artifactId>
-     <version>5.1.7</version>
+     <version>5.1.11</version>
      <configuration>
        <protoc>4.36.2</protoc>
        <plugins>
