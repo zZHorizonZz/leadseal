@@ -66,4 +66,3 @@ jobs:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
           files: |
             */target/leadseal*.jar
-            leadseal-protoc/target/leadseal-protoc-*.exe

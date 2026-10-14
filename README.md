@@ -153,8 +153,8 @@ nothing changed, it writes nothing. Commit the migration directory to version co
 | `leadseal-dialect-sqlserver` | `dev.horizon.leadseal.sqlserver` | `SqlServerDialect`                                             |
 | `leadseal-dialect-sqlite`    | `dev.horizon.leadseal.sqlite`    | `SqliteDialect`                                                |
 | `leadseal-protobuf`          | `dev.horizon.leadseal.protobuf`  | `leadseal/v1/options.proto` and `ProtoSchema`                  |
-| `leadseal-protoc`            | `dev.horizon.leadseal.protoc`    | `protoc-gen-leadseal`, as a JAR and as executables for protoc  |
-| `leadseal-it`                | `dev.horizon.leadseal.it`        | Tests that run the plugin through protoc and apply with Flyway |
+| `leadseal-protoc`            | `dev.horizon.leadseal.protoc`    | `protoc-gen-leadseal`, as a shaded JAR                         |
+| `leadseal-it`                | `dev.horizon.leadseal.it`        | Tests that run the plugin in a build and apply with Flyway     |
 
 ## Documentation
 
@@ -170,8 +170,8 @@ nothing changed, it writes nothing. Commit the migration directory to version co
 
 Each dialect module runs the contract tests of `leadseal-dialect` against its database. The contract tests generate
 migrations step by step, apply them with Flyway and check the tables through JDBC. `leadseal-it` runs
-`protoc-gen-leadseal` through protoc on a schema that changes in three steps, and applies the migrations to every
-database. Testcontainers starts PostgreSQL, MariaDB and SQL Server in Docker, and SQLite runs in process. Start
+`protoc-gen-leadseal` through protobuf-maven-plugin on a schema that changes in three steps, and applies the
+migrations to every database. Testcontainers starts PostgreSQL, MariaDB and SQL Server in Docker, and SQLite runs in process. Start
 Docker, then run:
 
 ```sh
@@ -201,9 +201,7 @@ Leadseal uses ideas and formats from these projects and documents:
 - [protoc plugin protocol](https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/compiler/plugin.proto):
   the request and response that protoc exchanges with `protoc-gen-leadseal`.
 - [Vert.x gRPC protoc plugin](https://github.com/eclipse-vertx/vertx-grpc/tree/main/vertx-grpc-protoc-plugin2): the
-  structure of `protoc-gen-leadseal`, its shaded JAR and its executables.
-- [Canteen](https://github.com/salesforce/grpc-java-contrib/tree/master/canteen): the protoc plugin executables for
-  each operating system.
+  structure of `protoc-gen-leadseal` and its shaded JAR.
 - [protobuf-maven-plugin](https://ascopes.github.io/protobuf-maven-plugin/): runs protoc and the plugin in Maven
   builds.
 

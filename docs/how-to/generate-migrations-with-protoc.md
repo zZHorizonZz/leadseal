@@ -64,26 +64,6 @@ Separate options with commas, for example `migrations=db/migration,dialect=postg
 protobuf-maven-plugin skips protoc when no protobuf file changed since the last build. Run
 `mvn compile -Dprotobuf.compiler.incremental=false` to run the plugin again, for example after you delete a migration.
 
-## Use protoc
-
-Each release has `protoc-gen-leadseal` executables for Linux, macOS and Windows, named
-`leadseal-protoc-<version>-<os>-<architecture>.exe`. They run the plugin JAR, so they need Java 25 or later.
-
-1. Download the executable for your system and rename it to `protoc-gen-leadseal`, or `protoc-gen-leadseal.exe` on
-   Windows.
-
-2. Add `leadseal/v1/options.proto` to an import path. The file is in the `leadseal-protobuf` JAR.
-
-3. Run protoc:
-
-   ```sh
-   protoc -I proto -I include \
-     --plugin=protoc-gen-leadseal=./protoc-gen-leadseal \
-     --leadseal_out=db/migration \
-     --leadseal_opt=migrations=db/migration,dialect=postgresql \
-     shop/v1/order.proto
-   ```
-
 ## Errors
 
 The plugin returns errors to protoc, and protoc prints them with the `--leadseal_out:` prefix. For example:

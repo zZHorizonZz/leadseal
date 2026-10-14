@@ -3,7 +3,6 @@ package dev.horizon.leadseal.it;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -16,63 +15,29 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
 import org.flywaydb.core.Flyway;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 class ProtocMigrationTest {
 
-  private static final Path PROTOC = Path.of(System.getProperty("leadseal.protoc"));
-  private static final Path PLUGIN = Path.of(System.getProperty("leadseal.plugin"));
-  private static final Path INCLUDE = Path.of(System.getProperty("leadseal.include"));
-  private static final Path PROTOS = Path.of(System.getProperty("leadseal.protos"));
-  private static final String DIALECTS = "dialect=postgresql,dialect=mariadb,dialect=sqlserver,dialect=sqlite";
+  private static final Path MIGRATIONS = Path.of(System.getProperty("leadseal.migrations"));
 
-  @TempDir
-  Path migrations;
-
-  record Run(int exitCode, String errors) {
-  }
-
-  @BeforeAll
-  static void makeExecutable() {
-    assertThat(PROTOC.toFile().setExecutable(true)).isTrue();
-    assertThat(PLUGIN.toFile().setExecutable(true)).isTrue();
-  }
-
-  private Run protoc(String step, String options) throws IOException, InterruptedException {
-    Process process = new ProcessBuilder(PROTOC.toString(), "-I" + PROTOS.resolve(step), "-I" + INCLUDE,
-        "--plugin=protoc-gen-leadseal=" + PLUGIN, "--leadseal_out=.", "--leadseal_opt=" + options,
-        source(step)).directory(migrations.toFile()).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
-    String errors = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-    return new Run(process.waitFor(), errors);
-  }
-
-  private static String source(String step) throws IOException {
-    Path root = PROTOS.resolve(step);
-    try (Stream<Path> files = Files.walk(root)) {
-      return files.filter(file -> file.toString().endsWith(".proto")).map(root::relativize).findFirst().orElseThrow()
-          .toString().replace('\\', '/');
-    }
-  }
-
-  private void generate(String step) throws IOException, InterruptedException {
-    Run run = protoc(step, "migrations=.," + DIALECTS);
-    assertThat(run.exitCode()).as(run.errors()).isZero();
-  }
-
-  private List<Path> steps() throws IOException {
-    try (Stream<Path> folders = Files.list(migrations)) {
+  private static List<Path> steps() throws IOException {
+    try (Stream<Path> folders = Files.list(MIGRATIONS)) {
       return folders.filter(folder -> Files.exists(folder.resolve("migration.json"))).sorted().toList();
     }
   }
 
-  private int migrate(Database database, Database.Location location) {
-    String folders = migrations.toAbsolutePath().toString().replace('\\', '/');
+  private static String version(Path step) {
+    return step.getFileName().toString().split("_", 2)[0];
+  }
+
+  private static int migrate(Database database, Database.Location location, Path step) {
+    String folders = MIGRATIONS.toAbsolutePath().toString().replace('\\', '/');
     return Flyway.configure().dataSource(location.url(), location.user(), location.password())
-        .locations("filesystem:" + folders + "/**/" + database.dialect()).load().migrate().migrationsExecuted;
+        .locations("filesystem:" + folders + "/**/" + database.dialect()).target(version(step)).load()
+        .migrate().migrationsExecuted;
   }
 
   private static List<List<String>> query(Database.Location location, String sql) throws SQLException {
@@ -110,12 +75,9 @@ class ProtocMigrationTest {
   }
 
   @Test
-  void writesAMigrationForEachStepAndDialect() throws Exception {
-    generate("step1");
-    generate("step2");
-    generate("step3");
-
+  void writesAMigrationForEachChangedStepAndDialect() throws Exception {
     List<Path> steps = steps();
+
     assertThat(steps).hasSize(3);
     for (Path step : steps) {
       String[] folder = step.getFileName().toString().split("_", 2);
@@ -125,41 +87,22 @@ class ProtocMigrationTest {
     }
   }
 
-  @Test
-  void writesNothingWhenTheSchemaDidNotChange() throws Exception {
-    generate("step1");
-
-    generate("step1");
-
-    assertThat(steps()).hasSize(1);
-  }
-
-  @Test
-  void reportsInvalidOptionsThroughProtoc() throws Exception {
-    Run run = protoc("step1", "migrations=.,dialect=oracle");
-
-    assertThat(run.exitCode()).isNotZero();
-    assertThat(run.errors()).contains("No installed dialect is named 'oracle'");
-  }
-
   @ParameterizedTest
   @EnumSource(Database.class)
   void appliesEachStepAndKeepsTheRows(Database database) throws Exception {
     Database.Location location = database.create();
+    List<Path> steps = steps();
 
-    generate("step1");
-    assertThat(migrate(database, location)).isEqualTo(1);
+    assertThat(migrate(database, location, steps.get(0))).isEqualTo(1);
     execute(location, "INSERT INTO customers (id, email) VALUES (1, 'ada@example.com')");
     execute(location, "INSERT INTO orders (id, customer_id, state) VALUES (1, 1, 'new')");
 
-    generate("step2");
-    assertThat(migrate(database, location)).isEqualTo(1);
+    assertThat(migrate(database, location, steps.get(1))).isEqualTo(1);
     assertThat(query(location, "SELECT email_address FROM customers")).containsExactly(List.of("ada@example.com"));
     assertThat(query(location, "SELECT quantity, note FROM orders")).containsExactly(Arrays.asList("1", null));
     execute(location, "INSERT INTO order_line (order_id, line, product) VALUES (1, 1, 'pen')");
 
-    generate("step3");
-    assertThat(migrate(database, location)).isEqualTo(1);
+    assertThat(migrate(database, location, steps.get(2))).isEqualTo(1);
     assertThat(columns(location, "customers")).isEmpty();
     assertThat(columns(location, "orders")).containsExactly("id", "customer_id", "state", "created", "quantity");
     assertThat(query(location, "SELECT email_address FROM clients")).containsExactly(List.of("ada@example.com"));
@@ -172,6 +115,6 @@ class ProtocMigrationTest {
 
     assertThat(query(location, "SELECT id FROM orders")).isEmpty();
     assertThat(query(location, "SELECT order_id FROM order_line")).isEmpty();
-    assertThat(migrate(database, location)).isZero();
+    assertThat(migrate(database, location, steps.get(2))).isZero();
   }
 }

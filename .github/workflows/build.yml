@@ -76,7 +76,6 @@ jobs:
           name: jars
           path: |
             */target/leadseal*.jar
-            leadseal-protoc/target/leadseal-protoc-*.exe
           if-no-files-found: error
 
   publish-snapshot:
