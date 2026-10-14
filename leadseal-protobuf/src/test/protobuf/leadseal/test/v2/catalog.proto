@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package leadseal.test.v2;
+
+import "leadseal/v1/options.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "CatalogProto";
+option java_package = "dev.horizon.leadseal.protobuf.test.v2";
+
+message Product {
+  option (leadseal.v1.table) = {};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+
+  message Variant {
+    option (leadseal.v1.table) = {};
+
+    int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  }
+}
+
+message Price {
+  option (leadseal.v1.table) = {id: "catalog.Price"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+}

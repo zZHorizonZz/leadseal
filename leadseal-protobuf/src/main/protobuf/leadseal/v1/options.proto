@@ -1,0 +1,287 @@
+syntax = "proto3";
+
+package leadseal.v1;
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "OptionsProto";
+option java_package = "dev.horizon.leadseal.protobuf";
+
+extend google.protobuf.MessageOptions {
+  // Makes the message a table. Messages without this option are not tables. The leading comment of the message is
+  // the table comment.
+  TableOptions table = 57200;
+}
+
+extend google.protobuf.FieldOptions {
+  // Sets how a field of a table message maps to its column. The leading comment of the field is the column comment.
+  ColumnOptions column = 57201;
+}
+
+// The options of a table.
+message TableOptions {
+  // The table name. The default is the message name in snake_case, for example `order_line` for `OrderLine`.
+  string name = 1;
+
+  // The database schema of the table. The default is the default schema of the database connection. Table names must
+  // be unique across all schemas.
+  string schema = 2;
+
+  // The indexes of the table.
+  repeated IndexOptions index = 3;
+
+  // The check constraints of the table.
+  repeated CheckOptions check = 4;
+
+  // The foreign keys of the table, for foreign keys with more than one column.
+  repeated TableForeignKeyOptions foreign_key = 5;
+
+  // The stable identity of the table across schema versions. A message with another name but the same id is the same
+  // table, so the migration renames the table and keeps its rows. The default is the full message name without the
+  // version parts of its package, such as `v1` or `v2beta1`: `shop.v1.Order` and `shop.v2.Order` are both
+  // `shop.Order`.
+  string id = 6;
+}
+
+// An index of a table.
+message IndexOptions {
+  // The names of the indexed fields, in index order.
+  repeated string fields = 1;
+
+  // Whether the index rejects two rows with the same values.
+  bool unique = 2;
+
+  // The index name. The default is `ix_<table>_<columns>`, or `ux_<table>_<columns>` for a unique index.
+  string name = 3;
+
+  // The names of the indexed fields that the index sorts in descending order.
+  repeated string descending = 4;
+
+  // The SQL condition of a partial index, which indexes only the rows that meet it, for example `deleted = false`.
+  // Every database writes it as it is. MariaDB has no partial indexes.
+  string where = 5;
+}
+
+// A check constraint of a table.
+message CheckOptions {
+  // The SQL condition that every row must meet, for example `quantity >= 0`. Every database writes it as it is.
+  string expression = 1;
+
+  // The constraint name. The default is `ck_<table>_<hash>`, with a hash of the expression.
+  string name = 2;
+}
+
+// The options of a column.
+message ColumnOptions {
+  // Whether the column is part of the primary key. The primary key has the fields with this option, in field order.
+  bool primary_key = 1;
+
+  // The column name. The default is the field name.
+  string name = 2;
+
+  // Whether the field has no column.
+  bool ignore = 3;
+
+  // Whether the column accepts `NULL`. The default is `true` for a field with presence, a repeated field and a map,
+  // and `false` for other fields.
+  optional bool nullable = 4;
+
+  // Whether the column has a unique index.
+  bool unique = 5;
+
+  // Whether the column has an index.
+  bool index = 6;
+
+  // A check constraint on this column: an SQL condition that every row must meet, for example `quantity >= 0`.
+  string check = 7;
+
+  // A foreign key from this column to a column of another table.
+  ForeignKeyOptions foreign_key = 8;
+
+  // The column type and its options. The default type follows from the field type. A field can only have a type that
+  // holds all its values: for example a `string` field can be `uuid` or `date`, but an `int64` field cannot be an
+  // `INT32` integer.
+  oneof type {
+    BooleanColumn boolean = 20;
+    IntegerColumn integer = 21;
+    NumberColumn number = 22;
+    DecimalColumn decimal = 23;
+    TextColumn text = 24;
+    BytesColumn bytes = 25;
+    UuidColumn uuid = 26;
+    TimestampColumn timestamp = 27;
+    DateColumn date = 28;
+    TimeColumn time = 29;
+    JsonColumn json = 30;
+  }
+}
+
+// A boolean column.
+message BooleanColumn {
+  // The default value.
+  optional bool default_value = 1;
+}
+
+// An integer column. An enum field with this type stores the value number.
+message IntegerColumn {
+  // The size of the integer.
+  enum Format {
+    FORMAT_UNSPECIFIED = 0;
+    // A 32-bit integer.
+    FORMAT_INT32 = 1;
+    // A 64-bit integer.
+    FORMAT_INT64 = 2;
+  }
+
+  // The size of the integer. The default follows from the field type.
+  Format format = 1;
+
+  // The default value.
+  optional int64 default_value = 2;
+
+  // Whether the database generates the values, for a primary key of one field.
+  bool identity = 3;
+}
+
+// A floating-point number column.
+message NumberColumn {
+  // The size of the number.
+  enum Format {
+    FORMAT_UNSPECIFIED = 0;
+    // A 32-bit floating-point number.
+    FORMAT_FLOAT = 1;
+    // A 64-bit floating-point number.
+    FORMAT_DOUBLE = 2;
+  }
+
+  // The size of the number. The default follows from the field type.
+  Format format = 1;
+
+  // The default value.
+  optional double default_value = 2;
+}
+
+// An exact decimal number column, for a `string` field that holds a decimal number such as `12.50`, or a
+// `google.type.Decimal` field.
+message DecimalColumn {
+  // The number of digits.
+  uint32 precision = 1;
+
+  // The number of digits after the decimal point. The default is 0.
+  uint32 scale = 2;
+
+  // The default value, such as `0.00`.
+  optional string default_value = 3;
+}
+
+// A text column. An enum field with this type stores the value name.
+message TextColumn {
+  // The maximum number of characters. A text column in a key or an index needs a length on MariaDB and SQL Server.
+  uint32 length = 1;
+
+  // The default value. For an enum field, a value name.
+  optional string default_value = 2;
+
+  // The collation for each database, by dialect name, for example `{key: "postgresql", value: "C"}`. A database
+  // without an entry uses its default collation.
+  map<string, string> collation = 3;
+}
+
+// A binary column.
+message BytesColumn {
+  // The maximum number of bytes. A binary column in a key or an index needs a length on MariaDB and SQL Server.
+  uint32 length = 1;
+
+  // The default value.
+  optional bytes default_value = 2;
+}
+
+// A UUID column, for a `string` or `bytes` field that holds a UUID.
+message UuidColumn {
+  // The default value, such as `123e4567-e89b-12d3-a456-426614174000`.
+  optional string default_value = 1;
+
+  // Whether the database generates a random UUID for each new row.
+  bool default_random = 2;
+}
+
+// A point in time with microsecond precision.
+message TimestampColumn {
+  // The default value.
+  optional google.protobuf.Timestamp default_value = 1;
+
+  // Whether the database sets new rows to the current time.
+  bool default_now = 2;
+}
+
+// A date without a time, for a `string` field that holds an ISO 8601 date or a `google.type.Date` field.
+message DateColumn {
+  // The default value, such as `2026-10-14`.
+  optional string default_value = 1;
+
+  // Whether the database sets new rows to the current date in UTC.
+  bool default_today = 2;
+}
+
+// A time of day with microsecond precision, for a `string` field that holds an ISO 8601 time or a
+// `google.type.TimeOfDay` field.
+message TimeColumn {
+  // The default value, such as `07:30:00`.
+  optional string default_value = 1;
+}
+
+// A JSON column. Messages, repeated fields and maps are JSON columns.
+message JsonColumn {
+  // The default value, such as `{}`.
+  optional string default_value = 1;
+}
+
+// What happens to a row when the row that it references is deleted or its key changes.
+enum Action {
+  ACTION_UNSPECIFIED = 0;
+  ACTION_NO_ACTION = 1;
+  ACTION_RESTRICT = 2;
+  ACTION_CASCADE = 3;
+  ACTION_SET_NULL = 4;
+}
+
+// A foreign key from one column.
+message ForeignKeyOptions {
+  // The full name of the referenced table message, for example `shop.v1.Customer`.
+  string message = 1;
+
+  // The referenced field. The default is the single primary key field of the referenced message.
+  string field = 2;
+
+  // What happens to the row when the referenced row is deleted. The default is `ACTION_NO_ACTION`.
+  Action on_delete = 3;
+
+  // What happens to the row when the referenced key changes. The default is `ACTION_NO_ACTION`.
+  Action on_update = 4;
+
+  // The constraint name. The default is `fk_<table>_<columns>`.
+  string name = 5;
+}
+
+// A foreign key from one or more columns.
+message TableForeignKeyOptions {
+  // The names of the fields of this table, in key order.
+  repeated string fields = 1;
+
+  // The full name of the referenced table message, for example `shop.v1.Order`.
+  string message = 2;
+
+  // The names of the referenced fields, in key order. The default is the primary key fields of the referenced message.
+  repeated string references = 3;
+
+  // What happens to the row when the referenced row is deleted. The default is `ACTION_NO_ACTION`.
+  Action on_delete = 4;
+
+  // What happens to the row when the referenced key changes. The default is `ACTION_NO_ACTION`.
+  Action on_update = 5;
+
+  // The constraint name. The default is `fk_<table>_<columns>`.
+  string name = 6;
+}

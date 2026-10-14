@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package shop.v1;
+
+import "google/protobuf/timestamp.proto";
+import "leadseal/v1/options.proto";
+
+message Customer {
+  option (leadseal.v1.table) = {name: "customers"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string email_address = 2 [(leadseal.v1.column) = {unique: true, text: {length: 200}}];
+}
+
+// The orders of the shop.
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  int64 customer_id = 2 [(leadseal.v1.column).foreign_key = {message: "shop.v1.Customer", on_delete: ACTION_CASCADE}];
+  string state = 3 [(leadseal.v1.column) = {index: true, text: {length: 20}}];
+  google.protobuf.Timestamp created = 4;
+  // How many items the order has.
+  int32 quantity = 5 [(leadseal.v1.column).integer.default_value = 1];
+  optional string note = 6;
+}
+
+message OrderLine {
+  option (leadseal.v1.table) = {};
+
+  int64 order_id = 1 [(leadseal.v1.column) = {
+    primary_key: true
+    foreign_key: {message: "shop.v1.Order", on_delete: ACTION_CASCADE}
+  }];
+  int32 line = 2 [(leadseal.v1.column).primary_key = true];
+  string product = 3 [(leadseal.v1.column).text.length = 100];
+}

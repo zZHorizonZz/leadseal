@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package leadseal.test;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "leadseal/v1/options.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "ShopProto";
+option java_package = "dev.horizon.leadseal.protobuf.test";
+
+message Customer {
+  option (leadseal.v1.table) = {
+    name: "customers"
+    index: {fields: ["region", "email"]}
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string email = 2 [(leadseal.v1.column) = {unique: true, text: {length: 200}}];
+  string region = 3 [(leadseal.v1.column).text.length = 20];
+  string internal_note = 4 [(leadseal.v1.column).ignore = true];
+}
+
+message OrderLine {
+  option (leadseal.v1.table) = {};
+
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    STATE_OPEN = 1;
+  }
+
+  string order_id = 1 [(leadseal.v1.column) = {primary_key: true, uuid: {}}];
+  int32 line = 2 [(leadseal.v1.column).primary_key = true];
+  int64 customer_id = 3 [(leadseal.v1.column) = {
+    index: true
+    foreign_key: {message: "leadseal.test.Customer", on_delete: ACTION_CASCADE}
+  }];
+  bool gift = 4;
+  uint32 quantity = 5;
+  sint64 total = 6;
+  float weight = 7;
+  double price = 8;
+  bytes thumbnail = 9;
+  State state = 10;
+  google.protobuf.Timestamp created = 11;
+  google.protobuf.Int64Value discount = 12;
+  google.protobuf.Struct attributes = 13;
+  repeated string tags = 14;
+  map<string, string> labels = 15;
+  optional string note = 16 [(leadseal.v1.column).name = "remark"];
+  string payload = 17 [(leadseal.v1.column).json = {}];
+}
+
+message NotATable {
+  int64 id = 1;
+}
+
+message Payment {
+  option (leadseal.v1.table) = {
+    schema: "billing"
+    check: {expression: "amount >= 0"}
+    index: {
+      name: "ix_recent_payments"
+      fields: ["paid", "amount"]
+      descending: ["paid"]
+      where: "day IS NOT NULL"
+    }
+    foreign_key: {
+      fields: ["order_id", "line"]
+      message: "leadseal.test.OrderLine"
+      on_delete: ACTION_CASCADE
+      on_update: ACTION_CASCADE
+    }
+  };
+
+  enum Method {
+    METHOD_UNSPECIFIED = 0;
+    METHOD_CARD = 1;
+    METHOD_CASH = 2;
+  }
+
+  int64 id = 1 [(leadseal.v1.column) = {primary_key: true, integer: {identity: true}}];
+  string amount = 2 [(leadseal.v1.column) = {
+    check: "amount < 1000000"
+    decimal: {precision: 12, scale: 2, default_value: "0"}
+  }];
+  google.protobuf.Timestamp paid = 3 [(leadseal.v1.column) = {nullable: false, timestamp: {default_now: true}}];
+  string day = 4 [(leadseal.v1.column) = {nullable: true, date: {}}];
+  Method method = 5 [(leadseal.v1.column).integer = {format: FORMAT_INT32, default_value: 1}];
+  string reference = 6 [(leadseal.v1.column).text = {
+    length: 40
+    collation: {key: "postgresql" value: "C"}
+  }];
+  string order_id = 7 [(leadseal.v1.column).uuid = {}];
+  int32 line = 8;
+  string token = 9 [(leadseal.v1.column).uuid.default_random = true];
+  Method fallback = 10 [(leadseal.v1.column).text.default_value = "METHOD_CASH"];
+  double rate = 11 [(leadseal.v1.column).number.default_value = 1.5];
+  bytes signature = 12 [(leadseal.v1.column).bytes = {length: 64, default_value: "\x0a\xff"}];
+  google.protobuf.Timestamp start = 13 [(leadseal.v1.column).timestamp.default_value = {seconds: 1791963000}];
+  bool active = 14 [(leadseal.v1.column).boolean.default_value = true];
+}

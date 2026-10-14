@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package leadseal.invalid;
+
+import "leadseal/v1/options.proto";
+
+option java_multiple_files = true;
+option java_package = "dev.horizon.leadseal.protobuf.invalid.defaults";
+
+message BothDefaults {
+  option (leadseal.v1.table) = {};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string token = 2 [(leadseal.v1.column).uuid = {
+    default_value: "123e4567-e89b-12d3-a456-426614174000"
+    default_random: true
+  }];
+}
