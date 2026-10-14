@@ -26,6 +26,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,6 +36,10 @@ import org.junit.jupiter.api.io.TempDir;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ContractTest {
+
+  protected static final int DECIMAL_PRECISION = 12;
+  protected static final int DECIMAL_SCALE = 2;
+  private static final AtomicInteger SCHEMAS = new AtomicInteger();
 
   protected Dialect dialect;
   protected Path migrations;
@@ -90,6 +95,26 @@ public abstract class ContractTest {
 
   protected String q(String identifier) {
     return dialect.quote(identifier);
+  }
+
+  protected String q(String schema, String table) {
+    return dialect.quote(schema) + "." + dialect.quote(table);
+  }
+
+  protected TestDatabase testDatabase() {
+    return testDatabase;
+  }
+
+  protected Connection connection() {
+    return connection;
+  }
+
+  protected String uniqueSchema() {
+    return "s" + SCHEMAS.incrementAndGet();
+  }
+
+  protected long count(String sql, Object... params) throws SQLException {
+    return Long.parseLong(query(sql, params).getFirst().getFirst());
   }
 
   protected int execute(String sql, Object... params) throws SQLException {
@@ -166,11 +191,15 @@ public abstract class ContractTest {
   }
 
   protected static Column column(String id, String name, ColumnType type) {
-    return new Column(id, name, type, null, false);
+    boolean decimal = type == ColumnType.DECIMAL;
+    return new Column(id, name, type, null, decimal ? DECIMAL_PRECISION : null, decimal ? DECIMAL_SCALE : null,
+        false, null, false, null, null);
   }
 
   protected static Column nullable(String id, String name, ColumnType type) {
-    return new Column(id, name, type, null, true);
+    boolean decimal = type == ColumnType.DECIMAL;
+    return new Column(id, name, type, null, decimal ? DECIMAL_PRECISION : null, decimal ? DECIMAL_SCALE : null,
+        true, null, false, null, null);
   }
 
   protected static Column text(String id, String name, int length) {

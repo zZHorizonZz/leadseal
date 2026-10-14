@@ -10,6 +10,7 @@ import dev.horizon.leadseal.Diff;
 import dev.horizon.leadseal.ForeignKey;
 import dev.horizon.leadseal.PrimaryKey;
 import dev.horizon.leadseal.Schema;
+import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.SqlScript;
 import dev.horizon.leadseal.Table;
 import java.sql.Connection;
@@ -41,6 +42,25 @@ class SqliteDialectTest {
     for (String sql : script.statements()) {
       statement.execute(sql);
     }
+  }
+
+  @Test
+  void rejectsSchemas() {
+    Schema after = new Schema(List.of(new Table("t", "t", List.of(ID), PrimaryKey.of("t", List.of("id")), List.of(),
+        List.of()).withSchema("sales")));
+
+    assertThatThrownBy(() -> script(Schema.empty(), after)).isInstanceOf(SchemaException.class)
+        .hasMessageContaining("SQLite has no database schemas");
+  }
+
+  @Test
+  void writesNothingForAComment() {
+    Table table = new Table("t", "t", List.of(ID), PrimaryKey.of("t", List.of("id")), List.of(), List.of());
+    Schema before = new Schema(List.of(table));
+    Schema after = new Schema(List.of(new Table("t", "t", List.of(ID.withComment("The key.")), table.primaryKey(),
+        List.of(), List.of()).withComment("A table.")));
+
+    assertThat(script(before, after).statements()).isEmpty();
   }
 
   @Test

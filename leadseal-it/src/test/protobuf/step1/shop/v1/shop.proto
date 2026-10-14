@@ -9,7 +9,7 @@ message Customer {
   option (leadseal.v1.table) = {name: "customers"};
 
   int64 id = 1 [(leadseal.v1.column).primary_key = true];
-  string email = 2 [(leadseal.v1.column) = {length: 200, unique: true}];
+  string email = 2 [(leadseal.v1.column) = {unique: true, text: {length: 200}}];
 }
 
 message Order {
@@ -17,6 +17,6 @@ message Order {
 
   int64 id = 1 [(leadseal.v1.column).primary_key = true];
   int64 customer_id = 2 [(leadseal.v1.column).foreign_key = {message: "shop.v1.Customer", on_delete: ACTION_CASCADE}];
-  string state = 3 [(leadseal.v1.column) = {length: 20, index: true}];
+  string state = 3 [(leadseal.v1.column) = {index: true, text: {length: 20}}];
   google.protobuf.Timestamp created = 4;
 }

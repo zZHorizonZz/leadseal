@@ -1,25 +1,30 @@
 package dev.horizon.leadseal.sqlite;
 
 import dev.horizon.leadseal.Change;
+import dev.horizon.leadseal.Check;
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.DdlWriter;
+import dev.horizon.leadseal.Default;
 import dev.horizon.leadseal.ForeignKey;
 import dev.horizon.leadseal.Node;
 import dev.horizon.leadseal.Operation;
+import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.Table;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * A change as SQLite runs it.
  *
  * <p>
- * Foreign keys of new tables go into their {@code CREATE TABLE}. A table with a change that SQLite cannot make in place
- * is rebuilt once, after the other operations: a changed column or primary key, an added or dropped foreign key, or a
- * dropped column that is part of the primary key or a foreign key.
+ * Foreign keys and checks of new tables go into their {@code CREATE TABLE}. A table with a change that SQLite cannot
+ * make in place is rebuilt once, after the other operations: a changed column type, nullability, default or collation,
+ * a changed primary key, an added or dropped foreign key or check, a new column with a generated default, or a dropped
+ * column that is part of the primary key or a foreign key. SQLite has no comments, so comment changes write nothing.
  *
  * <p>
  * A rebuild drops the old table. When a foreign key references that table, the drop would run the foreign key's
@@ -31,8 +36,16 @@ import java.util.Set;
  */
 record SqliteChange(Change change) implements Node {
 
+  private static final Node NOTHING = sql -> {
+  };
+
   @Override
   public void render(DdlWriter sql) {
+    Stream.concat(sql.before().tables().stream(), sql.after().tables().stream())
+        .filter(table -> table.schema() != null).findFirst().ifPresent(table -> {
+          throw new SchemaException("SQLite has no database schemas, so the table '" + table.name() + "' cannot be"
+              + " in the schema '" + table.schema() + "'.");
+        });
     List<Operation> operations = change.operations();
     Set<String> created = new LinkedHashSet<>();
     Set<String> dropped = new LinkedHashSet<>();
@@ -49,7 +62,8 @@ record SqliteChange(Change change) implements Node {
       if (operation instanceof Operation.AddForeignKey add && created.contains(add.table())) {
         continue;
       }
-      if (operation instanceof Operation.DropForeignKey drop && dropped.contains(drop.table())) {
+      if ((operation instanceof Operation.DropForeignKey || operation instanceof Operation.DropCheck)
+          && dropped.contains(operation.table())) {
         continue;
       }
       if (tableId(sql, operation).filter(rebuilt::contains).isPresent()) {
@@ -60,6 +74,8 @@ record SqliteChange(Change change) implements Node {
             sql.tableAfter(create.table()).foreignKeys());
         case Operation.RenameTable rename -> new SqliteOperation.RenameTable(rename);
         case Operation.AddColumn add -> new SqliteOperation.AddColumn(add);
+        case Operation.AlterColumn alter -> NOTHING;
+        case Operation.CommentTable comment -> NOTHING;
         default -> operation;
       });
     }
@@ -96,12 +112,20 @@ record SqliteChange(Change change) implements Node {
     Set<String> ids = new LinkedHashSet<>();
     for (Operation operation : operations) {
       switch (operation) {
-        case Operation.AlterColumn alter -> ids.add(sql.tableAfter(alter.table()).id());
+        case Operation.AlterColumn alter when alter.typeChanged() || alter.becomesNotNull() || alter.becomesNullable()
+            || alter.defaultChanged() || alter.collationChanged(sql.dialect().name()) ->
+          ids.add(sql.tableAfter(alter.table()).id());
         case Operation.AlterPrimaryKey alter -> ids.add(sql.tableAfter(alter.table()).id());
         case Operation.AddForeignKey add when !created.contains(add.table()) ->
           ids.add(sql.tableAfter(add.table()).id());
         case Operation.DropForeignKey drop when !dropped.contains(drop.table()) ->
           ids.add(sql.tableBefore(drop.table()).id());
+        case Operation.AddCheck add -> ids.add(sql.tableAfter(add.table()).id());
+        case Operation.DropCheck drop when !dropped.contains(drop.table()) ->
+          ids.add(sql.tableBefore(drop.table()).id());
+        case Operation.AddColumn add when add.column().defaultValue() != null
+            && add.column().defaultValue().kind() != Default.Kind.VALUE ->
+          ids.add(sql.tableAfter(add.table()).id());
         case Operation.DropColumn drop -> {
           Table after = sql.tableAfter(drop.table());
           Table before = sql.before().tableById(after.id()).orElseThrow();
@@ -121,7 +145,7 @@ record SqliteChange(Change change) implements Node {
   /** Returns the id of the table that an operation changes, if that table exists before or after the change. */
   private static Optional<String> tableId(DdlWriter sql, Operation operation) {
     boolean beforeRenames = operation instanceof Operation.DropIndex || operation instanceof Operation.DropForeignKey
-        || operation instanceof Operation.DropTable;
+        || operation instanceof Operation.DropCheck || operation instanceof Operation.DropTable;
     return (beforeRenames ? sql.before().table(operation.table()) : sql.after().table(operation.table()))
         .map(Table::id);
   }
@@ -130,7 +154,7 @@ record SqliteChange(Change change) implements Node {
   sealed interface SqliteOperation extends Node {
 
     /**
-     * {@code CREATE TABLE} with its foreign keys inline, and its indexes.
+     * {@code CREATE TABLE} with its foreign keys and checks inline, and its indexes.
      *
      * @param table the table
      * @param keys the foreign keys
@@ -160,8 +184,8 @@ record SqliteChange(Change change) implements Node {
     }
 
     /**
-     * {@code ALTER TABLE ... ADD COLUMN}. A {@code NOT NULL} column keeps its default, because SQLite cannot drop a
-     * default.
+     * {@code ALTER TABLE ... ADD COLUMN}. A {@code NOT NULL} column without a default keeps its zero value as default,
+     * because SQLite cannot drop a default.
      *
      * @param operation the operation
      */
@@ -172,7 +196,7 @@ record SqliteChange(Change change) implements Node {
         Column column = operation.column();
         sql.append("ALTER TABLE ").name(operation.table()).append(" ADD COLUMN ")
             .column(sql.tableAfter(operation.table()), column);
-        if (!column.nullable()) {
+        if (!column.nullable() && column.defaultValue() == null) {
           sql.append(" DEFAULT " + sql.dialect().zero(column));
         }
       }
@@ -180,8 +204,8 @@ record SqliteChange(Change change) implements Node {
 
     /**
      * Rebuilds a table: creates the new table under a temporary name, copies the rows, drops the old table, renames the
-     * new one and creates its indexes. Columns are matched by id. A new column gets its zero value, or {@code NULL} if
-     * it accepts {@code NULL}.
+     * new one and creates its indexes. Columns are matched by id. A new column gets its default, or {@code NULL} if it
+     * accepts {@code NULL}, or its zero value.
      *
      * @param before the table before the change
      * @param after the table after the change
@@ -192,17 +216,18 @@ record SqliteChange(Change change) implements Node {
       public void render(DdlWriter sql) {
         String temporary = "leadseal_new_" + after.name();
         create(sql, after, temporary, after.foreignKeys());
-        List<String> columns = after.columns().stream().map(Column::name).toList();
-        sql.append("INSERT INTO ").name(temporary).append(" (").names(columns).append(") SELECT ");
-        for (int i = 0; i < after.columns().size(); i++) {
-          Column column = after.columns().get(i);
+        List<Column> copied = after.columns().stream()
+            .filter(column -> before.columnById(column.id()).isPresent() || column.defaultValue() == null).toList();
+        sql.append("INSERT INTO ").name(temporary).append(" (").names(copied.stream().map(Column::name).toList())
+            .append(") SELECT ");
+        for (int i = 0; i < copied.size(); i++) {
+          Column column = copied.get(i);
           sql.append(i == 0 ? "" : ", ");
           Optional<Column> old = before.columnById(column.id());
-          String zero = sql.dialect().zero(column);
           if (old.isEmpty()) {
-            sql.append(column.nullable() ? "NULL" : zero);
+            sql.append(column.nullable() ? "NULL" : sql.dialect().zero(column));
           } else if (!column.nullable() && old.get().nullable()) {
-            sql.append("COALESCE(").name(old.get().name()).append(", " + zero + ")");
+            sql.append("COALESCE(").name(old.get().name()).append(", " + sql.dialect().fill(column) + ")");
           } else {
             sql.name(old.get().name());
           }
@@ -223,6 +248,10 @@ record SqliteChange(Change change) implements Node {
       }
       sql.append("CONSTRAINT ").name(table.primaryKey().name()).append(" PRIMARY KEY (")
           .names(table.primaryKey().columns()).append(")");
+      for (Check check : table.checks()) {
+        sql.append(", ");
+        Operation.AddCheck.constraint(sql, check);
+      }
       for (ForeignKey key : keys) {
         sql.append(", ");
         Operation.AddForeignKey.constraint(sql, key);

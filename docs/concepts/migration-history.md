@@ -7,19 +7,19 @@ Leadseal reads this directory each time it runs, so it only needs your current t
 
 ```txt
 db/migration/
-  20261014T083047_create_orders/
+  20261014T094131_create_orders/
     migration.json
     ops.json
-    postgresql/V20261014083047__create_orders.sql
-    sqlite/V20261014083047__create_orders.sql
-  20261014T083256_add_orders_total/
+    postgresql/V20261014094131__create_orders.sql
+    sqlite/V20261014094131__create_orders.sql
+  20261014T094134_add_orders_total/
     migration.json
     ops.json
-    postgresql/V20261014083256__add_orders_total.sql
-    sqlite/V20261014083256__add_orders_total.sql
+    postgresql/V20261014094134__add_orders_total.sql
+    sqlite/V20261014094134__add_orders_total.sql
   snapshots/
-    3fb5dee7cb41bf96/schema.json
-    28349903027be432/schema.json
+    92cc522514b6a40d/schema.json
+    10d3456210e234dc/schema.json
 ```
 
 Each migration folder has these files:

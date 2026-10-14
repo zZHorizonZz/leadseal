@@ -44,7 +44,9 @@ public final class MigrationName {
 
   private static boolean main(Operation operation) {
     return !(operation instanceof Operation.AddIndex || operation instanceof Operation.DropIndex
-        || operation instanceof Operation.AddForeignKey || operation instanceof Operation.DropForeignKey);
+        || operation instanceof Operation.AddForeignKey || operation instanceof Operation.DropForeignKey
+        || operation instanceof Operation.AddCheck || operation instanceof Operation.DropCheck
+        || operation instanceof Operation.CommentTable);
   }
 
   private static String describe(Operation operation) {
@@ -61,6 +63,10 @@ public final class MigrationName {
       case Operation.DropIndex drop -> "drop_" + drop.index().name();
       case Operation.AddForeignKey add -> "add_" + add.key().name();
       case Operation.DropForeignKey drop -> "drop_" + drop.key().name();
+      case Operation.MoveTable move -> "move_" + move.table() + "_to_" + (move.to() == null ? "default" : move.to());
+      case Operation.AddCheck add -> "add_" + add.check().name();
+      case Operation.DropCheck drop -> "drop_" + drop.check().name();
+      case Operation.CommentTable comment -> "comment_" + comment.table();
     };
   }
 }

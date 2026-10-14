@@ -28,8 +28,21 @@ final class StandardDialect implements Dialect {
   }
 
   @Override
-  public String zero(Column column) {
-    return column.type() == ColumnType.TEXT ? "''" : "0";
+  public String string(String text) {
+    return "'" + text.replace("'", "''") + "'";
+  }
+
+  @Override
+  public String literal(Column column, String value) {
+    return switch (column.type()) {
+      case BOOLEAN, INT, BIGINT, REAL, DOUBLE, DECIMAL -> value;
+      default -> string(value);
+    };
+  }
+
+  @Override
+  public String generated(Column column, Default.Kind kind) {
+    return kind == Default.Kind.NOW ? "CURRENT_TIMESTAMP" : "gen_random_uuid()";
   }
 
   @Override

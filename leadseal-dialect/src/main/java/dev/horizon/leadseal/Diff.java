@@ -1,15 +1,19 @@
 package dev.horizon.leadseal;
 
+import dev.horizon.leadseal.Operation.AddCheck;
 import dev.horizon.leadseal.Operation.AddColumn;
 import dev.horizon.leadseal.Operation.AddForeignKey;
 import dev.horizon.leadseal.Operation.AddIndex;
 import dev.horizon.leadseal.Operation.AlterColumn;
 import dev.horizon.leadseal.Operation.AlterPrimaryKey;
+import dev.horizon.leadseal.Operation.CommentTable;
 import dev.horizon.leadseal.Operation.CreateTable;
+import dev.horizon.leadseal.Operation.DropCheck;
 import dev.horizon.leadseal.Operation.DropColumn;
 import dev.horizon.leadseal.Operation.DropForeignKey;
 import dev.horizon.leadseal.Operation.DropIndex;
 import dev.horizon.leadseal.Operation.DropTable;
+import dev.horizon.leadseal.Operation.MoveTable;
 import dev.horizon.leadseal.Operation.RenameColumn;
 import dev.horizon.leadseal.Operation.RenameTable;
 import java.util.ArrayList;
@@ -22,21 +26,24 @@ import java.util.Optional;
  *
  * <p>
  * Tables and columns are matched by id. A table or column that keeps its id but changes its name is renamed, and keeps
- * its data. Indexes and foreign keys are matched by name and definition. A changed index or foreign key is dropped and
- * added again.
+ * its data. Indexes, checks and foreign keys are matched by name and definition. A changed index, check or foreign key
+ * is dropped and added again.
  *
  * <p>
- * The operations run in this order: drop foreign keys, drop indexes, drop tables, rename tables, create tables, rename
- * columns, add columns, alter columns, alter primary keys, drop columns, add indexes, add foreign keys.
+ * The operations run in this order: drop foreign keys, drop checks, drop indexes, drop tables, rename tables, move
+ * tables to other schemas, create tables, rename columns, add columns, alter columns, alter primary keys, drop columns,
+ * add indexes, add checks, add foreign keys, change table comments.
  */
 public final class Diff {
 
   private final Schema before;
   private final Schema after;
   private final List<Operation> dropKeys = new ArrayList<>();
+  private final List<Operation> dropChecks = new ArrayList<>();
   private final List<Operation> dropIndexes = new ArrayList<>();
   private final List<Operation> dropTables = new ArrayList<>();
   private final List<Operation> renameTables = new ArrayList<>();
+  private final List<Operation> moveTables = new ArrayList<>();
   private final List<Operation> createTables = new ArrayList<>();
   private final List<Operation> renameColumns = new ArrayList<>();
   private final List<Operation> addColumns = new ArrayList<>();
@@ -44,7 +51,9 @@ public final class Diff {
   private final List<Operation> alterKeys = new ArrayList<>();
   private final List<Operation> dropColumns = new ArrayList<>();
   private final List<Operation> addIndexes = new ArrayList<>();
+  private final List<Operation> addChecks = new ArrayList<>();
   private final List<Operation> addKeys = new ArrayList<>();
+  private final List<Operation> commentTables = new ArrayList<>();
 
   public Diff(Schema before, Schema after) {
     this.before = before;
@@ -73,8 +82,9 @@ public final class Diff {
    */
   public List<Operation> operations() {
     List<Operation> all = new ArrayList<>();
-    for (List<Operation> group : List.of(dropKeys, dropIndexes, dropTables, renameTables, createTables, renameColumns,
-        addColumns, alterColumns, alterKeys, dropColumns, addIndexes, addKeys)) {
+    for (List<Operation> group : List.of(dropKeys, dropChecks, dropIndexes, dropTables, renameTables, moveTables,
+        createTables, renameColumns, addColumns, alterColumns, alterKeys, dropColumns, addIndexes, addChecks, addKeys,
+        commentTables)) {
       all.addAll(group);
     }
     return all;
@@ -83,6 +93,22 @@ public final class Diff {
   private void table(Table old, Table current) {
     if (!old.name().equals(current.name())) {
       renameTables.add(new RenameTable(old.name(), current.name()));
+    }
+    if (!Objects.equals(old.schema(), current.schema())) {
+      moveTables.add(new MoveTable(current.name(), old.schema(), current.schema()));
+    }
+    if (!Objects.equals(old.comment(), current.comment())) {
+      commentTables.add(new CommentTable(current.name(), old.comment(), current.comment()));
+    }
+    for (Check check : old.checks()) {
+      if (!current.checks().contains(check)) {
+        dropChecks.add(new DropCheck(old.name(), check));
+      }
+    }
+    for (Check check : current.checks()) {
+      if (!old.checks().contains(check)) {
+        addChecks.add(new AddCheck(current.name(), check));
+      }
     }
     for (Column column : old.columns()) {
       Optional<Column> now = current.columnById(column.id());
@@ -109,14 +135,14 @@ public final class Diff {
       alterKeys.add(new AlterPrimaryKey(current.name(), new PrimaryKey(name, oldKey), current.primaryKey()));
     }
     for (Index index : old.indexes()) {
-      Index mapped = new Index(index.name(), renamed(old, current, index.columns()), index.unique());
+      Index mapped = index.withColumns(renamed(old, current, index.columns()));
       if (!current.indexes().contains(mapped)) {
         dropIndexes.add(new DropIndex(old.name(), index));
       }
     }
     for (Index index : current.indexes()) {
       boolean kept = old.indexes().stream()
-          .anyMatch(was -> new Index(was.name(), renamed(old, current, was.columns()), was.unique()).equals(index));
+          .anyMatch(was -> was.withColumns(renamed(old, current, was.columns())).equals(index));
       if (!kept) {
         addIndexes.add(new AddIndex(current.name(), index));
       }
@@ -140,10 +166,10 @@ public final class Diff {
     Optional<Table> oldTarget = before.table(key.table());
     Optional<Table> newTarget = oldTarget.flatMap(target -> after.tableById(target.id()));
     if (oldTarget.isEmpty() || newTarget.isEmpty()) {
-      return new ForeignKey(key.name(), columns, key.table(), key.referencedColumns(), key.onDelete());
+      return key.withColumns(columns, key.table(), key.referencedColumns());
     }
-    return new ForeignKey(key.name(), columns, newTarget.get().name(),
-        renamed(oldTarget.get(), newTarget.get(), key.referencedColumns()), key.onDelete());
+    return key.withColumns(columns, newTarget.get().name(),
+        renamed(oldTarget.get(), newTarget.get(), key.referencedColumns()));
   }
 
   /** Returns the names that columns of the old table have in the new table, or their old names if they are gone. */

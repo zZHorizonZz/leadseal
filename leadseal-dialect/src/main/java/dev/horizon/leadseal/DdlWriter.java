@@ -138,16 +138,52 @@ public final class DdlWriter {
   }
 
   /**
-   * Appends a column definition: the quoted name, the database type and {@code NOT NULL} for a column that does not
-   * accept {@code NULL}.
+   * Renders the definition of a column through the dialect's decorator. See {@link ColumnDefinition}.
    *
    * @param table the table of the column
    * @param column the column
    * @return this writer
    */
   public DdlWriter column(Table table, Column column) {
-    name(column.name()).append(" " + dialect.type(table, column));
-    return column.nullable() ? this : append(" NOT NULL");
+    return render(new ColumnDefinition(table, column));
+  }
+
+  /**
+   * Appends a name in a database schema: the quoted schema, a dot and the quoted name, or only the quoted name if
+   * the schema is {@code null}.
+   *
+   * @param schema the schema, or {@code null}
+   * @param name the name
+   * @return this writer
+   */
+  public DdlWriter qualified(String schema, String name) {
+    if (schema != null) {
+      name(schema).append(".");
+    }
+    return name(name);
+  }
+
+  /**
+   * Appends the qualified name of a table of the schema after the migration.
+   *
+   * @param name the table name
+   * @return this writer
+   * @throws SchemaException if the schema after the migration has no such table
+   */
+  public DdlWriter table(String name) {
+    return qualified(tableAfter(name).schema(), name);
+  }
+
+  /**
+   * Appends the qualified name of a table of the schema before the migration. Operations that run before tables are
+   * renamed or moved use it.
+   *
+   * @param name the table name
+   * @return this writer
+   * @throws SchemaException if the schema before the migration has no such table
+   */
+  public DdlWriter oldTable(String name) {
+    return qualified(tableBefore(name).schema(), name);
   }
 
   /**

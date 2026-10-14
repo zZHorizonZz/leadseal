@@ -15,6 +15,21 @@ final class SqliteTestDatabase implements TestDatabase {
   }
 
   @Override
+  public String binaryCollation() {
+    return "BINARY";
+  }
+
+  @Override
+  public boolean supportsSchemas() {
+    return false;
+  }
+
+  @Override
+  public boolean supportsComments() {
+    return false;
+  }
+
+  @Override
   public Database create() {
     try {
       Path file = Files.createTempFile("leadseal", ".db");

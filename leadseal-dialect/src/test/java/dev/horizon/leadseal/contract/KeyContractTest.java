@@ -2,6 +2,7 @@ package dev.horizon.leadseal.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.ColumnType;
@@ -134,5 +135,67 @@ public abstract class KeyContractTest extends ContractTest {
 
     assertThat(query("SELECT " + q("id") + " FROM " + q("orders"))).containsExactly(List.of("1"));
     assertThat(foreignKeys("orders")).containsExactly("customer_id -> customers.id");
+  }
+
+  @Test
+  void createsADescendingIndex() throws SQLException {
+    Index index = Index.of("orders", List.of("customer_id", "line"), false).withDescending(List.of("line"));
+    apply(schema(orders(List.of(index), List.of())));
+    insert("orders", 1, 1, 1);
+
+    assertThat(indexes("orders")).containsOnlyKeys("ix_orders_customer_id_line");
+  }
+
+  @Test
+  void createsAPartialUniqueIndex() throws SQLException {
+    assumeTrue(testDatabase().supportsPartialIndexes());
+    Index index = Index.of("orders", List.of("customer_id"), true).withWhere("line = 1");
+    apply(schema(orders(List.of(index), List.of())));
+    insert("orders", 1, 1, 1);
+    insert("orders", 2, 1, 2);
+    insert("orders", 3, 1, 3);
+
+    assertThatThrownBy(() -> insert("orders", 4, 1, 1)).isInstanceOf(SQLException.class);
+  }
+
+  @Test
+  void changesTheConditionOfAPartialIndex() throws SQLException {
+    assumeTrue(testDatabase().supportsPartialIndexes());
+    Index index = Index.of("orders", List.of("customer_id"), true);
+    apply(schema(orders(List.of(index.withWhere("line = 1")), List.of())));
+    insert("orders", 1, 1, 1);
+    insert("orders", 2, 1, 2);
+
+    apply(schema(orders(List.of(index.withWhere("line = 2")), List.of())));
+
+    insert("orders", 3, 1, 3);
+    assertThatThrownBy(() -> insert("orders", 4, 1, 2)).isInstanceOf(SQLException.class);
+  }
+
+  @Test
+  void updatesReferencingRows() throws SQLException {
+    ForeignKey key = toCustomers(ForeignKey.Action.CASCADE).withOnUpdate(ForeignKey.Action.CASCADE);
+    apply(schema(CUSTOMERS, orders(List.of(), List.of(key))));
+    insert("customers", 1);
+    insert("orders", 1, 1, 1);
+
+    execute("UPDATE " + q("customers") + " SET " + q("id") + " = 2");
+
+    assertThat(query("SELECT " + q("customer_id") + " FROM " + q("orders"))).containsExactly(List.of("2"));
+  }
+
+  @Test
+  void createsACompositeForeignKey() throws SQLException {
+    Table lines = table("shop.OrderLine", "order_line", List.of(ID, CUSTOMER_ID, LINE), List.of("customer_id",
+        "line"), List.of(), List.of());
+    ForeignKey key = ForeignKey.of("orders", List.of("customer_id", "line"), "order_line", List.of("customer_id",
+        "line"), ForeignKey.Action.CASCADE);
+    apply(schema(lines, orders(List.of(), List.of(key))));
+    insert("order_line", 1, 1, 1);
+    insert("orders", 1, 1, 1);
+
+    assertThatThrownBy(() -> insert("orders", 2, 1, 2)).isInstanceOf(SQLException.class);
+    execute("DELETE FROM " + q("order_line"));
+    assertThat(count("SELECT COUNT(*) FROM " + q("orders"))).isZero();
   }
 }

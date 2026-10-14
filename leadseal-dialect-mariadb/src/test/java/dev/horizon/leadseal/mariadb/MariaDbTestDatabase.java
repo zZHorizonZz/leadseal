@@ -21,6 +21,16 @@ final class MariaDbTestDatabase implements TestDatabase {
   }
 
   @Override
+  public String binaryCollation() {
+    return "utf8mb4_bin";
+  }
+
+  @Override
+  public boolean supportsPartialIndexes() {
+    return false;
+  }
+
+  @Override
   public Database create() throws SQLException {
     synchronized (CONTAINER) {
       if (!CONTAINER.isRunning()) {

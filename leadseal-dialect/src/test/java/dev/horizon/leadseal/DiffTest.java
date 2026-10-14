@@ -8,16 +8,20 @@ import static dev.horizon.leadseal.Fixtures.text;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import dev.horizon.leadseal.Operation.AddCheck;
 import dev.horizon.leadseal.Operation.AddColumn;
 import dev.horizon.leadseal.Operation.AddForeignKey;
 import dev.horizon.leadseal.Operation.AddIndex;
 import dev.horizon.leadseal.Operation.AlterColumn;
 import dev.horizon.leadseal.Operation.AlterPrimaryKey;
+import dev.horizon.leadseal.Operation.CommentTable;
 import dev.horizon.leadseal.Operation.CreateTable;
+import dev.horizon.leadseal.Operation.DropCheck;
 import dev.horizon.leadseal.Operation.DropColumn;
 import dev.horizon.leadseal.Operation.DropForeignKey;
 import dev.horizon.leadseal.Operation.DropIndex;
 import dev.horizon.leadseal.Operation.DropTable;
+import dev.horizon.leadseal.Operation.MoveTable;
 import dev.horizon.leadseal.Operation.RenameColumn;
 import dev.horizon.leadseal.Operation.RenameTable;
 import java.util.List;
@@ -68,6 +72,19 @@ class DiffTest {
             List.of(new DropIndex("orders", indexed.indexes().getFirst()))),
         arguments("change a primary key", schema(ORDERS), schema(compositeKey),
             List.of(new AlterPrimaryKey("orders", ORDERS.primaryKey(), compositeKey.primaryKey()))),
+        arguments("move a table to another schema", schema(ORDERS), schema(ORDERS.withSchema("sales")),
+            List.of(new MoveTable("orders", null, "sales"))),
+        arguments("comment a table", schema(ORDERS), schema(ORDERS.withComment("Orders.")),
+            List.of(new CommentTable("orders", null, "Orders."))),
+        arguments("add a check", schema(ORDERS), schema(ORDERS.withChecks(List.of(Check.of("orders", "id > 0")))),
+            List.of(new AddCheck("orders", Check.of("orders", "id > 0")))),
+        arguments("change a check", schema(ORDERS.withChecks(List.of(Check.of("orders", "id > 0")))),
+            schema(ORDERS.withChecks(List.of(Check.of("orders", "id > 1")))),
+            List.of(new DropCheck("orders", Check.of("orders", "id > 0")), new AddCheck("orders", Check.of("orders",
+                "id > 1")))),
+        arguments("add a default", schema(ORDERS), schema(table("shop.Order", "orders").column(ID).column(STATE
+            .withDefault(Default.value("new"))).primaryKey("id").build()),
+            List.of(new AlterColumn("orders", STATE, STATE.withDefault(Default.value("new"))))),
         arguments("no change", schema(ORDERS), schema(ORDERS), List.of()));
   }
 

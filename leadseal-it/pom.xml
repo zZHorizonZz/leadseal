@@ -14,8 +14,8 @@
 
   <properties>
     <module.name>dev.horizon.leadseal.it</module.name>
-    <leadseal.migrations>${project.build.directory}/migrations</leadseal.migrations>
-    <protobuf.compiler.incremental>false</protobuf.compiler.incremental>
+    <leadseal.tools>${project.build.directory}/tools</leadseal.tools>
+    <leadseal.include>${project.build.directory}/proto-include</leadseal.include>
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.install.skip>true</maven.install.skip>
   </properties>
@@ -25,7 +25,16 @@
       <groupId>dev.horizon</groupId>
       <artifactId>leadseal-protoc</artifactId>
       <version>${project.version}</version>
-      <type>pom</type>
+      <classifier>${os.detected.classifier}</classifier>
+      <type>exe</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protoc</artifactId>
+      <version>${protobuf.version}</version>
+      <classifier>${os.detected.classifier}</classifier>
+      <type>exe</type>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -92,105 +101,41 @@
   </dependencies>
 
   <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.7.1</version>
+      </extension>
+    </extensions>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-clean-plugin</artifactId>
+        <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>clean-migrations</id>
-            <phase>initialize</phase>
+            <id>copy-executables</id>
+            <phase>generate-test-resources</phase>
             <goals>
-              <goal>clean</goal>
+              <goal>copy-dependencies</goal>
             </goals>
             <configuration>
-              <excludeDefaultDirectories>true</excludeDefaultDirectories>
-              <filesets>
-                <fileset>
-                  <directory>${leadseal.migrations}</directory>
-                </fileset>
-              </filesets>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>io.github.ascopes</groupId>
-        <artifactId>protobuf-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>step1</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>generate-test</goal>
-            </goals>
-            <configuration>
-              <javaEnabled>false</javaEnabled>
-              <sourceDirectories>
-                <sourceDirectory>${project.basedir}/src/test/protobuf/step1</sourceDirectory>
-              </sourceDirectories>
-              <outputDirectory>${project.build.directory}/generated-test-sources/step1</outputDirectory>
-              <registerAsCompilationRoot>false</registerAsCompilationRoot>
-              <plugins>
-                <plugin kind="jvm-maven">
-                  <groupId>dev.horizon</groupId>
-                  <artifactId>leadseal-protoc</artifactId>
-                  <version>${project.version}</version>
-                  <options>migrations=${leadseal.migrations},dialect=postgresql,dialect=mariadb,dialect=sqlserver,dialect=sqlite</options>
-                  <outputDirectory>${leadseal.migrations}</outputDirectory>
-                  <registerAsCompilationRoot>false</registerAsCompilationRoot>
-                </plugin>
-              </plugins>
+              <includeTypes>exe</includeTypes>
+              <stripVersion>true</stripVersion>
+              <stripClassifier>true</stripClassifier>
+              <outputDirectory>${leadseal.tools}</outputDirectory>
             </configuration>
           </execution>
           <execution>
-            <id>step2</id>
-            <phase>generate-test-sources</phase>
+            <id>unpack-protos</id>
+            <phase>generate-test-resources</phase>
             <goals>
-              <goal>generate-test</goal>
+              <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <javaEnabled>false</javaEnabled>
-              <sourceDirectories>
-                <sourceDirectory>${project.basedir}/src/test/protobuf/step2</sourceDirectory>
-              </sourceDirectories>
-              <outputDirectory>${project.build.directory}/generated-test-sources/step2</outputDirectory>
-              <registerAsCompilationRoot>false</registerAsCompilationRoot>
-              <plugins>
-                <plugin kind="jvm-maven">
-                  <groupId>dev.horizon</groupId>
-                  <artifactId>leadseal-protoc</artifactId>
-                  <version>${project.version}</version>
-                  <options>migrations=${leadseal.migrations},dialect=postgresql,dialect=mariadb,dialect=sqlserver,dialect=sqlite</options>
-                  <outputDirectory>${leadseal.migrations}</outputDirectory>
-                  <registerAsCompilationRoot>false</registerAsCompilationRoot>
-                </plugin>
-              </plugins>
-            </configuration>
-          </execution>
-          <execution>
-            <id>step3</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>generate-test</goal>
-            </goals>
-            <configuration>
-              <javaEnabled>false</javaEnabled>
-              <sourceDirectories>
-                <sourceDirectory>${project.basedir}/src/test/protobuf/step3</sourceDirectory>
-              </sourceDirectories>
-              <outputDirectory>${project.build.directory}/generated-test-sources/step3</outputDirectory>
-              <registerAsCompilationRoot>false</registerAsCompilationRoot>
-              <plugins>
-                <plugin kind="jvm-maven">
-                  <groupId>dev.horizon</groupId>
-                  <artifactId>leadseal-protoc</artifactId>
-                  <version>${project.version}</version>
-                  <options>migrations=${leadseal.migrations},dialect=postgresql,dialect=mariadb,dialect=sqlserver,dialect=sqlite</options>
-                  <outputDirectory>${leadseal.migrations}</outputDirectory>
-                  <registerAsCompilationRoot>false</registerAsCompilationRoot>
-                </plugin>
-              </plugins>
+              <includeArtifactIds>leadseal-protobuf,protobuf-java</includeArtifactIds>
+              <includes>**/*.proto</includes>
+              <outputDirectory>${leadseal.include}</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -207,7 +152,10 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <systemPropertyVariables>
-            <leadseal.migrations>${leadseal.migrations}</leadseal.migrations>
+            <leadseal.protoc>${leadseal.tools}/protoc.exe</leadseal.protoc>
+            <leadseal.plugin>${leadseal.tools}/leadseal-protoc.exe</leadseal.plugin>
+            <leadseal.include>${leadseal.include}</leadseal.include>
+            <leadseal.protos>${project.basedir}/src/test/protobuf</leadseal.protos>
           </systemPropertyVariables>
         </configuration>
       </plugin>

@@ -21,6 +21,11 @@ final class PostgresTestDatabase implements TestDatabase {
   }
 
   @Override
+  public String binaryCollation() {
+    return "C";
+  }
+
+  @Override
   public Database create() throws SQLException {
     synchronized (CONTAINER) {
       if (!CONTAINER.isRunning()) {

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import dev.horizon.leadseal.Default;
 import dev.horizon.leadseal.Operation;
 import dev.horizon.leadseal.SchemaException;
 import java.util.List;
@@ -16,10 +17,11 @@ import java.util.List;
 public final class Json {
 
   private static final ObjectMapper MAPPER = new ObjectMapper()
-      .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+      .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
       .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
       .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
-      .addMixIn(Operation.class, OperationType.class);
+      .addMixIn(Operation.class, OperationType.class)
+      .addMixIn(Default.class, DefaultValue.class);
 
   static {
     MAPPER.registerSubtypes(
@@ -34,7 +36,11 @@ public final class Json {
         new NamedType(Operation.AddIndex.class, "add_index"),
         new NamedType(Operation.DropIndex.class, "drop_index"),
         new NamedType(Operation.AddForeignKey.class, "add_foreign_key"),
-        new NamedType(Operation.DropForeignKey.class, "drop_foreign_key"));
+        new NamedType(Operation.DropForeignKey.class, "drop_foreign_key"),
+        new NamedType(Operation.MoveTable.class, "move_table"),
+        new NamedType(Operation.AddCheck.class, "add_check"),
+        new NamedType(Operation.DropCheck.class, "drop_check"),
+        new NamedType(Operation.CommentTable.class, "comment_table"));
   }
 
   private Json() {
@@ -42,6 +48,12 @@ public final class Json {
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "op")
   private interface OperationType {
+  }
+
+  private interface DefaultValue {
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String value();
   }
 
   /**
@@ -72,6 +84,21 @@ public final class Json {
       }).withDefaultPrettyPrinter().writeValueAsString(operations) + "\n";
     } catch (JsonProcessingException failed) {
       throw new SchemaException("Cannot write operations as JSON.", failed);
+    }
+  }
+
+  /**
+   * Returns whether a text is a JSON document.
+   *
+   * @param text the text
+   * @return {@code true} if the text parses as JSON
+   */
+  public static boolean valid(String text) {
+    try {
+      MAPPER.readTree(text);
+      return true;
+    } catch (JsonProcessingException invalid) {
+      return false;
     }
   }
 

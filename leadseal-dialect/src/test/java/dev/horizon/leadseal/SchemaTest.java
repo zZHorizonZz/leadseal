@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,32 @@ class SchemaTest {
         arguments("foreign key with another type", call(() -> schema(
             table("a", "a").column(ID).column(column("2", "b_id", ColumnType.INT)).primaryKey("id")
                 .foreignKey("b_id", "b", "id", ForeignKey.Action.CASCADE).build(),
-            table("b", "b").column(ID).primaryKey("id").build())), "The types must be the same"));
+            table("b", "b").column(ID).primaryKey("id").build())), "The types must be the same"),
+        arguments("identity outside the primary key", call(() -> table("t", "t").column(ID)
+            .column(column("2", "n", ColumnType.INT).withIdentity(true)).primaryKey("id").build()),
+            "must be the only column of the primary key"),
+        arguments("identity on text", call(() -> column("1", "id", ColumnType.TEXT).withIdentity(true)),
+            "must be an INT or BIGINT column"),
+        arguments("decimal without precision", call(() -> column("1", "price", ColumnType.DECIMAL)),
+            "needs a precision"),
+        arguments("scale above precision", call(() -> new Column("1", "price", ColumnType.DECIMAL, null, 4, 5, false,
+            null, false, null, null)), "between 0 and its precision"),
+        arguments("default of another type", call(() -> column("1", "n", ColumnType.INT).withDefault(Default.value(
+            "many"))), "is not a valid INT value"),
+        arguments("integer default out of range", call(() -> column("1", "n", ColumnType.INT).withDefault(
+            Default.value("3000000000"))), "is not a valid INT value"),
+        arguments("current time on a number", call(() -> column("1", "n", ColumnType.INT).withDefault(
+            Default.now())), "only TIMESTAMP and DATE columns"),
+        arguments("random uuid on text", call(() -> column("1", "n", ColumnType.TEXT).withDefault(
+            Default.randomUuid())), "only UUID columns"),
+        arguments("invalid json default", call(() -> column("1", "n", ColumnType.JSON).withDefault(Default.value(
+            "{"))), "is not a valid JSON value"),
+        arguments("collation on a number", call(() -> column("1", "n", ColumnType.INT).withCollations(Map.of(
+            "postgresql", "C"))), "only TEXT columns"),
+        arguments("descending column outside the index", call(() -> Index.of("t", List.of("a"), false)
+            .withDescending(List.of("b"))), "does not index it"),
+        arguments("duplicate check name", call(() -> table("t", "t").column(ID).primaryKey("id").build()
+            .withChecks(List.of(new Check("ck", "id > 0"), new Check("ck", "id < 9")))), "check name 'ck' twice"));
   }
 
   @ParameterizedTest(name = "{0}")

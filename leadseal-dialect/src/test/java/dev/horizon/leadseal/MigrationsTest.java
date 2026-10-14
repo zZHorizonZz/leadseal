@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -92,6 +93,28 @@ class MigrationsTest {
     migrations("postgresql").generate(SECOND);
 
     assertThat(file).content().isEqualTo("-- edited by hand\n");
+  }
+
+  @Test
+  void readsEveryOptionBackFromItsFiles() {
+    Column state = new Column("2", "state", ColumnType.TEXT, 20, null, null, false, Default.value(""), false,
+        Map.of("postgresql", "C"), "The state.");
+    Column price = new Column("3", "price", ColumnType.DECIMAL, null, 12, 2, true, null, false, null, null);
+    Column created = new Column("4", "created", ColumnType.TIMESTAMP, null, false).withDefault(Default.now());
+    Schema schema = schema(new Table("shop.Order", "orders", "sales", List.of(ID.withIdentity(true), state, price,
+        created), PrimaryKey.of("orders", List.of("id")),
+        List.of(Index.of("orders", List.of("state", "created"), true)
+            .withDescending(List.of("created")).withWhere("price IS NOT NULL")),
+        List.of(), List.of(Check.of(
+            "orders", "price >= 0")),
+        "The orders."));
+    migrations("postgresql").generate(schema);
+
+    Migrations.Result result = migrations("postgresql", "mariadb").generate(schema);
+
+    assertThat(result.migration()).isEmpty();
+    assertThat(result.files()).singleElement().satisfies(file -> assertThat(file.path().toString()).contains(
+        "mariadb"));
   }
 
   @Test

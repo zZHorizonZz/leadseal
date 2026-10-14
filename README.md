@@ -71,7 +71,7 @@ Leadseal supports PostgreSQL, MariaDB, SQL Server and SQLite.
      option (leadseal.v1.table) = {name: "orders"};
 
      int64 id = 1 [(leadseal.v1.column).primary_key = true];
-     string state = 2 [(leadseal.v1.column) = {length: 20, index: true}];
+     string state = 2 [(leadseal.v1.column) = {index: true, text: {length: 20}}];
      optional string note = 3;
    }
    ```
@@ -117,14 +117,14 @@ Leadseal supports PostgreSQL, MariaDB, SQL Server and SQLite.
 
    ```txt
    src/main/resources/db/migration/
-     20261014T083047_create_orders/
+     20261014T094131_create_orders/
        migration.json
        ops.json
-       postgresql/V20261014083047__create_orders.sql
-     snapshots/3fb5dee7cb41bf96/schema.json
+       postgresql/V20261014094131__create_orders.sql
+     snapshots/92cc522514b6a40d/schema.json
    ```
 
-   `V20261014083047__create_orders.sql` contains:
+   `V20261014094131__create_orders.sql` contains:
 
    ```sql
    CREATE TABLE "orders" ("id" bigint NOT NULL, "state" varchar(20) NOT NULL, "note" text, CONSTRAINT "pk_orders" PRIMARY KEY ("id"));

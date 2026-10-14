@@ -7,8 +7,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * A set of tables. The constructor checks that names are unique and that every foreign key references the primary key
- * or a unique index of an existing table, with columns of the same types.
+ * A set of tables. The constructor checks that table names are unique across all database schemas, and that every
+ * foreign key references the primary key or a unique index of an existing table, with columns of the same types.
  *
  * @param tables the tables
  */
@@ -20,7 +20,8 @@ public record Schema(List<Table> tables) {
     Set<String> ids = new HashSet<>();
     for (Table table : tables) {
       if (!names.add(table.name())) {
-        throw new SchemaException("The schema has the table name '" + table.name() + "' twice.");
+        throw new SchemaException("The schema has the table name '" + table.name() + "' twice. Table names must be"
+            + " unique, also in different database schemas.");
       }
       if (!ids.add(table.id())) {
         throw new SchemaException("The schema has the table id '" + table.id() + "' twice.");
@@ -77,7 +78,8 @@ public record Schema(List<Table> tables) {
             + key.table() + "', which the schema does not have."));
     List<String> referenced = key.referencedColumns();
     boolean unique = target.primaryKey().columns().equals(referenced)
-        || target.indexes().stream().anyMatch(index -> index.unique() && index.columns().equals(referenced));
+        || target.indexes().stream().anyMatch(index -> index.unique() && index.where() == null
+            && index.columns().equals(referenced));
     if (!unique) {
       throw new SchemaException("The foreign key '" + key.name() + "' references " + target.name() + referenced
           + ", which is neither the primary key nor a unique index of that table.");

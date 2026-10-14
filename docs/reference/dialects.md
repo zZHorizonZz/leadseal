@@ -14,48 +14,76 @@ The name is also the name of the folder with the SQL files of the dialect.
 
 ## Operations
 
-| Operation            | PostgreSQL                          | MariaDB                             | SQL Server                          | SQLite                           |
-| -------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | -------------------------------- |
-| Create a table       | `CREATE TABLE`                      | `CREATE TABLE`                      | `CREATE TABLE`                      | `CREATE TABLE` with foreign keys |
-| Rename a table       | `RENAME TO`, `RENAME CONSTRAINT`    | `RENAME TO`                         | `sp_rename`                         | `RENAME TO`                      |
-| Add a column         | `ADD COLUMN`                        | `ADD COLUMN`                        | `ADD`                               | `ADD COLUMN`                     |
-| Rename a column      | `RENAME COLUMN`                     | `RENAME COLUMN`                     | `sp_rename`                         | `RENAME COLUMN`                  |
-| Change a column      | `ALTER COLUMN ... TYPE ... USING`   | `MODIFY COLUMN`                     | `ALTER COLUMN`                      | Rebuild                          |
-| Change a primary key | `DROP CONSTRAINT`, `ADD CONSTRAINT` | `DROP PRIMARY KEY, ADD PRIMARY KEY` | `DROP CONSTRAINT`, `ADD CONSTRAINT` | Rebuild                          |
-| Drop an index        | `DROP INDEX`                        | `DROP INDEX ... ON`                 | `DROP INDEX ... ON`                 | `DROP INDEX`                     |
-| Add a foreign key    | `ADD CONSTRAINT`                    | `ADD CONSTRAINT`                    | `ADD CONSTRAINT`                    | Rebuild                          |
-| Drop a foreign key   | `DROP CONSTRAINT`                   | `DROP FOREIGN KEY`                  | `DROP CONSTRAINT`                   | Rebuild                          |
+| Operation            | PostgreSQL                          | MariaDB                                            | SQL Server                          | SQLite                                 |
+| -------------------- | ----------------------------------- | -------------------------------------------------- | ----------------------------------- | -------------------------------------- |
+| Create a table       | `CREATE TABLE`                      | `CREATE TABLE`                                     | `CREATE TABLE`                      | `CREATE TABLE` with foreign keys       |
+| Rename a table       | `RENAME TO`, `RENAME CONSTRAINT`    | `RENAME TO`                                        | `sp_rename`                         | `RENAME TO`                            |
+| Move to a schema     | `SET SCHEMA`                        | `RENAME TABLE`                                     | `ALTER SCHEMA ... TRANSFER`         | Not supported                          |
+| Add a column         | `ADD COLUMN`                        | `ADD COLUMN`                                       | `ADD`                               | `ADD COLUMN`, or rebuild               |
+| Rename a column      | `RENAME COLUMN`                     | `RENAME COLUMN`                                    | `sp_rename`                         | `RENAME COLUMN`                        |
+| Change a column      | `ALTER COLUMN`                      | `MODIFY COLUMN`                                    | `ALTER COLUMN`                      | Rebuild                                |
+| Change a primary key | `DROP CONSTRAINT`, `ADD CONSTRAINT` | `DROP PRIMARY KEY, ADD PRIMARY KEY`                | `DROP CONSTRAINT`, `ADD CONSTRAINT` | Rebuild                                |
+| Drop an index        | `DROP INDEX`                        | `DROP INDEX ... ON`                                | `DROP INDEX ... ON`                 | `DROP INDEX`                           |
+| Add a foreign key    | `ADD CONSTRAINT`                    | `ADD CONSTRAINT`                                   | `ADD CONSTRAINT`                    | Rebuild                                |
+| Drop a foreign key   | `DROP CONSTRAINT`                   | `DROP FOREIGN KEY`                                 | `DROP CONSTRAINT`                   | Rebuild                                |
+| Add or drop a check  | `ADD CONSTRAINT`, `DROP CONSTRAINT` | `ADD CONSTRAINT`, `DROP CONSTRAINT`                | `ADD CONSTRAINT`, `DROP CONSTRAINT` | Rebuild                                |
+| Set a comment        | `COMMENT ON`                        | `COMMENT` in the column, `ALTER TABLE ... COMMENT` | `MS_Description` extended property  | Not supported, writes nothing          |
+
+## Features
+
+| Feature              | PostgreSQL                         | MariaDB                  | SQL Server                             | SQLite                          |
+| -------------------- | ---------------------------------- | ------------------------ | -------------------------------------- | ------------------------------- |
+| Identity             | `GENERATED BY DEFAULT AS IDENTITY` | `AUTO_INCREMENT`         | `IDENTITY(1, 1)`, only for new columns | The rowid                       |
+| Current time default | `CURRENT_TIMESTAMP`                | `UTC_TIMESTAMP(6)`       | `SYSUTCDATETIME()`                     | `strftime(...)`                 |
+| Random UUID default  | `gen_random_uuid()`                | `UUID()`                 | `NEWID()`                              | An expression with `randomblob` |
+| Partial index        | Yes                                | No                       | Yes, a filtered index                  | Yes                             |
+| Descending index     | Yes                                | Yes                      | Yes                                    | Yes                             |
+| Database schemas     | Yes                                | Yes, as databases        | Yes                                    | No                              |
+| Collation            | `COLLATE "name"`                   | `COLLATE name`           | `COLLATE name`                         | `COLLATE name`                  |
+
+Leadseal stops with an error when a migration needs a feature that a database does not have, for example a partial
+index on MariaDB.
 
 ## PostgreSQL
 
-A migration renames the primary key constraint together with its table, so the key keeps the name `pk_<table>`.
+A migration renames the primary key constraint together with its table, so the key keeps the name `pk_<table>`. When
+a column becomes an identity column, the migration starts the identity after the largest existing value.
 
 ## MariaDB
 
 MariaDB names every primary key `PRIMARY`. A migration that renames a table does not rename its primary key.
 
+A migration changes a column with `MODIFY COLUMN`, which writes the whole column definition, including its default and
+comment. A database schema is a MariaDB database. A migration that creates a table in a schema creates the database if
+it does not exist.
+
 ## SQL Server
 
-SQL Server cannot change a column while an index, the primary key or a foreign key of its table uses the column. A
-migration that changes such a column drops these objects first and creates them again after the change.
+SQL Server cannot change a column while an index, a key, a check or a default uses the column. A migration that
+changes such a column drops these objects first and creates them again after the change. It also drops and creates the
+foreign keys of other tables that reference the column.
 
-A new column that does not accept `NULL` gets a default constraint that fills the existing rows. The migration drops
-the constraint after it adds the column.
+Defaults are named constraints, `df_<table>_<column>`. Renames do not rename them, so a migration that drops a default
+looks up its name. A new column that does not accept `NULL` and has no default gets a temporary default constraint that
+fills the existing rows.
 
-SQL Server has no `ON DELETE RESTRICT`. A foreign key with `ACTION_RESTRICT` uses `NO ACTION`, which also rejects the
-delete.
+SQL Server has no `RESTRICT` action. A foreign key with `ACTION_RESTRICT` uses `NO ACTION`, which also rejects the
+change. SQL Server cannot add `IDENTITY` to an existing column or remove it, and leadseal stops with an error for such
+a change.
 
 ## SQLite
 
-SQLite cannot change a column, a primary key or a foreign key of an existing table. A migration with such a change
-rebuilds the table, as the [SQLite documentation](https://www.sqlite.org/lang_altertable.html#otheralter) describes:
+SQLite cannot change a column, a primary key, a foreign key or a check of an existing table. A migration with such a
+change rebuilds the table, as the [SQLite documentation](https://www.sqlite.org/lang_altertable.html#otheralter)
+describes:
 
 1. Create the new table under a temporary name.
 2. Copy the rows. Columns are matched by id.
 3. Drop the old table.
 4. Rename the new table, and create its indexes.
 
-A migration also rebuilds a table when it drops a column that is part of the primary key or a foreign key.
+A migration also rebuilds a table when it drops a column that is part of the primary key or a foreign key, or adds a
+column with a generated default. SQLite allows only constant defaults in `ADD COLUMN`.
 
 Dropping a table deletes its rows first. When a foreign key of another table references the rebuilt table, this
 delete would run the `ON DELETE` action of the foreign key, and could delete or change the rows of the other table. So
@@ -84,5 +112,7 @@ transaction. If the script runs in a transaction while foreign keys are on, it f
 Outside a transaction, SQLite runs each statement of the script on its own. If a statement fails, the statements
 before it stay applied. The script turns foreign keys on at the end, also on a connection that had them off.
 
-SQLite cannot drop a default value, so a new column that does not accept `NULL` keeps its zero value as default.
-SQLite cannot rename a constraint, so a renamed table keeps the name of its primary key.
+An `INT` or `BIGINT` primary key of one column is the rowid of the table, so SQLite generates its values with or
+without identity. SQLite cannot drop a default, so a new column that does not accept `NULL` and has no default keeps
+its zero value as default. SQLite cannot rename a constraint, so a renamed table keeps the name of its primary key.
+SQLite has no database schemas and no comments.

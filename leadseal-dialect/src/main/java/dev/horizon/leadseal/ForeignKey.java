@@ -10,9 +10,10 @@ import java.util.List;
  * @param table the referenced table
  * @param referencedColumns the referenced columns, which must be the primary key or a unique index of that table
  * @param onDelete what happens to the rows of this table when the referenced row is deleted
+ * @param onUpdate what happens to the rows of this table when the referenced columns change
  */
 public record ForeignKey(String name, List<String> columns, String table, List<String> referencedColumns,
-    Action onDelete) {
+    Action onDelete, Action onUpdate) {
 
   public ForeignKey {
     Names.require(name, "foreign key name");
@@ -26,6 +27,14 @@ public record ForeignKey(String name, List<String> columns, String table, List<S
     if (onDelete == null) {
       onDelete = Action.NO_ACTION;
     }
+    if (onUpdate == null) {
+      onUpdate = Action.NO_ACTION;
+    }
+  }
+
+  public ForeignKey(String name, List<String> columns, String table, List<String> referencedColumns,
+      Action onDelete) {
+    this(name, columns, table, referencedColumns, onDelete, Action.NO_ACTION);
   }
 
   /**
@@ -43,13 +52,35 @@ public record ForeignKey(String name, List<String> columns, String table, List<S
     return new ForeignKey(Names.generate("fk", table, columns), columns, referencedTable, referencedColumns, onDelete);
   }
 
-  /** What happens to referencing rows when the referenced row is deleted. */
+  /**
+   * Returns a copy of this foreign key with another update action.
+   *
+   * @param onUpdate what happens when the referenced columns change
+   * @return the new foreign key
+   */
+  public ForeignKey withOnUpdate(Action onUpdate) {
+    return new ForeignKey(name, columns, table, referencedColumns, onDelete, onUpdate);
+  }
+
+  /**
+   * Returns a copy of this foreign key with other columns and another referenced table.
+   *
+   * @param columns the columns of this table
+   * @param table the referenced table
+   * @param referencedColumns the referenced columns
+   * @return the new foreign key
+   */
+  public ForeignKey withColumns(List<String> columns, String table, List<String> referencedColumns) {
+    return new ForeignKey(name, columns, table, referencedColumns, onDelete, onUpdate);
+  }
+
+  /** What happens to referencing rows when the referenced row is deleted or its key changes. */
   public enum Action {
-    /** The delete fails at the end of the statement. */
+    /** The delete or update fails at the end of the statement. */
     NO_ACTION,
-    /** The delete fails at once. */
+    /** The delete or update fails at once. */
     RESTRICT,
-    /** The referencing rows are deleted too. */
+    /** The referencing rows are deleted or updated too. */
     CASCADE,
     /** The referencing columns are set to {@code NULL}. */
     SET_NULL

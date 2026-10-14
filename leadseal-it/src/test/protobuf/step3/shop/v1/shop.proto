@@ -9,17 +9,19 @@ message Customer {
   option (leadseal.v1.table) = {name: "clients"};
 
   int64 id = 1 [(leadseal.v1.column).primary_key = true];
-  string email_address = 2 [(leadseal.v1.column) = {length: 200, unique: true}];
+  string email_address = 2 [(leadseal.v1.column) = {unique: true, text: {length: 200}}];
 }
 
+// The orders of the shop.
 message Order {
   option (leadseal.v1.table) = {name: "orders"};
 
   int64 id = 1 [(leadseal.v1.column).primary_key = true];
   int64 customer_id = 2 [(leadseal.v1.column).foreign_key = {message: "shop.v1.Customer", on_delete: ACTION_CASCADE}];
-  string state = 3 [(leadseal.v1.column) = {length: 50, index: true}];
+  string state = 3 [(leadseal.v1.column) = {index: true, text: {length: 50}}];
   google.protobuf.Timestamp created = 4;
-  int64 quantity = 5;
+  // How many items the order has.
+  int64 quantity = 5 [(leadseal.v1.column) = {check: "quantity >= 0", integer: {default_value: 1}}];
 }
 
 message OrderLine {
@@ -30,5 +32,6 @@ message OrderLine {
     foreign_key: {message: "shop.v1.Order", on_delete: ACTION_CASCADE}
   }];
   int32 line = 2 [(leadseal.v1.column).primary_key = true];
-  string product = 3 [(leadseal.v1.column).length = 100];
+  string product = 3 [(leadseal.v1.column).text.length = 100];
+  google.protobuf.Timestamp added = 4 [(leadseal.v1.column) = {nullable: false, timestamp: {default_now: true}}];
 }

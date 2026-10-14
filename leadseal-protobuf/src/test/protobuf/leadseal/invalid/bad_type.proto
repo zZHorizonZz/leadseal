@@ -10,5 +10,5 @@ option java_package = "dev.horizon.leadseal.protobuf.invalid.type";
 message BadType {
   option (leadseal.v1.table) = {};
 
-  int64 id = 1 [(leadseal.v1.column) = {primary_key: true, type: TYPE_UUID}];
+  int64 id = 1 [(leadseal.v1.column) = {primary_key: true, uuid: {}}];
 }

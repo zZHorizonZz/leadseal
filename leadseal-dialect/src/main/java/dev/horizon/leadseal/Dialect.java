@@ -7,9 +7,9 @@ import java.util.ServiceLoader;
  * The DDL of one database.
  *
  * <p>
- * A dialect defines how to quote identifiers, the database type of each column type, and a {@link Decorator} that
- * rewrites the operations that the database writes differently from standard SQL. Dialects are services: each dialect
- * module registers its dialect for {@link ServiceLoader}.
+ * A dialect defines how to quote identifiers and values, the database type of each column type, and a
+ * {@link Decorator} that rewrites the nodes that the database writes differently from standard SQL. Dialects are
+ * services: each dialect module registers its dialect for {@link ServiceLoader}.
  */
 public interface Dialect {
 
@@ -29,6 +29,14 @@ public interface Dialect {
   String quote(String identifier);
 
   /**
+   * Returns a SQL string literal.
+   *
+   * @param text the text
+   * @return the literal, for example {@code 'it''s'}
+   */
+  String string(String text);
+
+  /**
    * Returns the database type of a column.
    *
    * @param table the table of the column
@@ -39,20 +47,61 @@ public interface Dialect {
   String type(Table table, Column column);
 
   /**
-   * Returns the SQL literal of the default value of a column type: {@code 0}, {@code false}, an empty text or empty
-   * bytes. Migrations fill new and existing rows with it when a column becomes {@code NOT NULL}.
+   * Returns the SQL literal of a value of a column.
    *
    * @param column the column
-   * @return the literal
+   * @param value the value, in the canonical text form of the column type
+   * @return the literal, for example {@code false} or {@code '2026-10-14'}
    */
-  String zero(Column column);
+  String literal(Column column, String value);
 
   /**
-   * Returns the decorator that rewrites operations into the DDL of this database.
+   * Returns the SQL expression of a generated default.
+   *
+   * @param column the column
+   * @param kind {@link Default.Kind#NOW} or {@link Default.Kind#RANDOM_UUID}
+   * @return the expression, for example {@code CURRENT_TIMESTAMP}
+   */
+  String generated(Column column, Default.Kind kind);
+
+  /**
+   * Returns the decorator that rewrites nodes into the DDL of this database.
    *
    * @return the decorator
    */
   Decorator decorator();
+
+  /**
+   * Returns the SQL of the default of a column.
+   *
+   * @param column a column with a default
+   * @return the literal or the expression
+   */
+  default String defaultValue(Column column) {
+    Default value = column.defaultValue();
+    return value.kind() == Default.Kind.VALUE ? literal(column, value.value()) : generated(column, value.kind());
+  }
+
+  /**
+   * Returns the SQL literal of the zero value of a column type: {@code 0}, {@code false}, an empty text and so on.
+   *
+   * @param column the column
+   * @return the literal
+   */
+  default String zero(Column column) {
+    return literal(column, column.type().zero());
+  }
+
+  /**
+   * Returns the value that a migration writes into existing rows when a column stops accepting {@code NULL}: the
+   * default of the column, or its zero value.
+   *
+   * @param column the column
+   * @return the literal or the expression
+   */
+  default String fill(Column column) {
+    return column.defaultValue() == null ? zero(column) : defaultValue(column);
+  }
 
   /**
    * Finds an installed dialect by name. Dialect modules register their dialect for {@link ServiceLoader}.
