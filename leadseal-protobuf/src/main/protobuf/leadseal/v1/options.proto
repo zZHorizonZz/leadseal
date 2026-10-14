@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package leadseal.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "OptionsProto";
+option java_package = "dev.horizon.leadseal.protobuf";
+
+extend google.protobuf.MessageOptions {
+  // Makes the message a table. Messages without this option are not tables.
+  TableOptions table = 57200;
+}
+
+extend google.protobuf.FieldOptions {
+  // Sets how a field of a table message maps to its column.
+  ColumnOptions column = 57201;
+}
+
+// The options of a table.
+message TableOptions {
+  // The table name. The default is the message name in snake_case, for example `order_line` for `OrderLine`.
+  string name = 1;
+
+  // The indexes of the table.
+  repeated IndexOptions index = 2;
+}
+
+// An index of a table.
+message IndexOptions {
+  // The names of the indexed fields, in index order.
+  repeated string fields = 1;
+
+  // Whether the index rejects two rows with the same values.
+  bool unique = 2;
+
+  // The index name. The default is `ix_<table>_<columns>`, or `ux_<table>_<columns>` for a unique index.
+  string name = 3;
+}
+
+// The options of a column.
+message ColumnOptions {
+  // The column type. The default follows from the field type.
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_BOOLEAN = 1;
+    TYPE_INT = 2;
+    TYPE_BIGINT = 3;
+    TYPE_REAL = 4;
+    TYPE_DOUBLE = 5;
+    TYPE_TEXT = 6;
+    TYPE_BYTES = 7;
+    TYPE_UUID = 8;
+    TYPE_TIMESTAMP = 9;
+    TYPE_JSON = 10;
+  }
+
+  // Whether the column is part of the primary key. The primary key has the fields with this option, in field order.
+  bool primary_key = 1;
+
+  // The column name. The default is the field name.
+  string name = 2;
+
+  // The column type, for a field that stores another type than its default.
+  Type type = 3;
+
+  // The maximum length of a text or bytes column. A text or bytes column in a key or an index needs a length on
+  // MariaDB and SQL Server.
+  uint32 length = 4;
+
+  // A foreign key from this column to a column of another table.
+  ForeignKeyOptions foreign_key = 5;
+
+  // Whether the field has no column.
+  bool ignore = 6;
+
+  // Whether the column has a unique index.
+  bool unique = 7;
+
+  // Whether the column has an index.
+  bool index = 8;
+}
+
+// A foreign key.
+message ForeignKeyOptions {
+  // What happens to a row when the row that it references is deleted.
+  enum Action {
+    ACTION_UNSPECIFIED = 0;
+    ACTION_NO_ACTION = 1;
+    ACTION_RESTRICT = 2;
+    ACTION_CASCADE = 3;
+    ACTION_SET_NULL = 4;
+  }
+
+  // The full name of the referenced table message, for example `shop.v1.Customer`.
+  string message = 1;
+
+  // The referenced field. The default is the single primary key field of the referenced message.
+  string field = 2;
+
+  // What happens to a row when the row that it references is deleted. The default is `ACTION_NO_ACTION`.
+  Action on_delete = 3;
+}

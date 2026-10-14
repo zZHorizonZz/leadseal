@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package leadseal.test;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "leadseal/v1/options.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "ShopProto";
+option java_package = "dev.horizon.leadseal.protobuf.test";
+
+message Customer {
+  option (leadseal.v1.table) = {
+    name: "customers"
+    index: {fields: ["region", "email"]}
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string email = 2 [(leadseal.v1.column) = {length: 200, unique: true}];
+  string region = 3 [(leadseal.v1.column).length = 20];
+  string internal_note = 4 [(leadseal.v1.column).ignore = true];
+}
+
+message OrderLine {
+  option (leadseal.v1.table) = {};
+
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    STATE_OPEN = 1;
+  }
+
+  string order_id = 1 [(leadseal.v1.column) = {primary_key: true, type: TYPE_UUID}];
+  int32 line = 2 [(leadseal.v1.column).primary_key = true];
+  int64 customer_id = 3 [(leadseal.v1.column) = {
+    index: true
+    foreign_key: {message: "leadseal.test.Customer", on_delete: ACTION_CASCADE}
+  }];
+  bool gift = 4;
+  uint32 quantity = 5;
+  sint64 total = 6;
+  float weight = 7;
+  double price = 8;
+  bytes thumbnail = 9;
+  State state = 10;
+  google.protobuf.Timestamp created = 11;
+  google.protobuf.Int64Value discount = 12;
+  google.protobuf.Struct attributes = 13;
+  repeated string tags = 14;
+  map<string, string> labels = 15;
+  optional string note = 16 [(leadseal.v1.column).name = "remark"];
+  string payload = 17 [(leadseal.v1.column).type = TYPE_JSON];
+}
+
+message NotATable {
+  int64 id = 1;
+}
