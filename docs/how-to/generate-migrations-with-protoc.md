@@ -24,7 +24,7 @@ Separate options with commas, for example `migrations=db/migration,dialect=postg
    <dependency>
      <groupId>dev.horizon</groupId>
      <artifactId>leadseal-protobuf</artifactId>
-     <version>0.2.0</version> <!-- x-release-please-version -->
+     <version>0.2.1-SNAPSHOT</version> <!-- x-release-please-version -->
      <scope>provided</scope>
    </dependency>
    ```
@@ -42,7 +42,7 @@ Separate options with commas, for example `migrations=db/migration,dialect=postg
          <plugin kind="jvm-maven">
            <groupId>dev.horizon</groupId>
            <artifactId>leadseal-protoc</artifactId>
-           <version>0.2.0</version> <!-- x-release-please-version -->
+           <version>0.2.1-SNAPSHOT</version> <!-- x-release-please-version -->
            <options>migrations=${project.basedir}/src/main/resources/db/migration,dialect=postgresql</options>
            <outputDirectory>${project.basedir}/src/main/resources/db/migration</outputDirectory>
            <registerAsCompilationRoot>false</registerAsCompilationRoot>
