@@ -8,7 +8,7 @@ You can generate migrations without protoc. Build a `Schema` and pass it to `Mig
    <dependency>
      <groupId>dev.horizon</groupId>
      <artifactId>leadseal-dialect-postgres</artifactId>
-     <version>0.2.0</version> <!-- x-release-please-version -->
+     <version>0.2.1-SNAPSHOT</version> <!-- x-release-please-version -->
    </dependency>
    ```
 
