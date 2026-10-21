@@ -58,7 +58,7 @@
     <jackson.version>2.22.3</jackson.version>
     <picocli.version>4.7.7</picocli.version>
 
-    <flyway.version>13.10.0</flyway.version>
+    <flyway.version>13.10.3</flyway.version>
     <testcontainers.version>2.0.5</testcontainers.version>
     <postgresql.version>42.7.14</postgresql.version>
     <mariadb-client.version>3.5.10</mariadb-client.version>
