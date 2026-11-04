@@ -47,15 +47,19 @@ enum Database {
     return dialect;
   }
 
+  synchronized void start() {
+    if (containers != null && container == null) {
+      container = containers.get();
+      container.start();
+    }
+  }
+
   synchronized Location create() throws SQLException {
     String name = "it_" + DATABASES.incrementAndGet();
     if (containers == null) {
       return new Location("jdbc:sqlite:" + file(name) + "?foreign_keys=true", null, null);
     }
-    if (container == null) {
-      container = containers.get();
-      container.start();
-    }
+    start();
     try (Connection admin = DriverManager.getConnection(container.getJdbcUrl(), container.getUsername(),
         container.getPassword()); Statement statement = admin.createStatement()) {
       statement.execute("CREATE DATABASE " + name);

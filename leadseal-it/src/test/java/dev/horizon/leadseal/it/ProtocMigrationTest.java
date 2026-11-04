@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
 import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -72,6 +73,13 @@ class ProtocMigrationTest {
       }
     }
     return columns;
+  }
+
+  @BeforeAll
+  static void startDatabases() {
+    for (Database database : Database.values()) {
+      database.start();
+    }
   }
 
   @Test
