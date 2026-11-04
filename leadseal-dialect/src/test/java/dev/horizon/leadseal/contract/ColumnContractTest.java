@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.TextType;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.attribute.CollationAttribute;
-import dev.horizon.leadseal.attribute.IndexAttribute;
-import dev.horizon.leadseal.attribute.LiteralDefaultAttribute;
+import dev.horizon.leadseal.attribute.Collation;
+import dev.horizon.leadseal.attribute.Index;
+import dev.horizon.leadseal.attribute.LiteralDefault;
+import dev.horizon.leadseal.type.TextType;
+import dev.horizon.leadseal.type.Type;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -113,7 +113,7 @@ public abstract class ColumnContractTest extends ContractTest {
     apply(schema(orders(ID, STATE)));
     insertOrder();
 
-    apply(schema(orders(ID, Column.of("2", "state", new TextType(20)))));
+    apply(schema(orders(ID, Column.of("2", "state", TextType.of(20)))));
     execute("UPDATE " + q("orders") + " SET " + q("state") + " = NULL");
 
     assertThat(columns("orders")).containsEntry("state", true);
@@ -121,12 +121,12 @@ public abstract class ColumnContractTest extends ContractTest {
 
   @Test
   void changesAnIndexedColumn() throws SQLException {
-    apply(schema(table("shop.Order", "orders", List.of(ID, STATE), List.of("id"), List.of(IndexAttribute.of("orders",
+    apply(schema(table("shop.Order", "orders", List.of(ID, STATE), List.of("id"), List.of(Index.of("orders",
         List.of("state"), false)), List.of())));
     insertOrder();
 
     apply(schema(table("shop.Order", "orders", List.of(ID, text("2", "state", 200)), List.of("id"),
-        List.of(IndexAttribute.of("orders", List.of("state"), false)), List.of())));
+        List.of(Index.of("orders", List.of("state"), false)), List.of())));
 
     assertThat(indexes("orders")).containsExactly(Map.entry("ix_orders_state", false));
     assertThat(query("SELECT " + q("state") + " FROM " + q("orders"))).containsExactly(List.of("new"));
@@ -166,8 +166,8 @@ public abstract class ColumnContractTest extends ContractTest {
 
   @Test
   void createsAColumnWithACollation() throws SQLException {
-    Column code = text("2", "code", 20).with(new CollationAttribute(dialect.name(), testDatabase().binaryCollation()));
-    apply(schema(table("shop.Order", "orders", List.of(ID, code), List.of("id"), List.of(IndexAttribute.of("orders",
+    Column code = text("2", "code", 20).with(new Collation(dialect.name(), testDatabase().binaryCollation()));
+    apply(schema(table("shop.Order", "orders", List.of(ID, code), List.of("id"), List.of(Index.of("orders",
         List.of("code"), true)), List.of())));
 
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("code") + ") VALUES (1, 'a')");
@@ -179,13 +179,13 @@ public abstract class ColumnContractTest extends ContractTest {
   @Test
   void changesTheCollationOfAColumn() throws SQLException {
     Column code = text("2", "code", 20);
-    apply(schema(table("shop.Order", "orders", List.of(ID, code), List.of("id"), List.of(IndexAttribute.of("orders",
+    apply(schema(table("shop.Order", "orders", List.of(ID, code), List.of("id"), List.of(Index.of("orders",
         List.of("code"), false)), List.of())));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("code") + ") VALUES (1, 'a')");
 
     apply(schema(table("shop.Order", "orders",
-        List.of(ID, code.with(new CollationAttribute(dialect.name(), testDatabase().binaryCollation()))), List.of("id"),
-        List.of(IndexAttribute.of("orders", List.of("code"), false)),
+        List.of(ID, code.with(new Collation(dialect.name(), testDatabase().binaryCollation()))), List.of("id"),
+        List.of(Index.of("orders", List.of("code"), false)),
         List.of())));
 
     assertThat(count("SELECT COUNT(*) FROM " + q("orders") + " WHERE " + q("code") + " = 'A'")).isZero();
@@ -198,7 +198,8 @@ public abstract class ColumnContractTest extends ContractTest {
     insertOrder();
 
     apply(schema(table("shop.Order", "orders", List.of(ID, STATE, column("3", "total", INT)
-        .with(new LiteralDefaultAttribute("5"))), List.of("id"), List.of(IndexAttribute.of("orders", List.of("total"), false)),
+        .with(new LiteralDefault("5"))), List.of("id"),
+        List.of(Index.of("orders", List.of("total"), false)),
         List.of())));
     execute("UPDATE " + q("orders") + " SET " + q("total") + " = " + q("total") + " + 1");
 

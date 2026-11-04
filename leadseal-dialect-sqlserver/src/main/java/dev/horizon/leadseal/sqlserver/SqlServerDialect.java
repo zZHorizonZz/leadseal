@@ -1,28 +1,27 @@
 package dev.horizon.leadseal.sqlserver;
 
-import dev.horizon.leadseal.BooleanType;
-import dev.horizon.leadseal.BytesType;
 import dev.horizon.leadseal.Column;
-import dev.horizon.leadseal.DateType;
-import dev.horizon.leadseal.DecimalType;
 import dev.horizon.leadseal.Dialect;
-import dev.horizon.leadseal.FloatType;
-import dev.horizon.leadseal.IntegerType;
-import dev.horizon.leadseal.JsonType;
-import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.TextType;
-import dev.horizon.leadseal.TimeType;
-import dev.horizon.leadseal.TimestampType;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.UuidType;
-import dev.horizon.leadseal.attribute.DefaultAttribute;
-import dev.horizon.leadseal.attribute.NowDefaultAttribute;
-import dev.horizon.leadseal.attribute.RandomUuidDefaultAttribute;
-import dev.horizon.leadseal.command.CommandFactory;
+import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.type.BooleanType;
+import dev.horizon.leadseal.type.BytesType;
+import dev.horizon.leadseal.type.DateType;
+import dev.horizon.leadseal.type.DecimalLimit;
+import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.FloatType;
+import dev.horizon.leadseal.type.IntegerType;
+import dev.horizon.leadseal.type.JsonType;
+import dev.horizon.leadseal.type.KeyLimit;
+import dev.horizon.leadseal.type.TextType;
+import dev.horizon.leadseal.type.TimeType;
+import dev.horizon.leadseal.type.TimestampType;
+import dev.horizon.leadseal.type.Type;
+import dev.horizon.leadseal.type.UuidType;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 /**
  * The DDL of SQL Server 2017 and later.
@@ -38,11 +37,15 @@ public final class SqlServerDialect implements Dialect {
 
   private static final int MAX_NVARCHAR = 4000;
   private static final int MAX_VARBINARY = 8000;
-  private static final int MAX_PRECISION = 38;
+  private static final DecimalLimit DECIMAL = new DecimalLimit("SQL Server", 38, 38);
+  private static final KeyLimit NVARCHAR = new KeyLimit("SQL Server", "NVARCHAR(MAX)", "Give the column a"
+      + " length of at most " + MAX_NVARCHAR + ".");
+  private static final KeyLimit VARBINARY = new KeyLimit("SQL Server", "VARBINARY(MAX)", "Give the column a"
+      + " length of at most " + MAX_VARBINARY + ".");
   private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS")
       .withZone(ZoneOffset.UTC);
 
-  private final CommandFactory commands = new SqlServerCommandFactory();
+  private final Ddl ddl = new SqlServerDdl(this);
 
   @Override
   public String name() {
@@ -63,19 +66,20 @@ public final class SqlServerDialect implements Dialect {
   public String type(Table table, Column column) {
     return switch (column.type()) {
       case BooleanType _ -> "BIT";
-      case IntegerType type -> type.size() == IntegerType.Size.INT32 ? "INT" : "BIGINT";
-      case FloatType type -> type.size() == FloatType.Size.FLOAT32 ? "REAL" : "FLOAT";
-      case DecimalType type -> decimal(table, column, type);
-      case TextType type -> type.length() != null && type.length() <= MAX_NVARCHAR ? "NVARCHAR(" + type.length() + ")"
-          : unbounded(table, column, "NVARCHAR(MAX)", MAX_NVARCHAR);
-      case BytesType type -> type.length() != null && type.length() <= MAX_VARBINARY
-          ? "VARBINARY(" + type.length() + ")"
-          : unbounded(table, column, "VARBINARY(MAX)", MAX_VARBINARY);
+      case IntegerType type -> type.size().select("INT", "BIGINT");
+      case FloatType type -> type.size().select("REAL", "FLOAT");
+      case DecimalType type -> DECIMAL.sql("DECIMAL", table, column, type);
+      case TextType type -> type.length().map(characters -> characters <= MAX_NVARCHAR ? "NVARCHAR(" + characters
+          + ")" : NVARCHAR.sql(table, column),
+          () -> NVARCHAR.sql(table, column));
+      case BytesType type -> type.length().map(bytes -> bytes <= MAX_VARBINARY ? "VARBINARY(" + bytes + ")"
+          : VARBINARY.sql(table, column),
+          () -> VARBINARY.sql(table, column));
       case UuidType _ -> "UNIQUEIDENTIFIER";
       case TimestampType _ -> "DATETIME2(6)";
       case DateType _ -> "DATE";
       case TimeType _ -> "TIME(6)";
-      case JsonType _ -> unbounded(table, column, "NVARCHAR(MAX)", MAX_NVARCHAR);
+      case JsonType _ -> NVARCHAR.sql(table, column);
     };
   }
 
@@ -97,34 +101,69 @@ public final class SqlServerDialect implements Dialect {
   }
 
   @Override
-  public String generated(Column column, DefaultAttribute value) {
-    return switch (value) {
-      case NowDefaultAttribute _ -> column.type() instanceof DateType ? "CAST(SYSUTCDATETIME() AS DATE)"
-          : "SYSUTCDATETIME()";
-      case RandomUuidDefaultAttribute _ -> "NEWID()";
-      default -> throw new IllegalArgumentException("A literal default is not generated.");
-    };
+  public String currentDate() {
+    return "CAST(SYSUTCDATETIME() AS DATE)";
   }
 
   @Override
-  public CommandFactory commands() {
-    return commands;
+  public String currentTimestamp() {
+    return "SYSUTCDATETIME()";
   }
 
-  private static String decimal(Table table, Column column, DecimalType type) {
-    if (type.precision() > MAX_PRECISION) {
-      throw new SchemaException("SQL Server cannot store the column " + table.name() + "." + column.name() + " with"
-          + " a precision of " + type.precision() + ". The maximum is " + MAX_PRECISION + ".");
-    }
-    return "DECIMAL(" + type.precision() + ", " + type.scale() + ")";
+  @Override
+  public String randomUuid() {
+    return "NEWID()";
   }
 
-  private static String unbounded(Table table, Column column, String type, int maximum) {
-    if (table.keyed(column.name())) {
-      throw new SchemaException("SQL Server cannot use the column " + table.name() + "." + column.name() + " in a"
-          + " key or an index, because its type is " + type + ". Give the column a length of at most " + maximum
-          + ".");
-    }
-    return type;
+  @Override
+  public Ddl ddl() {
+    return ddl;
   }
+
+  /**
+   * Returns {@code GO}. Flyway sends a SQL Server migration file as one batch up to each {@code GO}, and statements
+   * such as {@code CREATE TRIGGER} must be the only statement of their batch.
+   */
+  @Override
+  public Optional<String> batchSeparator() {
+    return Optional.of("GO");
+  }
+
+  /** SQL Server has no boolean values, so a {@code BIT} value is compared with 1 where a condition belongs. */
+  @Override
+  public String condition(String value) {
+    return "(" + value + " = 1)";
+  }
+
+  /** SQL Server has no boolean values, so a condition is {@code 1} or {@code 0} where a value belongs. */
+  @Override
+  public String value(String condition) {
+    return "CASE WHEN " + condition + " THEN 1 ELSE 0 END";
+  }
+
+  /**
+   * SQL Server joins texts with {@code +}, which gives {@code NULL} if either text is, as {@code ||} does elsewhere.
+   * {@code CONCAT} would read {@code NULL} as an empty text.
+   */
+  @Override
+  public String concatenation(String left, String right) {
+    return "(" + left + " + " + right + ")";
+  }
+
+  /**
+   * SQL Server's {@code LEN} does not count the spaces at the end of a text, so the length counts one more character
+   * at the end and subtracts it.
+   */
+  @Override
+  public String length(String text) {
+    return "(LEN(" + text + " + " + string("x") + ") - 1)";
+  }
+
+  /** SQL Server has no comparison where {@code NULL} equals itself, so the difference tests the nulls on its own. */
+  @Override
+  public String difference(String old, String current) {
+    return "((" + old + " <> " + current + ") OR (" + old + " IS NULL AND " + current + " IS NOT NULL) OR (" + old
+        + " IS NOT NULL AND " + current + " IS NULL))";
+  }
+
 }

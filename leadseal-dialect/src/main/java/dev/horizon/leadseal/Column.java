@@ -1,14 +1,17 @@
 package dev.horizon.leadseal;
 
-import dev.horizon.leadseal.attribute.CollationAttribute;
+import dev.horizon.leadseal.attribute.Collation;
 import dev.horizon.leadseal.attribute.ColumnAttribute;
-import dev.horizon.leadseal.attribute.NotNullAttribute;
-import dev.horizon.leadseal.change.AddColumnAttributeChange;
-import dev.horizon.leadseal.change.AlterColumnAttributeChange;
-import dev.horizon.leadseal.change.AlterColumnTypeChange;
+import dev.horizon.leadseal.attribute.Default;
+import dev.horizon.leadseal.attribute.Identity;
+import dev.horizon.leadseal.attribute.NotNull;
+import dev.horizon.leadseal.change.AddColumnAttribute;
+import dev.horizon.leadseal.change.AlterColumnAttribute;
+import dev.horizon.leadseal.change.AlterColumnType;
 import dev.horizon.leadseal.change.Change;
-import dev.horizon.leadseal.change.DropColumnAttributeChange;
-import dev.horizon.leadseal.change.RenameColumnChange;
+import dev.horizon.leadseal.change.DropColumnAttribute;
+import dev.horizon.leadseal.change.RenameColumn;
+import dev.horizon.leadseal.type.Type;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -33,10 +36,10 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
 
   public Column(String id, String name, Type type, List<ColumnAttribute> attributes) {
     if (id == null || id.isBlank() || name == null || name.isBlank()) {
-      throw new SchemaException("A column needs an id and a name.");
+      throw new InvalidSchemaException("A column needs an id and a name.");
     }
     if (type == null) {
-      throw new SchemaException("The column '" + name + "' has no type.");
+      throw new InvalidSchemaException("The column '" + name + "' has no type.");
     }
     this.id = id;
     this.name = name;
@@ -45,7 +48,7 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
     Set<Object> keys = new HashSet<>();
     for (ColumnAttribute attribute : this.attributes) {
       if (!keys.add(attribute.key())) {
-        throw new SchemaException("The column '" + name + "' has two attributes with the key " + attribute.key()
+        throw new InvalidSchemaException("The column '" + name + "' has two attributes with the key " + attribute.key()
             + ".");
       }
       attribute.validate(this);
@@ -69,7 +72,7 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
   /**
    * Returns the attribute of a type.
    *
-   * @param type the attribute type, for example {@code DefaultAttribute.class}
+   * @param type the attribute type, for example {@code Default.class}
    * @param <A> the attribute type
    * @return the attribute, or an empty optional if the column has none
    */
@@ -80,7 +83,7 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
   /**
    * Returns the attributes of a type.
    *
-   * @param type the attribute type, for example {@code CollationAttribute.class}
+   * @param type the attribute type, for example {@code Collation.class}
    * @param <A> the attribute type
    * @return the attributes, in order
    */
@@ -91,10 +94,10 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
   /**
    * Returns whether the column accepts {@code NULL}.
    *
-   * @return {@code true} if the column has no {@link NotNullAttribute}
+   * @return {@code true} if the column has no {@link NotNull}
    */
   public boolean nullable() {
-    return attribute(NotNullAttribute.class).isEmpty();
+    return attribute(NotNull.class).isEmpty();
   }
 
   /**
@@ -104,8 +107,8 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
    * @return the collation name, or an empty optional for the database default
    */
   public Optional<String> collation(String dialect) {
-    return attributes(CollationAttribute.class).stream().filter(collation -> collation.dialect().equals(dialect))
-        .map(CollationAttribute::name).findFirst();
+    return attributes(Collation.class).stream().filter(collation -> collation.dialect().equals(dialect))
+        .map(Collation::name).findFirst();
   }
 
   /**
@@ -144,6 +147,17 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
   }
 
   /**
+   * Tells if the rows that a table has already need a value when this column is added to it: the column is required,
+   * and the database gives it neither a default nor a generated value.
+   *
+   * @return true if the rows need a value
+   */
+  public boolean needsFill() {
+    return !nullable() && attribute(Default.class).isEmpty()
+        && attribute(Identity.class).isEmpty();
+  }
+
+  /**
    * Returns the changes that turn this column into another column with the same id.
    *
    * @param table the name of the table after renames
@@ -153,22 +167,22 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
   List<Change> changesTo(TableName table, Column target) {
     List<Change> changes = new ArrayList<>();
     if (!name.equals(target.name)) {
-      changes.add(new RenameColumnChange(table, name, target.name));
+      changes.add(new RenameColumn(table, name, target.name));
     }
     if (!type.equals(target.type)) {
-      changes.add(new AlterColumnTypeChange(table, target.name, type, target.type));
+      changes.add(new AlterColumnType(table, target.name, type, target.type));
     }
     Map<Object, ColumnAttribute> added = new LinkedHashMap<>();
     target.attributes.forEach(attribute -> added.put(attribute.key(), attribute));
     for (ColumnAttribute attribute : attributes) {
       ColumnAttribute now = added.remove(attribute.key());
       if (now == null) {
-        changes.add(new DropColumnAttributeChange(table, target.name, attribute));
+        changes.add(new DropColumnAttribute(table, target.name, attribute));
       } else if (!now.equals(attribute)) {
-        changes.add(new AlterColumnAttributeChange(table, target.name, attribute, now));
+        changes.add(new AlterColumnAttribute(table, target.name, attribute, now));
       }
     }
-    added.values().forEach(attribute -> changes.add(new AddColumnAttributeChange(table, target.name, attribute)));
+    added.values().forEach(attribute -> changes.add(new AddColumnAttribute(table, target.name, attribute)));
     return changes;
   }
 }

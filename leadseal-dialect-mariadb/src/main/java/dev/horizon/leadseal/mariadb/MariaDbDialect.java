@@ -1,25 +1,23 @@
 package dev.horizon.leadseal.mariadb;
 
-import dev.horizon.leadseal.BooleanType;
-import dev.horizon.leadseal.BytesType;
 import dev.horizon.leadseal.Column;
-import dev.horizon.leadseal.DateType;
-import dev.horizon.leadseal.DecimalType;
 import dev.horizon.leadseal.Dialect;
-import dev.horizon.leadseal.FloatType;
-import dev.horizon.leadseal.IntegerType;
-import dev.horizon.leadseal.JsonType;
-import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.TextType;
-import dev.horizon.leadseal.TimeType;
-import dev.horizon.leadseal.TimestampType;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.UuidType;
-import dev.horizon.leadseal.attribute.DefaultAttribute;
-import dev.horizon.leadseal.attribute.NowDefaultAttribute;
-import dev.horizon.leadseal.attribute.RandomUuidDefaultAttribute;
-import dev.horizon.leadseal.command.CommandFactory;
+import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.type.BooleanType;
+import dev.horizon.leadseal.type.BytesType;
+import dev.horizon.leadseal.type.DateType;
+import dev.horizon.leadseal.type.DecimalLimit;
+import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.FloatType;
+import dev.horizon.leadseal.type.IntegerType;
+import dev.horizon.leadseal.type.JsonType;
+import dev.horizon.leadseal.type.KeyLimit;
+import dev.horizon.leadseal.type.TextType;
+import dev.horizon.leadseal.type.TimeType;
+import dev.horizon.leadseal.type.TimestampType;
+import dev.horizon.leadseal.type.Type;
+import dev.horizon.leadseal.type.UuidType;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -37,12 +35,14 @@ public final class MariaDbDialect implements Dialect {
 
   public static final String NAME = "mariadb";
 
-  private static final int MAX_PRECISION = 65;
-  private static final int MAX_SCALE = 38;
+  private static final DecimalLimit DECIMAL = new DecimalLimit("MariaDB", 65, 38);
+  private static final KeyLimit LONGTEXT = new KeyLimit("MariaDB", "LONGTEXT", "Give the column a length.");
+  private static final KeyLimit LONGBLOB = new KeyLimit("MariaDB", "LONGBLOB", "Give the column a length.");
+  private static final KeyLimit JSON = new KeyLimit("MariaDB", "JSON", "Use a text column instead.");
   private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS")
       .withZone(ZoneOffset.UTC);
 
-  private final CommandFactory commands = new MariaDbCommandFactory();
+  private final Ddl ddl = new MariaDbDdl(this);
 
   @Override
   public String name() {
@@ -63,18 +63,18 @@ public final class MariaDbDialect implements Dialect {
   public String type(Table table, Column column) {
     return switch (column.type()) {
       case BooleanType _ -> "BOOLEAN";
-      case IntegerType type -> type.size() == IntegerType.Size.INT32 ? "INT" : "BIGINT";
-      case FloatType type -> type.size() == FloatType.Size.FLOAT32 ? "FLOAT" : "DOUBLE";
-      case DecimalType type -> decimal(table, column, type);
-      case TextType type -> type.length() != null ? "VARCHAR(" + type.length() + ")"
-          : unbounded(table, column, "LONGTEXT");
-      case BytesType type -> type.length() != null ? "VARBINARY(" + type.length() + ")"
-          : unbounded(table, column, "LONGBLOB");
+      case IntegerType type -> type.size().select("INT", "BIGINT");
+      case FloatType type -> type.size().select("FLOAT", "DOUBLE");
+      case DecimalType type -> DECIMAL.sql("DECIMAL", table, column, type);
+      case TextType type -> type.length().map(characters -> "VARCHAR(" + characters + ")",
+          () -> LONGTEXT.sql(table, column));
+      case BytesType type -> type.length().map(bytes -> "VARBINARY(" + bytes + ")",
+          () -> LONGBLOB.sql(table, column));
       case UuidType _ -> "UUID";
       case TimestampType _ -> "DATETIME(6)";
       case DateType _ -> "DATE";
       case TimeType _ -> "TIME(6)";
-      case JsonType _ -> unbounded(table, column, "JSON");
+      case JsonType _ -> JSON.sql(table, column);
     };
   }
 
@@ -96,33 +96,41 @@ public final class MariaDbDialect implements Dialect {
   }
 
   @Override
-  public String generated(Column column, DefaultAttribute value) {
-    return switch (value) {
-      case NowDefaultAttribute _ -> column.type() instanceof DateType ? "(UTC_DATE())" : "(UTC_TIMESTAMP(6))";
-      case RandomUuidDefaultAttribute _ -> "(UUID())";
-      default -> throw new IllegalArgumentException("A literal default is not generated.");
-    };
+  public String currentDate() {
+    return "(UTC_DATE())";
   }
 
   @Override
-  public CommandFactory commands() {
-    return commands;
+  public String currentTimestamp() {
+    return "(UTC_TIMESTAMP(6))";
   }
 
-  private static String decimal(Table table, Column column, DecimalType type) {
-    if (type.precision() > MAX_PRECISION || type.scale() > MAX_SCALE) {
-      throw new SchemaException("MariaDB cannot store the column " + table.name() + "." + column.name() + " with a"
-          + " precision of " + type.precision() + " and a scale of " + type.scale() + ". The maximum precision is "
-          + MAX_PRECISION + " and the maximum scale is " + MAX_SCALE + ".");
-    }
-    return "DECIMAL(" + type.precision() + ", " + type.scale() + ")";
+  @Override
+  public String randomUuid() {
+    return "(UUID())";
   }
 
-  private static String unbounded(Table table, Column column, String type) {
-    if (table.keyed(column.name())) {
-      throw new SchemaException("MariaDB cannot use the column " + table.name() + "." + column.name() + " in a key"
-          + " or an index, because its type is " + type + ". Give the column a length.");
-    }
-    return type;
+  @Override
+  public Ddl ddl() {
+    return ddl;
   }
+
+  /** MariaDB reads {@code ||} as {@code OR}, so texts join with {@code CONCAT}. */
+  @Override
+  public String concatenation(String left, String right) {
+    return "CONCAT(" + left + ", " + right + ")";
+  }
+
+  /** MariaDB gives a decimal for {@code /} of two integers, so they divide with {@code DIV}. */
+  @Override
+  public String quotient(String dividend, String divisor) {
+    return "(" + dividend + " DIV " + divisor + ")";
+  }
+
+  /** MariaDB compares values where {@code NULL} equals itself with {@code <=>}. */
+  @Override
+  public String difference(String old, String current) {
+    return "(NOT (" + old + " <=> " + current + "))";
+  }
+
 }

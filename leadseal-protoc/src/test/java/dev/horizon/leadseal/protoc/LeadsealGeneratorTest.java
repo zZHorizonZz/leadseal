@@ -18,7 +18,7 @@ class LeadsealGeneratorTest {
     CodeGeneratorRequest request = CodeGeneratorRequest.newBuilder()
         .setParameter("migrations=" + migrations + ",dialect=oracle").build();
 
-    CodeGeneratorResponse response = LeadsealGenerator.processRequest(request);
+    CodeGeneratorResponse response = new LeadsealGenerator().generate(request);
 
     assertThat(response.getError()).contains("No installed dialect is named 'oracle'");
     assertThat(response.getFileList()).isEmpty();

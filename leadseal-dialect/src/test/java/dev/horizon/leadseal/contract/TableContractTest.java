@@ -6,8 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.horizon.leadseal.Schema;
 import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
-import dev.horizon.leadseal.attribute.ForeignKeyAttribute;
-import dev.horizon.leadseal.attribute.IndexAttribute;
+import dev.horizon.leadseal.attribute.ForeignKey;
+import dev.horizon.leadseal.attribute.Index;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -17,14 +17,14 @@ public abstract class TableContractTest extends ContractTest {
 
   private static final Table CUSTOMERS = table("shop.Customer", "customers", List.of(column("1", "id",
       BIGINT), text("2", "email", 100)), List.of("id"), List.of(
-          IndexAttribute.of("customers", List.of("email"),
+          Index.of("customers", List.of("email"),
               true)),
       List.of());
   private static final Table ORDERS = table("shop.Order", "orders", List.of(column("1", "id", BIGINT),
       column("2", "customer_id", BIGINT), text("3", "state", 20)), List.of("id"),
-      List.of(IndexAttribute.of("orders", List.of("state"), false)),
-      List.of(ForeignKeyAttribute.of("orders", List.of("customer_id"),
-          TableName.of("customers"), List.of("id"), ForeignKeyAttribute.Action.CASCADE)));
+      List.of(Index.of("orders", List.of("state"), false)),
+      List.of(ForeignKey.of("orders", List.of("customer_id"),
+          TableName.of("customers"), List.of("id"), ForeignKey.Action.CASCADE)));
 
   @Test
   void createsTablesWithKeysAndIndexes() throws SQLException {
@@ -61,8 +61,9 @@ public abstract class TableContractTest extends ContractTest {
     apply(schema(CUSTOMERS));
     execute("INSERT INTO " + q("customers") + " (" + q("id") + ", " + q("email") + ") VALUES (1, 'a@example.com')");
 
-    apply(schema(table("shop.Customer", "clients", CUSTOMERS.columns(), List.of("id"), List.of(IndexAttribute.of("clients",
-        List.of("email"), true)), List.of())));
+    apply(
+        schema(table("shop.Customer", "clients", CUSTOMERS.columns(), List.of("id"), List.of(Index.of("clients",
+            List.of("email"), true)), List.of())));
 
     assertThat(tableExists("customers")).isFalse();
     assertThat(query("SELECT " + q("email") + " FROM " + q("clients"))).containsExactly(List.of("a@example.com"));

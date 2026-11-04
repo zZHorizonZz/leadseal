@@ -6,10 +6,10 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.attribute.LiteralDefaultAttribute;
-import dev.horizon.leadseal.attribute.NowDefaultAttribute;
-import dev.horizon.leadseal.attribute.RandomUuidDefaultAttribute;
+import dev.horizon.leadseal.attribute.LiteralDefault;
+import dev.horizon.leadseal.attribute.NowDefault;
+import dev.horizon.leadseal.attribute.RandomUuidDefault;
+import dev.horizon.leadseal.type.Type;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Stream;
@@ -51,7 +51,7 @@ public abstract class DefaultContractTest extends ContractTest {
   @ParameterizedTest
   @MethodSource("values")
   void fillsNewRowsWithTheDefault(Type type, String value) throws SQLException {
-    Column column = column("2", "value", type).with(new LiteralDefaultAttribute(value));
+    Column column = column("2", "value", type).with(new LiteralDefault(value));
     apply(schema(orders(ID, column)));
 
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
@@ -64,7 +64,7 @@ public abstract class DefaultContractTest extends ContractTest {
   void fillsExistingRowsWithTheDefaultOfANewColumn(Type type, String value) throws SQLException {
     apply(schema(orders(ID)));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
-    Column column = column("2", "value", type).with(new LiteralDefaultAttribute(value));
+    Column column = column("2", "value", type).with(new LiteralDefault(value));
 
     apply(schema(orders(ID, column)));
 
@@ -77,7 +77,7 @@ public abstract class DefaultContractTest extends ContractTest {
     apply(schema(orders(ID)));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
 
-    apply(schema(orders(ID, column("2", "created", type).with(new NowDefaultAttribute()))));
+    apply(schema(orders(ID, column("2", "created", type).with(new NowDefault()))));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (2)");
 
     assertThat(count("SELECT COUNT(*) FROM " + q("orders") + " WHERE " + q("created") + " IS NOT NULL"))
@@ -89,7 +89,7 @@ public abstract class DefaultContractTest extends ContractTest {
     apply(schema(orders(ID)));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
 
-    apply(schema(orders(ID, column("2", "token", UUID).with(new RandomUuidDefaultAttribute()))));
+    apply(schema(orders(ID, column("2", "token", UUID).with(new RandomUuidDefault()))));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (2)");
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (3)");
 
@@ -99,10 +99,10 @@ public abstract class DefaultContractTest extends ContractTest {
   @Test
   void changesTheDefault() throws SQLException {
     Column total = column("2", "total", INT);
-    apply(schema(orders(ID, total.with(new LiteralDefaultAttribute("1")))));
+    apply(schema(orders(ID, total.with(new LiteralDefault("1")))));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
 
-    apply(schema(orders(ID, total.with(new LiteralDefaultAttribute("2")))));
+    apply(schema(orders(ID, total.with(new LiteralDefault("2")))));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (2)");
 
     assertThat(query("SELECT " + q("total") + " FROM " + q("orders") + " ORDER BY " + q("id")))
@@ -112,7 +112,7 @@ public abstract class DefaultContractTest extends ContractTest {
   @Test
   void removesTheDefault() throws SQLException {
     Column total = column("2", "total", INT);
-    apply(schema(orders(ID, total.with(new LiteralDefaultAttribute("1")))));
+    apply(schema(orders(ID, total.with(new LiteralDefault("1")))));
 
     apply(schema(orders(ID, total)));
 
@@ -125,7 +125,7 @@ public abstract class DefaultContractTest extends ContractTest {
     apply(schema(orders(ID, nullable("2", "state", TEXT))));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
 
-    apply(schema(orders(ID, column("2", "state", TEXT).with(new LiteralDefaultAttribute("new")))));
+    apply(schema(orders(ID, column("2", "state", TEXT).with(new LiteralDefault("new")))));
 
     assertThat(query("SELECT " + q("state") + " FROM " + q("orders"))).containsExactly(List.of("new"));
   }

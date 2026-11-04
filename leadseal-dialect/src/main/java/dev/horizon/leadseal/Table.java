@@ -1,26 +1,23 @@
 package dev.horizon.leadseal;
 
-import dev.horizon.leadseal.attribute.ForeignKeyAttribute;
-import dev.horizon.leadseal.attribute.IdentityAttribute;
-import dev.horizon.leadseal.attribute.IndexAttribute;
-import dev.horizon.leadseal.attribute.PrimaryKeyAttribute;
+import dev.horizon.leadseal.attribute.ForeignKey;
+import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.attribute.TableAttribute;
-import dev.horizon.leadseal.change.AddColumnChange;
-import dev.horizon.leadseal.change.AddTableAttributeChange;
-import dev.horizon.leadseal.change.AlterTableAttributeChange;
+import dev.horizon.leadseal.change.AddColumn;
+import dev.horizon.leadseal.change.AddTableAttribute;
+import dev.horizon.leadseal.change.AlterTableAttribute;
 import dev.horizon.leadseal.change.Change;
-import dev.horizon.leadseal.change.CreateTableChange;
-import dev.horizon.leadseal.change.DropColumnChange;
-import dev.horizon.leadseal.change.DropTableAttributeChange;
-import dev.horizon.leadseal.change.DropTableChange;
-import dev.horizon.leadseal.change.MoveTableChange;
-import dev.horizon.leadseal.change.RenameTableChange;
+import dev.horizon.leadseal.change.CreateTable;
+import dev.horizon.leadseal.change.DropColumn;
+import dev.horizon.leadseal.change.DropTable;
+import dev.horizon.leadseal.change.DropTableAttribute;
+import dev.horizon.leadseal.change.MoveTable;
+import dev.horizon.leadseal.change.RenameTable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -35,35 +32,27 @@ import java.util.Set;
  * @param id the stable identity of the table
  * @param name the table name, unique in its namespace
  * @param columns the columns, in order
- * @param attributes the attributes, at most one with each key. Every table has a {@link PrimaryKeyAttribute}.
+ * @param attributes the attributes, at most one with each key. Every table has a {@link PrimaryKey}.
  */
 public record Table(String id, String name, List<Column> columns, List<TableAttribute> attributes) {
 
   public Table(String id, String name, List<Column> columns, List<TableAttribute> attributes) {
     if (id == null || id.isBlank() || name == null || name.isBlank()) {
-      throw new SchemaException("A table needs an id and a name.");
+      throw new InvalidSchemaException("A table needs an id and a name.");
     }
     this.id = id;
     this.name = name;
     this.columns = List.copyOf(columns);
     this.attributes = attributes == null ? List.of() : List.copyOf(attributes);
     if (this.columns.isEmpty()) {
-      throw new SchemaException("The table '" + name + "' has no columns.");
+      throw new InvalidSchemaException("The table '" + name + "' has no columns.");
     }
-    unique(name, this.columns.stream().map(Column::name).toList(), "column name");
-    unique(name, this.columns.stream().map(Column::id).toList(), "column id");
-    unique(name, this.attributes.stream().map(TableAttribute::key).toList(), "attribute");
+    unique(this.columns.stream().map(Column::name).toList(), "column name");
+    unique(this.columns.stream().map(Column::id).toList(), "column id");
+    unique(this.attributes.stream().map(TableAttribute::key).toList(), "attribute");
     primaryKey();
-    for (TableAttribute attribute : this.attributes) {
-      attribute.validate(this);
-    }
-    for (Column column : this.columns) {
-      if (column.attribute(IdentityAttribute.class).isPresent()
-          && !primaryKey().columns().equals(List.of(column.name()))) {
-        throw new SchemaException("The identity column '" + name + "." + column.name() + "' must be the only column"
-            + " of the primary key.");
-      }
-    }
+    this.attributes.forEach(attribute -> attribute.validate(this));
+    this.columns.forEach(column -> column.attributes().forEach(attribute -> attribute.validate(this, column)));
   }
 
   /**
@@ -72,7 +61,7 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
    * @param id the stable identity of the table
    * @param name the table name
    * @param columns the columns
-   * @param attributes the attributes, with a {@link PrimaryKeyAttribute}
+   * @param attributes the attributes, with a {@link PrimaryKey}
    * @return the table
    * @throws SchemaException if the table has no primary key, or an attribute does not fit it
    */
@@ -103,7 +92,7 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
   /**
    * Returns the attribute of a type.
    *
-   * @param type the attribute type, for example {@code CommentAttribute.class}
+   * @param type the attribute type, for example {@code Comment.class}
    * @param <A> the attribute type
    * @return the attribute, or an empty optional if the table has none
    */
@@ -114,7 +103,7 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
   /**
    * Returns the attributes of a type.
    *
-   * @param type the attribute type, for example {@code IndexAttribute.class}
+   * @param type the attribute type, for example {@code Index.class}
    * @param <A> the attribute type
    * @return the attributes, in order
    */
@@ -127,21 +116,19 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
    *
    * @return the primary key
    */
-  public PrimaryKeyAttribute primaryKey() {
-    return attribute(PrimaryKeyAttribute.class).orElseThrow(() -> new SchemaException("The table '" + name
+  public PrimaryKey primaryKey() {
+    return attribute(PrimaryKey.class).orElseThrow(() -> new InvalidSchemaException("The table '" + name
         + "' has no primary key."));
   }
 
   /**
-   * Returns whether a column is part of the primary key, an index or a foreign key.
+   * Tells if a column is part of the primary key, an index or a foreign key.
    *
    * @param column the column name
    * @return {@code true} if a key or an index contains the column
    */
-  public boolean keyed(String column) {
-    return primaryKey().columns().contains(column)
-        || attributes(IndexAttribute.class).stream().anyMatch(index -> index.contains(column))
-        || attributes(ForeignKeyAttribute.class).stream().anyMatch(key -> key.columns().contains(column));
+  public boolean covers(String column) {
+    return attributes.stream().anyMatch(attribute -> attribute.covers(column));
   }
 
   /**
@@ -187,8 +174,8 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
    */
   List<Change> createChanges(TableName name) {
     List<Change> changes = new ArrayList<>();
-    changes.add(new CreateTableChange(name.namespace(), without(ForeignKeyAttribute.class)));
-    attributes(ForeignKeyAttribute.class).forEach(key -> changes.add(new AddTableAttributeChange(name, key)));
+    changes.add(new CreateTable(name.namespace(), without(ForeignKey.class)));
+    attributes(ForeignKey.class).forEach(key -> changes.add(new AddTableAttribute(name, key)));
     return changes;
   }
 
@@ -200,8 +187,8 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
    */
   List<Change> dropChanges(TableName name) {
     List<Change> changes = new ArrayList<>();
-    attributes(ForeignKeyAttribute.class).forEach(key -> changes.add(new DropTableAttributeChange(name, key)));
-    changes.add(new DropTableChange(name));
+    attributes(ForeignKey.class).forEach(key -> changes.add(new DropTableAttribute(name, key)));
+    changes.add(new DropTable(name));
     return changes;
   }
 
@@ -212,61 +199,68 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
    * @param name the name of this table
    * @param targetName the name of the table after the changes
    * @param target the table after the changes
-   * @param renaming the new names of tables and columns
+   * @param transition the origin and target schemas
    * @return the changes, in no particular order
    */
-  List<Change> changesTo(TableName name, TableName targetName, Table target, Renaming renaming) {
-    List<Change> changes = new ArrayList<>();
-    if (!name.name().equals(targetName.name())) {
-      changes.add(new RenameTableChange(name, targetName.name()));
-    }
-    if (!Objects.equals(name.namespace(), targetName.namespace())) {
-      changes.add(new MoveTableChange(name.withName(targetName.name()), targetName.namespace()));
-    }
-    for (Column column : columns) {
-      Optional<Column> now = target.columnById(column.id());
-      if (now.isEmpty()) {
-        changes.add(new DropColumnChange(targetName, column.name()));
-      } else {
-        changes.addAll(column.changesTo(targetName, now.get()));
-      }
-    }
-    for (Column column : target.columns) {
-      if (columnById(column.id()).isEmpty()) {
-        changes.add(new AddColumnChange(targetName, column));
-      }
-    }
-    Map<Object, TableAttribute> added = new LinkedHashMap<>();
-    target.attributes.forEach(attribute -> added.put(attribute.key(), attribute));
-    for (TableAttribute attribute : attributes) {
-      TableAttribute renamed = attribute.renamed(name, renaming);
-      TableAttribute now = added.remove(renamed.key());
-      if (now == null) {
-        changes.add(dropChange(name, targetName, attribute));
-      } else if (now.equals(renamed)) {
-        continue;
-      } else if (now.alterable()) {
-        changes.add(new AlterTableAttributeChange(targetName, renamed, now));
-      } else {
-        changes.add(dropChange(name, targetName, attribute));
-        changes.add(new AddTableAttributeChange(targetName, now));
-      }
-    }
-    added.values().forEach(attribute -> changes.add(new AddTableAttributeChange(targetName, attribute)));
+  List<Change> changesTo(TableName name, TableName targetName, Table target, Transition transition) {
+    List<Change> changes = new ArrayList<>(nameChanges(name, targetName));
+    changes.addAll(columnChanges(targetName, target));
+    changes.addAll(attributeChanges(name, targetName, target, transition));
     return changes;
   }
 
-  /** Returns the change that drops an attribute. A drop that runs before tables are renamed uses the old name. */
-  private Change dropChange(TableName name, TableName targetName, TableAttribute attribute) {
-    boolean beforeRenames = attribute.dropPhase().compareTo(Change.Phase.RENAME_TABLES) < 0;
-    return new DropTableAttributeChange(beforeRenames ? name : targetName, attribute);
+  private List<Change> nameChanges(TableName name, TableName targetName) {
+    List<Change> changes = new ArrayList<>();
+    if (!name.name().equals(targetName.name())) {
+      changes.add(new RenameTable(name, targetName.name()));
+    }
+    if (!name.namespace().equals(targetName.namespace())) {
+      changes.add(new MoveTable(name.withName(targetName.name()), targetName.namespace()));
+    }
+    return changes;
   }
 
-  private static void unique(String table, List<?> values, String what) {
-    Set<Object> seen = new HashSet<>();
+  private List<Change> columnChanges(TableName targetName, Table target) {
+    List<Change> changes = new ArrayList<>();
+    for (Column column : columns) {
+      target.columnById(column.id()).ifPresentOrElse(other -> changes.addAll(column.changesTo(targetName, other)),
+          () -> changes.add(new DropColumn(targetName, column.name())));
+    }
+    target.columns.stream().filter(column -> columnById(column.id()).isEmpty())
+        .forEach(column -> changes.add(new AddColumn(targetName, column)));
+    return changes;
+  }
+
+  private List<Change> attributeChanges(TableName name, TableName targetName, Table target, Transition transition) {
+    List<Change> changes = new ArrayList<>();
+    Map<Object, TableAttribute> added = new LinkedHashMap<>();
+    target.attributes.forEach(attribute -> added.put(attribute.key(), attribute));
+    for (TableAttribute attribute : attributes) {
+      TableAttribute origin = attribute.rename(name, transition);
+      TableAttribute other = added.remove(origin.key());
+      if (other == null) {
+        changes.add(dropChange(name, targetName, attribute));
+      } else if (!other.equals(origin) && other.alterable()) {
+        changes.add(new AlterTableAttribute(targetName, origin, other));
+      } else if (!other.equals(origin)) {
+        changes.add(dropChange(name, targetName, attribute));
+        changes.add(new AddTableAttribute(targetName, other));
+      }
+    }
+    added.values().forEach(attribute -> changes.add(new AddTableAttribute(targetName, attribute)));
+    return changes;
+  }
+
+  private Change dropChange(TableName name, TableName targetName, TableAttribute attribute) {
+    boolean beforeRenames = attribute.dropPhase().precedes(Change.Phase.RENAME_TABLES);
+    return new DropTableAttribute(beforeRenames ? name : targetName, attribute);
+  }
+
+  private void unique(List<?> values, String what) {
+    Set<Object> distinct = new HashSet<>();
     for (Object value : values) {
-      if (!seen.add(value)) {
-        throw new SchemaException("The table '" + table + "' has the " + what + " " + value + " twice.");
+      if (!distinct.add(value)) {
+        throw new InvalidSchemaException("The table '" + name + "' has the " + what + " " + value + " twice.");
       }
     }
   }

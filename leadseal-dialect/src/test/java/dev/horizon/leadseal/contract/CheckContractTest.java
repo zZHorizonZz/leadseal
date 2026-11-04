@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.attribute.CheckAttribute;
+import dev.horizon.leadseal.attribute.Check;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Stream;
@@ -18,7 +18,7 @@ public abstract class CheckContractTest extends ContractTest {
 
   private static Table orders(String... checks) {
     return table("shop.Order", "orders", List.of(ID, QUANTITY), List.of("id"),
-        Stream.of(checks).map(check -> CheckAttribute.of("orders", check)).toList(), List.of());
+        Stream.of(checks).map(check -> Check.of("orders", check)).toList(), List.of());
   }
 
   private void insert(long id, int quantity) throws SQLException {

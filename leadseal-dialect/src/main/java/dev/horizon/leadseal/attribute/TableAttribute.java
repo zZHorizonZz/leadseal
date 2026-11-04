@@ -2,12 +2,17 @@ package dev.horizon.leadseal.attribute;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import dev.horizon.leadseal.Renaming;
 import dev.horizon.leadseal.Schema;
 import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
+import dev.horizon.leadseal.Transition;
+import dev.horizon.leadseal.Transition.TableTransition;
 import dev.horizon.leadseal.change.Change;
+import dev.horizon.leadseal.command.Command;
+import dev.horizon.leadseal.command.Ddl;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * An attribute of a table, such as its primary key, an index or a foreign key.
@@ -18,14 +23,14 @@ import dev.horizon.leadseal.change.Change;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = PrimaryKeyAttribute.class, name = "primary_key"),
-    @JsonSubTypes.Type(value = IndexAttribute.class, name = "index"),
-    @JsonSubTypes.Type(value = ForeignKeyAttribute.class, name = "foreign_key"),
-    @JsonSubTypes.Type(value = CheckAttribute.class, name = "check"),
-    @JsonSubTypes.Type(value = CommentAttribute.class, name = "comment")
+    @JsonSubTypes.Type(value = PrimaryKey.class, name = "primary_key"),
+    @JsonSubTypes.Type(value = Index.class, name = "index"),
+    @JsonSubTypes.Type(value = ForeignKey.class, name = "foreign_key"),
+    @JsonSubTypes.Type(value = Check.class, name = "check"),
+    @JsonSubTypes.Type(value = Comment.class, name = "comment")
 })
-public sealed interface TableAttribute permits PrimaryKeyAttribute, IndexAttribute, ForeignKeyAttribute,
-    CheckAttribute, CommentAttribute {
+public sealed interface TableAttribute permits PrimaryKey, Index, ForeignKey,
+    Check, Comment {
 
   /**
    * Returns the key of this attribute. A table has at most one attribute with each key.
@@ -44,6 +49,16 @@ public sealed interface TableAttribute permits PrimaryKeyAttribute, IndexAttribu
    * have
    */
   void validate(Table table);
+
+  /**
+   * Tells if this attribute is a key or an index that covers a column.
+   *
+   * @param column the column name
+   * @return true if the attribute covers the column. The default is false.
+   */
+  default boolean covers(String column) {
+    return false;
+  }
 
   /**
    * Returns the phase in which a migration adds this attribute, or changes another attribute into it.
@@ -90,14 +105,45 @@ public sealed interface TableAttribute permits PrimaryKeyAttribute, IndexAttribu
   }
 
   /**
-   * Returns this attribute with the names that tables and columns have after renames. A migration compares the
-   * renamed attribute of the old table with the attribute of the new table.
+   * Returns this attribute with the names that its tables and columns have in the target schema. A migration compares
+   * this attribute of the origin table, so renamed, with the attribute of the target table.
    *
-   * @param table the name of the table that has this attribute, before the renames
-   * @param renaming the renames
-   * @return the renamed attribute. The default is this attribute.
+   * @param table the name of the table that has this attribute, in the origin schema
+   * @param transition the origin and target schemas
+   * @return the attribute with the target names. The default is this attribute.
    */
-  default TableAttribute renamed(TableName table, Renaming renaming) {
+  default TableAttribute rename(TableName table, Transition transition) {
     return this;
   }
+
+  /**
+   * Gives the commands that add this attribute to a table that the database has already.
+   *
+   * @param ddl the statements of the dialect
+   * @param table the table, which has this attribute after the migration
+   * @return the commands
+   */
+  List<Command> add(Ddl ddl, TableTransition table);
+
+  /**
+   * Gives the commands that drop this attribute from a table.
+   *
+   * @param ddl the statements of the dialect
+   * @param table the table, which has this attribute before the migration
+   * @return the commands
+   */
+  List<Command> drop(Ddl ddl, TableTransition table);
+
+  /**
+   * Gives the commands that change an attribute with the key of this attribute into this attribute.
+   *
+   * @param ddl the statements of the dialect
+   * @param table the table, which has this attribute after the migration
+   * @param origin the attribute before the migration
+   * @return the commands. The default drops the origin attribute and adds this one.
+   */
+  default List<Command> alter(Ddl ddl, TableTransition table, TableAttribute origin) {
+    return Stream.concat(origin.drop(ddl, table).stream(), add(ddl, table).stream()).toList();
+  }
+
 }

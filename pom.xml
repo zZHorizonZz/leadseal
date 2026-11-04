@@ -55,6 +55,7 @@
     <maven.compiler.release>25</maven.compiler.release>
 
     <protobuf.version>4.36.2</protobuf.version>
+    <aquery.version>0.3.1-SNAPSHOT</aquery.version>
     <jackson.version>2.22.4</jackson.version>
     <picocli.version>4.7.7</picocli.version>
 
@@ -75,6 +76,11 @@
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>${protobuf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.horizon</groupId>
+        <artifactId>aquery-grammar-cel</artifactId>
+        <version>${aquery.version}</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
@@ -143,6 +149,13 @@
     </dependencies>
   </dependencyManagement>
 
+  <repositories>
+    <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/zZHorizonZz/aquery</url>
+    </repository>
+  </repositories>
+
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -202,6 +215,9 @@
           <version>3.6.1</version>
           <configuration>
             <useModulePath>false</useModulePath>
+            <properties>
+              <configurationParameters>junit.jupiter.execution.timeout.testable.method.default = 30 s</configurationParameters>
+            </properties>
           </configuration>
         </plugin>
         <plugin>

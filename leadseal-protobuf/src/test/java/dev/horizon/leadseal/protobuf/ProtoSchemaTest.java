@@ -8,31 +8,21 @@ import com.google.protobuf.DescriptorProtos.FileDescriptorProto;
 import com.google.protobuf.DescriptorProtos.SourceCodeInfo;
 import com.google.protobuf.Descriptors.DescriptorValidationException;
 import com.google.protobuf.Descriptors.FileDescriptor;
-import dev.horizon.leadseal.BooleanType;
-import dev.horizon.leadseal.BytesType;
 import dev.horizon.leadseal.Column;
-import dev.horizon.leadseal.DateType;
-import dev.horizon.leadseal.DecimalType;
-import dev.horizon.leadseal.FloatType;
-import dev.horizon.leadseal.IntegerType;
-import dev.horizon.leadseal.JsonType;
+import dev.horizon.leadseal.InvalidSchemaException;
 import dev.horizon.leadseal.Schema;
-import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
-import dev.horizon.leadseal.TextType;
-import dev.horizon.leadseal.TimestampType;
-import dev.horizon.leadseal.UuidType;
-import dev.horizon.leadseal.attribute.CheckAttribute;
-import dev.horizon.leadseal.attribute.CollationAttribute;
-import dev.horizon.leadseal.attribute.CommentAttribute;
-import dev.horizon.leadseal.attribute.ForeignKeyAttribute;
-import dev.horizon.leadseal.attribute.IdentityAttribute;
-import dev.horizon.leadseal.attribute.IndexAttribute;
-import dev.horizon.leadseal.attribute.LiteralDefaultAttribute;
-import dev.horizon.leadseal.attribute.NotNullAttribute;
-import dev.horizon.leadseal.attribute.NowDefaultAttribute;
-import dev.horizon.leadseal.attribute.RandomUuidDefaultAttribute;
+import dev.horizon.leadseal.attribute.Check;
+import dev.horizon.leadseal.attribute.Collation;
+import dev.horizon.leadseal.attribute.Comment;
+import dev.horizon.leadseal.attribute.ForeignKey;
+import dev.horizon.leadseal.attribute.Identity;
+import dev.horizon.leadseal.attribute.Index;
+import dev.horizon.leadseal.attribute.LiteralDefault;
+import dev.horizon.leadseal.attribute.NotNull;
+import dev.horizon.leadseal.attribute.NowDefault;
+import dev.horizon.leadseal.attribute.RandomUuidDefault;
 import dev.horizon.leadseal.protobuf.invalid.defaults.BothDefaultsOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.enumdefault.UnknownEnumDefaultOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.identity.TextIdentityOuterClass;
@@ -43,6 +33,16 @@ import dev.horizon.leadseal.protobuf.invalid.reference.UnknownReferenceOuterClas
 import dev.horizon.leadseal.protobuf.invalid.type.BadTypeOuterClass;
 import dev.horizon.leadseal.protobuf.test.ShopProto;
 import dev.horizon.leadseal.protobuf.test.v2.CatalogProto;
+import dev.horizon.leadseal.type.BooleanType;
+import dev.horizon.leadseal.type.BytesType;
+import dev.horizon.leadseal.type.DateType;
+import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.FloatType;
+import dev.horizon.leadseal.type.IntegerType;
+import dev.horizon.leadseal.type.JsonType;
+import dev.horizon.leadseal.type.TextType;
+import dev.horizon.leadseal.type.TimestampType;
+import dev.horizon.leadseal.type.UuidType;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -55,7 +55,7 @@ class ProtoSchemaTest {
   private static final Schema SCHEMA = new ProtoSchema().read(List.of(ShopProto.getDescriptor()));
   private static final IntegerType INT = new IntegerType(IntegerType.Size.INT32);
   private static final IntegerType BIGINT = new IntegerType(IntegerType.Size.INT64);
-  private static final NotNullAttribute NOT_NULL = NotNullAttribute.INSTANCE;
+  private static final NotNull NOT_NULL = NotNull.INSTANCE;
 
   private static Table table(TableName name) {
     return SCHEMA.table(name).orElseThrow();
@@ -71,14 +71,14 @@ class ProtoSchemaTest {
         arguments(Column.of("6", "total", BIGINT, NOT_NULL)),
         arguments(Column.of("7", "weight", new FloatType(FloatType.Size.FLOAT32), NOT_NULL)),
         arguments(Column.of("8", "price", new FloatType(FloatType.Size.FLOAT64), NOT_NULL)),
-        arguments(Column.of("9", "thumbnail", new BytesType(null), NOT_NULL)),
-        arguments(Column.of("10", "state", new TextType(null), NOT_NULL)),
+        arguments(Column.of("9", "thumbnail", BytesType.unlimited(), NOT_NULL)),
+        arguments(Column.of("10", "state", TextType.unlimited(), NOT_NULL)),
         arguments(Column.of("11", "created", new TimestampType())),
         arguments(Column.of("12", "discount", BIGINT)),
         arguments(Column.of("13", "attributes", new JsonType())),
         arguments(Column.of("14", "tags", new JsonType())),
         arguments(Column.of("15", "labels", new JsonType())),
-        arguments(Column.of("16", "remark", new TextType(null))),
+        arguments(Column.of("16", "remark", TextType.unlimited())),
         arguments(Column.of("17", "payload", new JsonType(), NOT_NULL)));
   }
 
@@ -109,11 +109,11 @@ class ProtoSchemaTest {
     Table customers = table(TableName.of("customers"));
 
     assertThat(customers.columns()).extracting(Column::name).containsExactly("id", "email", "region");
-    assertThat(customers.column("email")).contains(Column.of("2", "email", new TextType(200), NOT_NULL));
+    assertThat(customers.column("email")).contains(Column.of("2", "email", TextType.of(200), NOT_NULL));
     assertThat(customers.primaryKey().columns()).containsExactly("id");
-    assertThat(customers.attributes(IndexAttribute.class)).containsExactly(
-        IndexAttribute.of("customers", List.of("email"), true),
-        IndexAttribute.of("customers", List.of("region", "email"), false));
+    assertThat(customers.attributes(Index.class)).containsExactly(
+        Index.of("customers", List.of("email"), true),
+        Index.of("customers", List.of("region", "email"), false));
   }
 
   @Test
@@ -121,10 +121,10 @@ class ProtoSchemaTest {
     Table lines = table(TableName.of("order_line"));
 
     assertThat(lines.primaryKey().columns()).containsExactly("order_id", "line");
-    assertThat(lines.attributes(IndexAttribute.class)).containsExactly(IndexAttribute.of("order_line",
+    assertThat(lines.attributes(Index.class)).containsExactly(Index.of("order_line",
         List.of("customer_id"), false));
-    assertThat(lines.attributes(ForeignKeyAttribute.class)).containsExactly(ForeignKeyAttribute.of("order_line",
-        List.of("customer_id"), TableName.of("customers"), List.of("id"), ForeignKeyAttribute.Action.CASCADE));
+    assertThat(lines.attributes(ForeignKey.class)).containsExactly(ForeignKey.of("order_line",
+        List.of("customer_id"), TableName.of("customers"), List.of("id"), ForeignKey.Action.CASCADE));
   }
 
   static Stream<Arguments> invalid() {
@@ -142,26 +142,26 @@ class ProtoSchemaTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("invalid")
   void rejects(FileDescriptor file, String message) {
-    assertThatThrownBy(() -> new ProtoSchema().read(List.of(file))).isInstanceOf(SchemaException.class)
+    assertThatThrownBy(() -> new ProtoSchema().read(List.of(file))).isInstanceOf(InvalidSchemaException.class)
         .hasMessageContaining(message);
   }
 
   static Stream<Arguments> paymentColumns() {
     return Stream.of(
-        arguments(Column.of("1", "id", BIGINT, NOT_NULL, IdentityAttribute.INSTANCE)),
-        arguments(Column.of("2", "amount", new DecimalType(12, 2), NOT_NULL, new LiteralDefaultAttribute("0"))),
-        arguments(Column.of("3", "paid", new TimestampType(), NOT_NULL, new NowDefaultAttribute())),
+        arguments(Column.of("1", "id", BIGINT, NOT_NULL, Identity.INSTANCE)),
+        arguments(Column.of("2", "amount", new DecimalType(12, 2), NOT_NULL, new LiteralDefault("0"))),
+        arguments(Column.of("3", "paid", new TimestampType(), NOT_NULL, new NowDefault())),
         arguments(Column.of("4", "day", new DateType())),
-        arguments(Column.of("5", "method", INT, NOT_NULL, new LiteralDefaultAttribute("1"))),
-        arguments(Column.of("6", "reference", new TextType(40), NOT_NULL, new CollationAttribute("postgresql", "C"))),
-        arguments(Column.of("9", "token", new UuidType(), NOT_NULL, new RandomUuidDefaultAttribute())),
-        arguments(Column.of("10", "fallback", new TextType(null), NOT_NULL, new LiteralDefaultAttribute(
+        arguments(Column.of("5", "method", INT, NOT_NULL, new LiteralDefault("1"))),
+        arguments(Column.of("6", "reference", TextType.of(40), NOT_NULL, new Collation("postgresql", "C"))),
+        arguments(Column.of("9", "token", new UuidType(), NOT_NULL, new RandomUuidDefault())),
+        arguments(Column.of("10", "fallback", TextType.unlimited(), NOT_NULL, new LiteralDefault(
             "METHOD_CASH"))),
         arguments(Column.of("11", "rate", new FloatType(FloatType.Size.FLOAT64), NOT_NULL,
-            new LiteralDefaultAttribute("1.5"))),
-        arguments(Column.of("12", "signature", new BytesType(64), NOT_NULL, new LiteralDefaultAttribute("0aff"))),
-        arguments(Column.of("13", "start", new TimestampType(), new LiteralDefaultAttribute("2026-10-14T07:30:00Z"))),
-        arguments(Column.of("14", "active", new BooleanType(), NOT_NULL, new LiteralDefaultAttribute("true"))));
+            new LiteralDefault("1.5"))),
+        arguments(Column.of("12", "signature", BytesType.of(64), NOT_NULL, new LiteralDefault("0aff"))),
+        arguments(Column.of("13", "start", new TimestampType(), new LiteralDefault("2026-10-14T07:30:00Z"))),
+        arguments(Column.of("14", "active", new BooleanType(), NOT_NULL, new LiteralDefault("true"))));
   }
 
   @ParameterizedTest(name = "{0}")
@@ -174,13 +174,13 @@ class ProtoSchemaTest {
   void readsTheTableOptionsOfPayments() {
     Table payments = table(new TableName("billing", "payment"));
 
-    assertThat(payments.attributes(CheckAttribute.class)).containsExactly(CheckAttribute.of("payment",
-        "amount < 1000000"), CheckAttribute.of("payment", "amount >= 0"));
-    assertThat(payments.attributes(IndexAttribute.class)).containsExactly(new IndexAttribute("ix_recent_payments",
-        List.of("paid", "amount"), false, List.of("paid"), "day IS NOT NULL"));
-    assertThat(payments.attributes(ForeignKeyAttribute.class)).containsExactly(ForeignKeyAttribute.of("payment",
+    assertThat(payments.attributes(Check.class)).containsExactly(Check.of("payment",
+        "amount < 1000000"), Check.of("payment", "amount >= 0"));
+    assertThat(payments.attributes(Index.class)).containsExactly(new Index("ix_recent_payments",
+        List.of("paid", "amount"), false, List.of("paid"), Index.Rows.of("day IS NOT NULL")));
+    assertThat(payments.attributes(ForeignKey.class)).containsExactly(ForeignKey.of("payment",
         List.of("order_id", "line"), TableName.of("order_line"), List.of("order_id", "line"),
-        ForeignKeyAttribute.Action.CASCADE).withOnUpdate(ForeignKeyAttribute.Action.CASCADE));
+        ForeignKey.Action.CASCADE).withOnUpdate(ForeignKey.Action.CASCADE));
   }
 
   @Test
@@ -197,10 +197,10 @@ class ProtoSchemaTest {
 
     Table customers = new ProtoSchema().read(List.of(file)).table(TableName.of("customers")).orElseThrow();
 
-    assertThat(customers.attribute(CommentAttribute.class)).contains(new CommentAttribute(
+    assertThat(customers.attribute(Comment.class)).contains(new Comment(
         "The customers of the shop.\nEach one has an email."));
-    assertThat(customers.column("email").orElseThrow().attribute(CommentAttribute.class))
-        .contains(new CommentAttribute("The address for receipts."));
-    assertThat(customers.column("id").orElseThrow().attribute(CommentAttribute.class)).isEmpty();
+    assertThat(customers.column("email").orElseThrow().attribute(Comment.class))
+        .contains(new Comment("The address for receipts."));
+    assertThat(customers.column("id").orElseThrow().attribute(Comment.class)).isEmpty();
   }
 }

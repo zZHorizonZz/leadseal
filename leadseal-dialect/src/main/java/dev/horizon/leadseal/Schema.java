@@ -1,12 +1,12 @@
 package dev.horizon.leadseal;
 
-import dev.horizon.leadseal.attribute.ForeignKeyAttribute;
+import dev.horizon.leadseal.attribute.ForeignKey;
+
 import dev.horizon.leadseal.change.Change;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -21,21 +21,21 @@ public record Schema(List<Namespace> namespaces) {
 
   public Schema(List<Namespace> namespaces) {
     this.namespaces = List.copyOf(namespaces);
-    Set<String> names = new HashSet<>();
+    Set<Namespace.Name> names = new HashSet<>();
     Set<String> ids = new HashSet<>();
     for (Namespace namespace : this.namespaces) {
-      if (!names.add(Objects.requireNonNullElse(namespace.name(), ""))) {
-        throw new SchemaException("The schema has the namespace " + namespace.name() + " twice.");
+      if (!names.add(namespace.name())) {
+        throw new InvalidSchemaException("The schema has the namespace " + namespace.name() + " twice.");
       }
       for (Table table : namespace.tables()) {
         if (!ids.add(table.id())) {
-          throw new SchemaException("The schema has the table id '" + table.id() + "' twice.");
+          throw new InvalidSchemaException("The schema has the table id '" + table.id() + "' twice.");
         }
       }
     }
     for (TableName name : names()) {
       Table table = table(name).orElseThrow();
-      for (ForeignKeyAttribute key : table.attributes(ForeignKeyAttribute.class)) {
+      for (ForeignKey key : table.attributes(ForeignKey.class)) {
         key.validate(table, this);
       }
     }
@@ -86,7 +86,7 @@ public record Schema(List<Namespace> namespaces) {
    * @return the table, or an empty optional if the schema has no such table
    */
   public Optional<Table> table(TableName name) {
-    return namespaces.stream().filter(namespace -> Objects.equals(namespace.name(), name.namespace())).findFirst()
+    return namespaces.stream().filter(namespace -> namespace.name().equals(name.namespace())).findFirst()
         .flatMap(namespace -> namespace.table(name.name()));
   }
 
@@ -123,13 +123,13 @@ public record Schema(List<Namespace> namespaces) {
    * @return the changes, or an empty list if the schemas have the same tables
    */
   public List<Change> changesTo(Schema target) {
-    Renaming renaming = new Renames(this, target);
+    Transition transition = new Transition(this, target);
     List<Change> changes = new ArrayList<>();
     for (TableName name : names()) {
       Table table = table(name).orElseThrow();
       Optional<TableName> targetName = target.nameOf(table.id());
       changes.addAll(targetName.isEmpty() ? table.dropChanges(name)
-          : table.changesTo(name, targetName.get(), target.table(targetName.get()).orElseThrow(), renaming));
+          : table.changesTo(name, targetName.get(), target.table(targetName.get()).orElseThrow(), transition));
     }
     for (TableName name : target.names()) {
       Table table = target.table(name).orElseThrow();
@@ -139,26 +139,5 @@ public record Schema(List<Namespace> namespaces) {
     }
     changes.sort(Comparator.comparing(Change::phase));
     return List.copyOf(changes);
-  }
-
-  /**
-   * The new names of tables and columns, found by their ids.
-   *
-   * @param before the schema before the renames
-   * @param after the schema after the renames
-   */
-  private record Renames(Schema before, Schema after) implements Renaming {
-
-    @Override
-    public TableName table(TableName table) {
-      return before.table(table).flatMap(old -> after.nameOf(old.id())).orElse(table);
-    }
-
-    @Override
-    public String column(TableName table, String column) {
-      Optional<String> id = before.table(table).flatMap(old -> old.column(column)).map(Column::id);
-      return before.table(table).flatMap(old -> after.tableById(old.id()))
-          .flatMap(now -> id.flatMap(now::columnById)).map(Column::name).orElse(column);
-    }
   }
 }

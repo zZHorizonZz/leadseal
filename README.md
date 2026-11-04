@@ -20,159 +20,43 @@ Leadseal supports PostgreSQL, MariaDB, SQL Server and SQLite.
 
 ## Get started
 
-1. Add the GitHub Packages repository and `leadseal-protobuf` to your `pom.xml`. The module contains
-   `leadseal/v1/options.proto`:
-
-   <!-- x-release-please-start-version -->
-   ```xml
-   <repositories>
-     <repository>
-       <id>github</id>
-       <url>https://maven.pkg.github.com/zZHorizonZz/leadseal</url>
-     </repository>
-   </repositories>
-
-   <dependencies>
-     <dependency>
-       <groupId>dev.horizon</groupId>
-       <artifactId>leadseal-protobuf</artifactId>
-       <version>0.2.1-SNAPSHOT</version>
-       <scope>provided</scope>
-     </dependency>
-   </dependencies>
-   ```
-   <!-- x-release-please-end -->
-
-2. GitHub Packages requires a token, also for public packages. Create a personal access token with the
-   `read:packages` scope, and add it to `~/.m2/settings.xml`:
-
-   ```xml
-   <settings>
-     <servers>
-       <server>
-         <id>github</id>
-         <username>YOUR_GITHUB_USERNAME</username>
-         <password>YOUR_TOKEN</password>
-       </server>
-     </servers>
-   </settings>
-   ```
-
-3. Mark a message as a table and set its primary key:
-
-   ```proto
-   syntax = "proto3";
-
-   package shop.v1;
-
-   import "leadseal/v1/options.proto";
-
-   message Order {
-     option (leadseal.v1.table) = {name: "orders"};
-
-     int64 id = 1 [(leadseal.v1.column).primary_key = true];
-     string state = 2 [(leadseal.v1.column) = {index: true, text: {length: 20}}];
-     optional string note = 3;
-   }
-   ```
-
-4. Run the plugin with protobuf-maven-plugin. Set the plugin output and the `migrations` option to the same
-   directory, and add a `dialect` option for each database:
-
-   ```xml
-   <plugin>
-     <groupId>io.github.ascopes</groupId>
-     <artifactId>protobuf-maven-plugin</artifactId>
-     <version>5.1.11</version>
-     <configuration>
-       <protoc>4.36.2</protoc>
-       <plugins>
-         <plugin kind="jvm-maven">
-           <groupId>dev.horizon</groupId>
-           <artifactId>leadseal-protoc</artifactId>
-           <version>0.2.1-SNAPSHOT</version> <!-- x-release-please-version -->
-           <options>migrations=${project.basedir}/src/main/resources/db/migration,dialect=postgresql</options>
-           <outputDirectory>${project.basedir}/src/main/resources/db/migration</outputDirectory>
-           <registerAsCompilationRoot>false</registerAsCompilationRoot>
-         </plugin>
-       </plugins>
-     </configuration>
-     <executions>
-       <execution>
-         <goals>
-           <goal>generate</goal>
-         </goals>
-       </execution>
-     </executions>
-   </plugin>
-   ```
-
-5. Build the project:
-
-   ```sh
-   mvn compile
-   ```
-
-   The plugin writes the first migration. The folder name starts with the time of the build, in UTC:
-
-   ```txt
-   src/main/resources/db/migration/
-     20261014104830/
-       migration.json
-       postgresql/V20261014104830.sql
-     snapshots/298c2267bb456adc/contract.json
-   ```
-
-   `V20261014104830.sql` contains:
-
-   ```sql
-   CREATE TABLE "orders" ("id" bigint NOT NULL, "state" varchar(20) NOT NULL, "note" text, CONSTRAINT "pk_orders" PRIMARY KEY ("id"));
-
-   CREATE INDEX "ix_orders_state" ON "orders" ("state");
-   ```
-
-6. Point Flyway to the folders of your database:
-
-   ```properties
-   spring.flyway.locations=classpath:db/migration/**/postgresql
-   ```
-
-When you change a table message and build again, the plugin writes a new migration with only the changes. When
-nothing changed, it writes nothing. Commit the migration directory to version control.
+Follow [Get started](docs/get-started.md) to generate a first PostgreSQL migration from one table message.
+The [documentation](docs/README.md) covers every option, dialect and error.
 
 ## Modules
 
-| Module                       | Package                          | Contents                                                       |
-| ---------------------------- | -------------------------------- | -------------------------------------------------------------- |
-| `leadseal-dialect`           | `dev.horizon.leadseal`           | The schema model, its types and the migration directory        |
-| `leadseal-dialect`           | `dev.horizon.leadseal.attribute` | The column and table attributes, such as `IndexAttribute`      |
-| `leadseal-dialect`           | `dev.horizon.leadseal.change`    | The changes between two schemas, such as `AddColumnChange`     |
-| `leadseal-dialect`           | `dev.horizon.leadseal.command`   | The SQL commands and the `CommandFactory` of dialects          |
-| `leadseal-dialect-postgres`  | `dev.horizon.leadseal.postgres`  | `PostgresDialect`                                              |
-| `leadseal-dialect-mariadb`   | `dev.horizon.leadseal.mariadb`   | `MariaDbDialect`                                               |
-| `leadseal-dialect-sqlserver` | `dev.horizon.leadseal.sqlserver` | `SqlServerDialect`                                             |
-| `leadseal-dialect-sqlite`    | `dev.horizon.leadseal.sqlite`    | `SqliteDialect`                                                |
-| `leadseal-protobuf`          | `dev.horizon.leadseal.protobuf`  | `leadseal/v1/options.proto` and `ProtoSchema`                  |
-| `leadseal-protoc`            | `dev.horizon.leadseal.protoc`    | `protoc-gen-leadseal`, as a shaded JAR                         |
-| `leadseal-it`                | `dev.horizon.leadseal.it`        | Tests that run the plugin in a build and apply with Flyway     |
+| Module | Package | Contents |
+| --- | --- | --- |
+| `leadseal-dialect` | `dev.horizon.leadseal` | The schema model, `Dialect`, `ScriptWriter` and the exceptions |
+| `leadseal-dialect` | `dev.horizon.leadseal.attribute` | The column and table attributes, such as `Index` and `ForeignKey` |
+| `leadseal-dialect` | `dev.horizon.leadseal.change` | The changes between two schemas, such as `AddColumn` |
+| `leadseal-dialect` | `dev.horizon.leadseal.command` | The `Ddl` of a dialect, its commands and clauses |
+| `leadseal-dialect` | `dev.horizon.leadseal.expression` | The SQL expressions of checks and triggers, such as `Comparison` |
+| `leadseal-dialect` | `dev.horizon.leadseal.migration` | `MigrationDirectory`, `Plan` and `MigrationOptions` |
+| `leadseal-dialect` | `dev.horizon.leadseal.type` | The column types, such as `TextType` and `IntegerType` |
+| `leadseal-dialect-postgres` | `dev.horizon.leadseal.postgres` | `PostgresDialect` |
+| `leadseal-dialect-mariadb` | `dev.horizon.leadseal.mariadb` | `MariaDbDialect` |
+| `leadseal-dialect-sqlserver` | `dev.horizon.leadseal.sqlserver` | `SqlServerDialect` |
+| `leadseal-dialect-sqlite` | `dev.horizon.leadseal.sqlite` | `SqliteDialect` |
+| `leadseal-protobuf` | `dev.horizon.leadseal.protobuf` | `leadseal/v1/options.proto` and `ProtoSchema` |
+| `leadseal-protoc` | `dev.horizon.leadseal.protoc` | `protoc-gen-leadseal`, as a shaded JAR |
+| `leadseal-it` | `dev.horizon.leadseal.it` | Tests that run the plugin in a build and apply the migrations with Flyway |
 
 ## Documentation
 
-- Concept: [Migration history](docs/concepts/migration-history.md)
-- How to: [Generate migrations with protoc](docs/how-to/generate-migrations-with-protoc.md)
-- How to: [Apply migrations with Flyway](docs/how-to/apply-migrations-with-flyway.md)
-- How to: [Generate migrations from Java](docs/how-to/generate-migrations-from-java.md)
-- Reference: [Protobuf options](docs/reference/protobuf-options.md)
-- Reference: [Column types](docs/reference/column-types.md)
-- Reference: [Dialects](docs/reference/dialects.md)
+- [Leadseal](docs/README.md): the overview and the map of the documentation.
+- [Get started](docs/get-started.md)
+- [Migrations](docs/migrations/README.md): generate, apply and merge migrations.
+- [Schemas](docs/schemas/README.md): the protobuf options and the column types.
+- [Dialects](docs/dialects/README.md): what each database supports, and how to write a dialect.
 
 ## Run the tests
 
 Each dialect module runs the contract tests of `leadseal-dialect` against its database. The contract tests generate
 migrations step by step, apply them with Flyway and check the tables through JDBC. `leadseal-it` runs
 `protoc-gen-leadseal` through protobuf-maven-plugin on a schema that changes in three steps, and applies the
-migrations to every database. Testcontainers starts PostgreSQL, MariaDB and SQL Server in Docker, and SQLite runs in process. Start
-Docker, then run:
+migrations to every database. Testcontainers starts PostgreSQL, MariaDB and SQL Server in Docker, and SQLite runs in process.
+Start Docker, then run:
 
 ```sh
 mvn verify

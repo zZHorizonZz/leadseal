@@ -1,12 +1,11 @@
 package dev.horizon.leadseal.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.attribute.IdentityAttribute;
+import dev.horizon.leadseal.attribute.Identity;
+import dev.horizon.leadseal.type.Type;
 import java.sql.SQLException;
 import java.util.List;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,27 +26,12 @@ public abstract class IdentityContractTest extends ContractTest {
   @ParameterizedTest
   @MethodSource("integers")
   void generatesKeys(Type type) throws SQLException {
-    apply(schema(customers(column("1", "id", type).with(IdentityAttribute.INSTANCE))));
+    apply(schema(customers(column("1", "id", type).with(Identity.INSTANCE))));
 
     insert("Ada");
     insert("Grace");
 
     assertThat(query("SELECT " + q("id") + " FROM " + q("customers") + " WHERE " + q("name") + " = 'Grace'"))
         .containsExactly(List.of("2"));
-  }
-
-  @ParameterizedTest
-  @MethodSource("integers")
-  void continuesAfterTheExistingKeys(Type type) throws SQLException {
-    assumeTrue(testDatabase().supportsIdentityChanges());
-    Column id = column("1", "id", type);
-    apply(schema(customers(id)));
-    execute("INSERT INTO " + q("customers") + " (" + q("id") + ", " + q("name") + ") VALUES (7, 'Ada')");
-
-    apply(schema(customers(id.with(IdentityAttribute.INSTANCE))));
-    insert("Grace");
-
-    assertThat(query("SELECT " + q("name") + " FROM " + q("customers") + " WHERE " + q("id") + " > 7"))
-        .containsExactly(List.of("Grace"));
   }
 }

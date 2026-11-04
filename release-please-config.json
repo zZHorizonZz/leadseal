@@ -20,9 +20,10 @@
         "leadseal-protobuf/pom.xml",
         "leadseal-protoc/pom.xml",
         "leadseal-it/pom.xml",
-        "README.md",
-        "docs/how-to/generate-migrations-with-protoc.md",
-        "docs/how-to/generate-migrations-from-java.md"
+        "docs/get-started.md",
+        "docs/migrations/generate-migrations-with-protoc.md",
+        "docs/migrations/generate-migrations-from-java.md",
+        "docs/dialects/write-a-dialect.md"
       ]
     }
   },

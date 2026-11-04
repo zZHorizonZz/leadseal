@@ -1,29 +1,29 @@
 package dev.horizon.leadseal;
 
 import dev.horizon.leadseal.change.Change;
+import dev.horizon.leadseal.command.Clause;
 import dev.horizon.leadseal.command.Command;
-import dev.horizon.leadseal.command.CommandFactory;
+import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.migration.MigrationOptions;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Writes the SQL script of a migration in one dialect.
  *
  * <p>
- * The writer asks the dialect's {@link CommandFactory} for the commands of the changes and renders each command. It
- * gives commands the schemas before and after the migration, so that a command can look up the full definition of its
- * table.
+ * The writer asks the {@link Ddl} of the dialect for the commands of the changes, with the schemas before and after
+ * the migration, and renders each command as a statement.
  */
 public final class ScriptWriter {
 
   private final Dialect dialect;
-  private final Schema before;
-  private final Schema after;
+  private final Transition transition;
   private final String prefix;
-  private final List<String> statements = new ArrayList<>();
+  private final List<Script.Statement> statements = new ArrayList<>();
   private final StringBuilder statement = new StringBuilder();
   private boolean transactional = true;
+  private boolean isolated;
 
   public ScriptWriter(Dialect dialect, Schema before, Schema after) {
     this(dialect, before, after, MigrationOptions.DEFAULT_PREFIX);
@@ -31,8 +31,7 @@ public final class ScriptWriter {
 
   public ScriptWriter(Dialect dialect, Schema before, Schema after, String prefix) {
     this.dialect = dialect;
-    this.before = before;
-    this.after = after;
+    this.transition = new Transition(before, after);
     this.prefix = prefix == null ? "" : prefix;
   }
 
@@ -44,39 +43,47 @@ public final class ScriptWriter {
    * @throws SchemaException if the dialect cannot write a change
    */
   public ScriptWriter write(List<Change> changes) {
-    for (Command command : commands().plan(changes, this)) {
+    for (Command command : dialect.ddl().plan(changes, transition)) {
       render(command).end();
     }
     return end();
   }
 
   /**
-   * Returns the written statements.
+   * Gives the script that this writer has written.
    *
-   * @return the statements, in order, without trailing semicolons
+   * @return the script
    */
-  public List<String> statements() {
-    return List.copyOf(statements);
+  public Script script() {
+    return new Script(statements, transactional);
   }
 
   /**
-   * Returns whether the written statements can run in a transaction.
+   * Gives the SQL of the statements that this writer has written.
    *
-   * @return {@code false} if the statements must run outside a transaction, for example because they change a setting
-   * that a transaction ignores
+   * @return the statements, in order, without semicolons
+   */
+  public List<String> statements() {
+    return script().sql();
+  }
+
+  /**
+   * Tells if the statements that this writer has written can run in a transaction.
+   *
+   * @return false if the statements must run outside a transaction, for example because they change a setting
    */
   public boolean transactional() {
     return transactional;
   }
 
   /**
-   * Returns the written statements as the text of a migration file. Each statement ends with a semicolon and a blank
-   * line separates two statements.
+   * Gives the text of the migration file of the statements that this writer has written.
    *
    * @return the file text
+   * @see Script#text(Dialect)
    */
   public String text() {
-    return String.join(";\n\n", statements) + (statements.isEmpty() ? "" : ";\n");
+    return script().text(dialect);
   }
 
   /**
@@ -109,92 +116,6 @@ public final class ScriptWriter {
   }
 
   /**
-   * Returns the command factory of the dialect.
-   *
-   * @return the command factory
-   */
-  public CommandFactory commands() {
-    return dialect.commands();
-  }
-
-  /**
-   * Returns the schema before the migration.
-   *
-   * @return the schema
-   */
-  public Schema before() {
-    return before;
-  }
-
-  /**
-   * Returns the schema after the migration.
-   *
-   * @return the schema
-   */
-  public Schema after() {
-    return after;
-  }
-
-  /**
-   * Returns a table of the schema before the migration.
-   *
-   * @param name the table name
-   * @return the table
-   * @throws SchemaException if the schema before the migration has no such table
-   */
-  public Table tableBefore(TableName name) {
-    return before.table(name).orElseThrow(() -> new SchemaException("The table " + name
-        + " is not in the schema before the migration."));
-  }
-
-  /**
-   * Returns a table of the schema after the migration.
-   *
-   * @param name the table name
-   * @return the table
-   * @throws SchemaException if the schema after the migration has no such table
-   */
-  public Table tableAfter(TableName name) {
-    return after.table(name).orElseThrow(() -> new SchemaException("The table " + name
-        + " is not in the schema after the migration."));
-  }
-
-  /**
-   * Returns a column of the schema after the migration.
-   *
-   * @param table the table name
-   * @param column the column name
-   * @return the column
-   * @throws SchemaException if the schema after the migration has no such column
-   */
-  public Column columnAfter(TableName table, String column) {
-    return tableAfter(table).column(column).orElseThrow(() -> new SchemaException("The column " + table + "."
-        + column + " is not in the schema after the migration."));
-  }
-
-  /**
-   * Returns a table as it was before the migration, found by its id.
-   *
-   * @param table the table name after the migration
-   * @return the table, or an empty optional if the table is new
-   */
-  public Optional<Table> previous(TableName table) {
-    return before.tableById(tableAfter(table).id());
-  }
-
-  /**
-   * Returns a column as it was before the migration, found by the ids of its table and of the column.
-   *
-   * @param table the table name after the migration
-   * @param column the column name after the migration
-   * @return the column, or an empty optional if the table or the column is new
-   */
-  public Optional<Column> columnBefore(TableName table, String column) {
-    String id = columnAfter(table, column).id();
-    return previous(table).flatMap(old -> old.columnById(id));
-  }
-
-  /**
    * Renders a command.
    *
    * @param command the command
@@ -202,6 +123,17 @@ public final class ScriptWriter {
    */
   public ScriptWriter render(Command command) {
     command.render(this);
+    return this;
+  }
+
+  /**
+   * Writes a clause into the current statement.
+   *
+   * @param clause the clause
+   * @return this writer
+   */
+  public ScriptWriter clause(Clause clause) {
+    clause.write(this);
     return this;
   }
 
@@ -243,14 +175,12 @@ public final class ScriptWriter {
    * Appends a name in a database schema: the quoted schema, a dot and the quoted name, or only the quoted name if the
    * schema is {@code null}.
    *
-   * @param schema the schema, or {@code null}
+   * @param namespace the namespace
    * @param name the name
    * @return this writer
    */
-  public ScriptWriter qualified(String schema, String name) {
-    if (schema != null) {
-      name(schema).append(".");
-    }
+  public ScriptWriter name(Namespace.Name namespace, String name) {
+    namespace.map(text -> name(text).append("."), () -> this);
     return name(name);
   }
 
@@ -262,7 +192,20 @@ public final class ScriptWriter {
    * @return this writer
    */
   public ScriptWriter table(TableName name) {
-    return qualified(name.namespace(), name.name());
+    return name(name.namespace(), name.name());
+  }
+
+  /**
+   * Marks the current statement as one that runs in a batch of its own. SQL Server, for example, accepts
+   * {@code CREATE TRIGGER} only as the first statement of a batch. {@link #text()} separates the batch of the
+   * statement from the statements before and after it, if the dialect has a {@linkplain Dialect#batchSeparator() batch
+   * separator}. {@link #statements()} has each statement on its own already.
+   *
+   * @return this writer
+   */
+  public ScriptWriter isolate() {
+    isolated = true;
+    return this;
   }
 
   /**
@@ -282,7 +225,8 @@ public final class ScriptWriter {
    */
   public ScriptWriter end() {
     if (!statement.isEmpty()) {
-      statements.add(statement.toString());
+      statements.add(new Script.Statement(statement.toString(), isolated));
+      isolated = false;
       statement.setLength(0);
     }
     return this;

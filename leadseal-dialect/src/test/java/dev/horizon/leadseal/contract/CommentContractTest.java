@@ -1,14 +1,12 @@
 package dev.horizon.leadseal.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.attribute.CommentAttribute;
+import dev.horizon.leadseal.attribute.Comment;
 import java.sql.SQLException;
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public abstract class CommentContractTest extends ContractTest {
@@ -17,9 +15,9 @@ public abstract class CommentContractTest extends ContractTest {
   private static final Column STATE = text("2", "state", 20);
 
   private static Table orders(String comment, String stateComment) {
-    Column state = stateComment == null ? STATE : STATE.with(new CommentAttribute(stateComment));
+    Column state = stateComment == null ? STATE : STATE.with(new Comment(stateComment));
     Table orders = table("shop.Order", "orders", List.of(ID, state), "id");
-    return comment == null ? orders : orders.with(new CommentAttribute(comment));
+    return comment == null ? orders : orders.with(new Comment(comment));
   }
 
   private String tableComment() throws SQLException {
@@ -28,11 +26,6 @@ public abstract class CommentContractTest extends ContractTest {
 
   private String stateComment() throws SQLException {
     return testDatabase().columnComment(connection(), "orders", "state");
-  }
-
-  @BeforeEach
-  void requireComments() {
-    assumeTrue(testDatabase().supportsComments());
   }
 
   @Test

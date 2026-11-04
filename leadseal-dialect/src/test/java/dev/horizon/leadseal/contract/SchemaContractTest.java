@@ -2,18 +2,16 @@ package dev.horizon.leadseal.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Namespace;
 import dev.horizon.leadseal.Schema;
 import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
-import dev.horizon.leadseal.attribute.ForeignKeyAttribute;
-import dev.horizon.leadseal.attribute.IndexAttribute;
+import dev.horizon.leadseal.attribute.ForeignKey;
+import dev.horizon.leadseal.attribute.Index;
 import java.sql.SQLException;
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public abstract class SchemaContractTest extends ContractTest {
@@ -24,22 +22,17 @@ public abstract class SchemaContractTest extends ContractTest {
 
   private static Table customers(String name) {
     return table("shop.Customer", name, List.of(ID, NAME), List.of("id"),
-        List.of(IndexAttribute.of(name, List.of("name"), false)), List.of());
+        List.of(Index.of(name, List.of("name"), false)), List.of());
   }
 
   private static Table orders(TableName customers) {
     return table("shop.Order", "orders", List.of(ID, CUSTOMER_ID), List.of("id"), List.of(),
-        List.of(ForeignKeyAttribute.of("orders", List.of("customer_id"), customers, List.of("id"),
-            ForeignKeyAttribute.Action.CASCADE)));
+        List.of(ForeignKey.of("orders", List.of("customer_id"), customers, List.of("id"),
+            ForeignKey.Action.CASCADE)));
   }
 
   private static Schema in(String namespace, Table... tables) {
     return Schema.of(new Namespace(namespace, List.of(tables)));
-  }
-
-  @BeforeEach
-  void requireSchemas() {
-    assumeTrue(testDatabase().supportsSchemas());
   }
 
   @Test
