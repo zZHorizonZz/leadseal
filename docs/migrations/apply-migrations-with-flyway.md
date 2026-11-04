@@ -16,12 +16,12 @@ Another migration tool works too, if it runs the files in version order.
 
 2. Set the Flyway location to the folders of your database:
 
-   | Database | Location |
-   | --- | --- |
+   | Database   | Location                               |
+   | ---------- | -------------------------------------- |
    | PostgreSQL | `classpath:db/migration/**/postgresql` |
-   | MariaDB | `classpath:db/migration/**/mariadb` |
-   | SQL Server | `classpath:db/migration/**/sqlserver` |
-   | SQLite | `classpath:db/migration/**/sqlite` |
+   | MariaDB    | `classpath:db/migration/**/mariadb`    |
+   | SQL Server | `classpath:db/migration/**/sqlserver`  |
+   | SQLite     | `classpath:db/migration/**/sqlite`     |
 
    With the Flyway API:
 

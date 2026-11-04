@@ -25,22 +25,22 @@ The [documentation](docs/README.md) covers every option, dialect and error.
 
 ## Modules
 
-| Module | Package | Contents |
-| --- | --- | --- |
-| `leadseal-dialect` | `dev.horizon.leadseal` | The schema model, `Dialect`, `ScriptWriter` and the exceptions |
-| `leadseal-dialect` | `dev.horizon.leadseal.attribute` | The column and table attributes, such as `Index` and `ForeignKey` |
-| `leadseal-dialect` | `dev.horizon.leadseal.change` | The changes between two schemas, such as `AddColumn` |
-| `leadseal-dialect` | `dev.horizon.leadseal.command` | The `Ddl` of a dialect, its commands and clauses |
-| `leadseal-dialect` | `dev.horizon.leadseal.expression` | The SQL expressions of checks and triggers, such as `Comparison` |
-| `leadseal-dialect` | `dev.horizon.leadseal.migration` | `MigrationDirectory`, `Plan` and `MigrationOptions` |
-| `leadseal-dialect` | `dev.horizon.leadseal.type` | The column types, such as `TextType` and `IntegerType` |
-| `leadseal-dialect-postgres` | `dev.horizon.leadseal.postgres` | `PostgresDialect` |
-| `leadseal-dialect-mariadb` | `dev.horizon.leadseal.mariadb` | `MariaDbDialect` |
-| `leadseal-dialect-sqlserver` | `dev.horizon.leadseal.sqlserver` | `SqlServerDialect` |
-| `leadseal-dialect-sqlite` | `dev.horizon.leadseal.sqlite` | `SqliteDialect` |
-| `leadseal-protobuf` | `dev.horizon.leadseal.protobuf` | `leadseal/v1/options.proto` and `ProtoSchema` |
-| `leadseal-protoc` | `dev.horizon.leadseal.protoc` | `protoc-gen-leadseal`, as a shaded JAR |
-| `leadseal-it` | `dev.horizon.leadseal.it` | Tests that run the plugin in a build and apply the migrations with Flyway |
+| Module                       | Package                           | Contents                                                                  |
+| ---------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
+| `leadseal-dialect`           | `dev.horizon.leadseal`            | The schema model, `Dialect`, `ScriptWriter` and the exceptions            |
+| `leadseal-dialect`           | `dev.horizon.leadseal.attribute`  | The column and table attributes, such as `Index` and `ForeignKey`         |
+| `leadseal-dialect`           | `dev.horizon.leadseal.change`     | The changes between two schemas, such as `AddColumn`                      |
+| `leadseal-dialect`           | `dev.horizon.leadseal.command`    | The `Ddl` of a dialect, its commands and clauses                          |
+| `leadseal-dialect`           | `dev.horizon.leadseal.expression` | The SQL expressions of checks and triggers, such as `Comparison`          |
+| `leadseal-dialect`           | `dev.horizon.leadseal.migration`  | `MigrationDirectory`, `Plan` and `MigrationOptions`                       |
+| `leadseal-dialect`           | `dev.horizon.leadseal.type`       | The column types, such as `TextType` and `IntegerType`                    |
+| `leadseal-dialect-postgres`  | `dev.horizon.leadseal.postgres`   | `PostgresDialect`                                                         |
+| `leadseal-dialect-mariadb`   | `dev.horizon.leadseal.mariadb`    | `MariaDbDialect`                                                          |
+| `leadseal-dialect-sqlserver` | `dev.horizon.leadseal.sqlserver`  | `SqlServerDialect`                                                        |
+| `leadseal-dialect-sqlite`    | `dev.horizon.leadseal.sqlite`     | `SqliteDialect`                                                           |
+| `leadseal-protobuf`          | `dev.horizon.leadseal.protobuf`   | `leadseal/v1/options.proto` and `ProtoSchema`                             |
+| `leadseal-protoc`            | `dev.horizon.leadseal.protoc`     | `protoc-gen-leadseal`, as a shaded JAR                                    |
+| `leadseal-it`                | `dev.horizon.leadseal.it`         | Tests that run the plugin in a build and apply the migrations with Flyway |
 
 ## Documentation
 

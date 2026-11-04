@@ -46,56 +46,56 @@ SQLite has no comments, so its migrations leave them out.
 
 A message option of type `TableOptions`.
 
-| Name | Type | Default | Description |
-| --- | --- | --- | --- |
-| `name` | `string` | the message name in snake_case | The table name. `OrderLine` is `order_line`. |
-| `schema` | `string` | the default schema of the connection | The database schema of the table. Table names must be unique within a schema. SQLite has no schemas. |
-| `index` | `repeated IndexOptions` | none | The indexes of the table. |
-| `check` | `repeated CheckOptions` | none | The check constraints of the table. |
-| `foreign_key` | `repeated TableForeignKeyOptions` | none | The foreign keys with more than one column. |
-| `id` | `string` | the full message name without the version parts of its package | The stable identity of the table. Refer to [About table identity](about-table-identity.md). |
+| Name          | Type                              | Default                                                        | Description                                                                                          |
+| ------------- | --------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `name`        | `string`                          | the message name in snake_case                                 | The table name. `OrderLine` is `order_line`.                                                         |
+| `schema`      | `string`                          | the default schema of the connection                           | The database schema of the table. Table names must be unique within a schema. SQLite has no schemas. |
+| `index`       | `repeated IndexOptions`           | none                                                           | The indexes of the table.                                                                            |
+| `check`       | `repeated CheckOptions`           | none                                                           | The check constraints of the table.                                                                  |
+| `foreign_key` | `repeated TableForeignKeyOptions` | none                                                           | The foreign keys with more than one column.                                                          |
+| `id`          | `string`                          | the full message name without the version parts of its package | The stable identity of the table. Refer to [About table identity](about-table-identity.md).          |
 
 On MariaDB, a database schema is a database.
 
 ### `index[]`
 
-| Name | Type | Default | Description |
-| --- | --- | --- | --- |
-| `index[].fields` | `repeated string` | none | The names of the indexed fields, in index order. |
-| `index[].unique` | `bool` | `false` | Whether the index rejects two rows with the same values. |
-| `index[].name` | `string` | `ix_<table>_<columns>`, or `ux_<table>_<columns>` when unique | The index name. |
-| `index[].descending` | `repeated string` | none | The indexed fields that the index sorts in descending order. |
-| `index[].where` | `string` | none | The SQL condition of a partial index, such as `deleted = false`. Every database gets it as it is. MariaDB has no partial indexes. |
+| Name                 | Type              | Default                                                       | Description                                                                                                                       |
+| -------------------- | ----------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `index[].fields`     | `repeated string` | none                                                          | The names of the indexed fields, in index order.                                                                                  |
+| `index[].unique`     | `bool`            | `false`                                                       | Whether the index rejects two rows with the same values.                                                                          |
+| `index[].name`       | `string`          | `ix_<table>_<columns>`, or `ux_<table>_<columns>` when unique | The index name.                                                                                                                   |
+| `index[].descending` | `repeated string` | none                                                          | The indexed fields that the index sorts in descending order.                                                                      |
+| `index[].where`      | `string`          | none                                                          | The SQL condition of a partial index, such as `deleted = false`. Every database gets it as it is. MariaDB has no partial indexes. |
 
 ### `check[]`
 
-| Name | Type | Default | Description |
-| --- | --- | --- | --- |
-| `check[].expression` | `string` | none | The SQL condition that every row must meet, such as `quantity >= 0`. Every database gets it as it is. |
-| `check[].name` | `string` | `ck_<table>_<hash>`, with a hash of the expression | The constraint name. |
+| Name                 | Type     | Default                                            | Description                                                                                           |
+| -------------------- | -------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `check[].expression` | `string` | none                                               | The SQL condition that every row must meet, such as `quantity >= 0`. Every database gets it as it is. |
+| `check[].name`       | `string` | `ck_<table>_<hash>`, with a hash of the expression | The constraint name.                                                                                  |
 
 Use SQL that all your databases understand.
 
 ### `foreign_key[]`
 
-| Name | Type | Default | Description |
-| --- | --- | --- | --- |
-| `foreign_key[].fields` | `repeated string` | none | The fields of this table, in key order. |
-| `foreign_key[].message` | `string` | none | The full name of the referenced table message, such as `shop.v1.Order`. |
-| `foreign_key[].references` | `repeated string` | the primary key fields of that message | The referenced fields, in key order. |
-| `foreign_key[].on_delete` | `Action` | `ACTION_NO_ACTION` | What happens to the row when the referenced row is deleted. |
-| `foreign_key[].on_update` | `Action` | `ACTION_NO_ACTION` | What happens to the row when the referenced key changes. |
-| `foreign_key[].name` | `string` | `fk_<table>_<columns>` | The constraint name. |
+| Name                       | Type              | Default                                | Description                                                             |
+| -------------------------- | ----------------- | -------------------------------------- | ----------------------------------------------------------------------- |
+| `foreign_key[].fields`     | `repeated string` | none                                   | The fields of this table, in key order.                                 |
+| `foreign_key[].message`    | `string`          | none                                   | The full name of the referenced table message, such as `shop.v1.Order`. |
+| `foreign_key[].references` | `repeated string` | the primary key fields of that message | The referenced fields, in key order.                                    |
+| `foreign_key[].on_delete`  | `Action`          | `ACTION_NO_ACTION`                     | What happens to the row when the referenced row is deleted.             |
+| `foreign_key[].on_update`  | `Action`          | `ACTION_NO_ACTION`                     | What happens to the row when the referenced key changes.                |
+| `foreign_key[].name`       | `string`          | `fk_<table>_<columns>`                 | The constraint name.                                                    |
 
 ## Generated names
 
-| Object | Name |
-| --- | --- |
-| Primary key | `pk_<table>` |
-| Index | `ix_<table>_<columns>` |
-| Unique index | `ux_<table>_<columns>` |
-| Foreign key | `fk_<table>_<columns>` |
-| Check | `ck_<table>_<hash>` |
-| Default, on SQL Server | `df_<table>_<column>` |
+| Object                 | Name                   |
+| ---------------------- | ---------------------- |
+| Primary key            | `pk_<table>`           |
+| Index                  | `ix_<table>_<columns>` |
+| Unique index           | `ux_<table>_<columns>` |
+| Foreign key            | `fk_<table>_<columns>` |
+| Check                  | `ck_<table>_<hash>`    |
+| Default, on SQL Server | `df_<table>_<column>`  |
 
 A name longer than 63 characters is shortened, and ends with a hash of the full name.

@@ -9,12 +9,12 @@ A dialect writes the changes of a migration as the SQL of one database.
 Each dialect is its own module, and registers itself for `ServiceLoader` under its name.
 The name is also the name of the folder with the SQL files of the dialect.
 
-| Dialect | Name | Module |
-| --- | --- | --- |
-| `PostgresDialect` | `postgresql` | `leadseal-dialect-postgres` |
-| `MariaDbDialect` | `mariadb` | `leadseal-dialect-mariadb` |
-| `SqlServerDialect` | `sqlserver` | `leadseal-dialect-sqlserver` |
-| `SqliteDialect` | `sqlite` | `leadseal-dialect-sqlite` |
+| Dialect            | Name         | Module                       |
+| ------------------ | ------------ | ---------------------------- |
+| `PostgresDialect`  | `postgresql` | `leadseal-dialect-postgres`  |
+| `MariaDbDialect`   | `mariadb`    | `leadseal-dialect-mariadb`   |
+| `SqlServerDialect` | `sqlserver`  | `leadseal-dialect-sqlserver` |
+| `SqliteDialect`    | `sqlite`     | `leadseal-dialect-sqlite`    |
 
 ## Features
 

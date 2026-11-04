@@ -26,12 +26,12 @@ db/migration/
     e1ef0ebd6b8b8350/contract.json
 ```
 
-| File | Contents |
-| --- | --- |
-| `<version>/migration.json` | The version, the name, the schema hashes before and after, the time, and the changes of the migration |
-| `<version>/<dialect>/V<version>.sql` | The SQL of one database, in the Flyway file name format |
-| `<version>/<dialect>/V<version>.sql.conf` | `executeInTransaction=false`, only for a script that must run outside a transaction |
-| `snapshots/<hash>/contract.json` | The schema after a migration |
+| File                                      | Contents                                                                                              |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `<version>/migration.json`                | The version, the name, the schema hashes before and after, the time, and the changes of the migration |
+| `<version>/<dialect>/V<version>.sql`      | The SQL of one database, in the Flyway file name format                                               |
+| `<version>/<dialect>/V<version>.sql.conf` | `executeInTransaction=false`, only for a script that must run outside a transaction                   |
+| `snapshots/<hash>/contract.json`          | The schema after a migration                                                                          |
 
 The version is the time of the migration in UTC, such as `20261014104830`.
 The folder name is the version, and the SQL file names use it as their Flyway version.
@@ -49,13 +49,13 @@ The migrations form one chain, ordered by version.
 
 On each run, leadseal does this:
 
-| Stage | What leadseal does |
-| --- | --- |
-| Read | It reads every `migration.json`, orders the migrations by version and checks the chain. |
+| Stage   | What leadseal does                                                                                                         |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Read    | It reads every `migration.json`, orders the migrations by version and checks the chain.                                    |
 | Fill in | It writes the SQL of each dialect that an existing migration has no file for. This is how you add a database to a project. |
-| Compare | It hashes your schema. When the hash is the hash after the latest migration, it stops. |
-| Diff | It compares the latest snapshot with your schema. When they have no differences, it stops. |
-| Write | It writes the snapshot, the migration folder, `migration.json` and one SQL file for each dialect. |
+| Compare | It hashes your schema. When the hash is the hash after the latest migration, it stops.                                     |
+| Diff    | It compares the latest snapshot with your schema. When they have no differences, it stops.                                 |
+| Write   | It writes the snapshot, the migration folder, `migration.json` and one SQL file for each dialect.                          |
 
 Leadseal never changes a file that exists.
 When you edit a generated SQL file, leadseal keeps your edit.
@@ -64,18 +64,18 @@ When you edit a generated SQL file, leadseal keeps your edit.
 
 The changes of one migration run phase by phase, in this order:
 
-| Phase | Changes |
-| --- | --- |
-| 1 | Drop foreign keys, checks and indexes |
-| 2 | Drop tables |
-| 3 | Rename tables, then move tables to other database schemas |
-| 4 | Create tables, without their foreign keys |
-| 5 | Rename columns, then add columns |
-| 6 | Drop column attributes, change column types, then add and change column attributes |
-| 7 | Change primary keys |
-| 8 | Drop columns |
-| 9 | Add indexes, checks and foreign keys |
-| 10 | Change table comments |
+| Phase | Changes                                                                            |
+| ----- | ---------------------------------------------------------------------------------- |
+| 1     | Drop foreign keys, checks and indexes                                              |
+| 2     | Drop tables                                                                        |
+| 3     | Rename tables, then move tables to other database schemas                          |
+| 4     | Create tables, without their foreign keys                                          |
+| 5     | Rename columns, then add columns                                                   |
+| 6     | Drop column attributes, change column types, then add and change column attributes |
+| 7     | Change primary keys                                                                |
+| 8     | Drop columns                                                                       |
+| 9     | Add indexes, checks and foreign keys                                               |
+| 10    | Change table comments                                                              |
 
 A foreign key is dropped before the tables and columns that it reads, and added after all of them exist.
 
