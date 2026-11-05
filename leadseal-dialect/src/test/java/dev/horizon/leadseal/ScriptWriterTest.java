@@ -1,12 +1,14 @@
 package dev.horizon.leadseal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.attribute.NotNull;
 import dev.horizon.leadseal.attribute.PrimaryKey;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.TextType;
 import dev.horizon.leadseal.type.Type;
@@ -118,5 +120,31 @@ class ScriptWriterTest {
     writer.isolate().end().append("SELECT 1").end();
 
     assertThat(writer.script().statements()).containsExactly(new Script.Statement("SELECT 1", false));
+  }
+
+  @Test
+  @DisplayName("Refuses to rename a value of an enum that stores names")
+  void refuseEnumRename() {
+    Schema before = Schema.of(shipments(EnumType.Storage.NAME, "SENT"));
+    Schema after = Schema.of(shipments(EnumType.Storage.NAME, "SHIPPED"));
+
+    assertThatThrownBy(() -> new ScriptWriter(DIALECT, before, after).write(before.changesTo(after)))
+        .isInstanceOf(UnsupportedChangeException.class).hasMessageContaining("renames the value SENT to SHIPPED");
+  }
+
+  @Test
+  @DisplayName("Renames a value of an enum that stores numbers, with no change")
+  void renameEnumNumber() {
+    Schema before = Schema.of(shipments(EnumType.Storage.NUMBER, "SENT"));
+    Schema after = Schema.of(shipments(EnumType.Storage.NUMBER, "SHIPPED"));
+
+    assertThat(before.changesTo(after)).isEmpty();
+  }
+
+  private static Table shipments(EnumType.Storage storage, String sent) {
+    EnumType type = new EnumType("shipment_state", List.of(new EnumType.Value(0, "NEW"), new EnumType.Value(1, sent)),
+        storage);
+    return Table.of("shop.Shipment", "shipments", List.of(Column.of("1", "id", new IntegerType(IntegerType.Size.INT64),
+        NotNull.INSTANCE), Column.of("2", "state", type, NotNull.INSTANCE)), PrimaryKey.of("shipments", List.of("id")));
   }
 }

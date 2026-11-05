@@ -16,6 +16,7 @@ import dev.horizon.leadseal.migration.MigrationDirectory;
 import dev.horizon.leadseal.migration.MigrationOptions;
 import dev.horizon.leadseal.migration.MigrationPlan;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.TextType;
 import dev.horizon.leadseal.type.TimestampType;
@@ -141,11 +142,16 @@ class MigrationsTest {
     Column price = Column.of("3", "price", new DecimalType(12, 2));
     Column created = Column.of("4", "created", new TimestampType(), NotNull.INSTANCE,
         new NowDefault());
+    List<EnumType.Value> values = List.of(new EnumType.Value(0, "NEW"), new EnumType.Value(1, "SENT"));
+    Column kind = Column.of("5", "kind", new EnumType("order_kind", values, EnumType.Storage.NAME),
+        new LiteralDefault("SENT"));
+    Column priority = Column.of("6", "priority", new EnumType("order_priority", values, EnumType.Storage.NUMBER));
     Table orders = Table.of("shop.Order", "orders", List.of(ID.with(Identity.INSTANCE), state, price,
-        created), PrimaryKey.of("orders", List.of("id")),
+        created, kind, priority), PrimaryKey.of("orders", List.of("id")),
         Index.of("orders", List.of("state", "created"), true).withDescending(List.of("created"))
             .withWhere("price IS NOT NULL"),
-        Check.of("orders", "price >= 0"), new Comment("The orders."));
+        Check.of("orders", "price >= 0"),
+        new Comment("The orders."));
     Schema schema = Schema.of(new Namespace("sales", List.of(orders)));
     migrations("postgresql").generate(schema);
 

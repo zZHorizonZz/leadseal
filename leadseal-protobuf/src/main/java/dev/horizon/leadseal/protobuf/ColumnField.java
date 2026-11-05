@@ -51,11 +51,12 @@ final class ColumnField {
 
   Column column(SourceComments comments) {
     List<ColumnAttribute> attributes = new ArrayList<>(type.attributes(kind));
-    Type columnType = type.type(kind);
-    if (!kind.holds(columnType)) {
-      throw new InvalidSchemaException("The field " + field.getFullName() + " cannot have the column type " + columnType
+    Type option = type.type(kind);
+    if (!kind.holds(option)) {
+      throw new InvalidSchemaException("The field " + field.getFullName() + " cannot have the column type " + option
           + ", because its values are " + kind.natural() + ".");
     }
+    Type columnType = kind.columnType(option);
     if (!nullable()) {
       attributes.addFirst(NotNull.INSTANCE);
     }

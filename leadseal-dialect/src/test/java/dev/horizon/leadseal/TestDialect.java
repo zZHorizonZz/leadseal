@@ -14,6 +14,7 @@ import dev.horizon.leadseal.type.BooleanType;
 import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
@@ -69,6 +70,7 @@ final class TestDialect implements Dialect {
       case DateType _ -> "DATE";
       case TimeType _ -> "TIME";
       case JsonType _ -> "JSON";
+      case EnumType values -> values.storage().select("TEXT", "INT");
     };
   }
 
@@ -76,6 +78,7 @@ final class TestDialect implements Dialect {
   public String literal(Type type, String value) {
     return switch (type) {
       case TextType _ -> string(value);
+      case EnumType values -> values.storage().select(string(value), value);
       case BooleanType _,NumberType _,BytesType _,UuidType _,TemporalType _,JsonType _ -> value;
     };
   }

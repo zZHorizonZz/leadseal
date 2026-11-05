@@ -2,6 +2,7 @@ package dev.horizon.leadseal.postgres;
 
 import dev.horizon.leadseal.contract.CommentContractTest;
 import dev.horizon.leadseal.contract.DialectContract;
+import dev.horizon.leadseal.contract.EnumRenameContractTest;
 import dev.horizon.leadseal.contract.IdentityChangeContractTest;
 import dev.horizon.leadseal.contract.IdentityRemovalContractTest;
 import dev.horizon.leadseal.contract.PartialIndexContractTest;
@@ -53,6 +54,15 @@ class PostgresContractTest extends DialectContract {
 
   @Nested
   class IdentityRemoval extends IdentityRemovalContractTest {
+
+    @Override
+    protected TestDatabase database() {
+      return fixture;
+    }
+  }
+
+  @Nested
+  class Enums extends EnumRenameContractTest {
 
     @Override
     protected TestDatabase database() {

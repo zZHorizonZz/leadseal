@@ -3,6 +3,7 @@ package dev.horizon.leadseal.sqlserver;
 import dev.horizon.leadseal.ScriptWriter;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.Transition.TableTransition;
+import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.command.Clause;
@@ -40,5 +41,11 @@ record SqlServerConstraintDdl(Ddl ddl) implements ConstraintDdl {
           .append(key.onDelete().withoutRestrict().clause("ON DELETE"))
           .append(key.onUpdate().withoutRestrict().clause("ON UPDATE"));
     }
+  }
+
+  @Override
+  public List<Command> renameCheck(TableTransition table, Check origin, Check target) {
+    return List.of(new SqlServerRename(ddl.dialect().quote(table.name().withName(origin.name())), target.name(),
+        ", N'OBJECT'"));
   }
 }

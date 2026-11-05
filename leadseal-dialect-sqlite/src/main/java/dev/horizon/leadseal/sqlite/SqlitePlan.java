@@ -5,6 +5,8 @@ import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.Transition;
 import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.change.Change;
+import dev.horizon.leadseal.change.TableChange;
+import dev.horizon.leadseal.change.TypeChange;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Plan;
 import java.util.ArrayList;
@@ -16,12 +18,20 @@ record SqlitePlan(SqliteDdl ddl, List<Change> changes, Transition transition) im
 
   @Override
   public List<Command> commands() {
-    List<ChangeCommands> changeCommands = changes.stream().map(change -> new ChangeCommands(new SqliteRebuild(ddl,
-        transition, change.table(transition).id()), change.commands(ddl, transition))).toList();
+    List<Command> typeCommands = new ArrayList<>();
+    List<ChangeCommands> changeCommands = new ArrayList<>();
+    for (Change change : changes) {
+      switch (change) {
+        case TableChange table -> changeCommands.add(new ChangeCommands(new SqliteRebuild(ddl, transition,
+            table.table(transition).id()), table.commands(ddl, transition)));
+        case TypeChange type -> typeCommands.addAll(type.commands(ddl, transition));
+      }
+    }
     Set<SqliteRebuild> tableRebuilds = changeCommands.stream().filter(ChangeCommands::needsRebuild)
         .map(ChangeCommands::tableRebuild).collect(Collectors.toSet());
     ForeignKeyMode mode = foreignKeyMode(tableRebuilds);
     List<Command> all = new ArrayList<>(mode.start());
+    all.addAll(typeCommands);
     changeCommands.stream().filter(change -> !tableRebuilds.contains(change.tableRebuild()))
         .forEach(change -> all.addAll(change.commands()));
     transition.target().names().stream()

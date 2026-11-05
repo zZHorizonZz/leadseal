@@ -1,10 +1,13 @@
 package dev.horizon.leadseal.change;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.Transition;
+import dev.horizon.leadseal.Transition.TableTransition;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -13,7 +16,7 @@ import java.util.List;
  * @param origin the table
  * @param name the new name of the table
  */
-public record RenameTable(@JsonProperty("from") TableName origin, @JsonProperty("to") String name) implements Change {
+public record RenameTable(@JsonProperty("from") TableName origin, @JsonProperty("to") String name) implements TableChange {
 
   @Override
   public TableName table() {
@@ -32,6 +35,13 @@ public record RenameTable(@JsonProperty("from") TableName origin, @JsonProperty(
 
   @Override
   public List<Command> commands(Ddl ddl, Transition transition) {
-    return ddl.table().renameTable(transition.originTable(origin), name);
+    TableTransition table = transition.originTable(origin);
+    List<Command> all = new ArrayList<>(ddl.table().renameTable(table, name));
+    TableTransition target = new TableTransition(transition, origin.withName(name), table.id());
+    for (Column column : table.origin().orElseThrow().columns()) {
+      ddl.dialect().typeCheck(origin.name(), column.name(), column.type()).ifPresent(check -> all.addAll(ddl.constraint()
+          .renameCheck(target, check, ddl.dialect().typeCheck(name, column.name(), column.type()).orElseThrow())));
+    }
+    return all;
   }
 }

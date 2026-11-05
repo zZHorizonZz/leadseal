@@ -3,9 +3,7 @@ package dev.horizon.leadseal.change;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import dev.horizon.leadseal.Schema;
-import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.Transition;
-import dev.horizon.leadseal.Transition.TableTransition;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.List;
@@ -29,29 +27,12 @@ import java.util.List;
     @JsonSubTypes.Type(value = AlterColumnAttribute.class, name = "alter_column_attribute"),
     @JsonSubTypes.Type(value = AddTableAttribute.class, name = "add_table_attribute"),
     @JsonSubTypes.Type(value = DropTableAttribute.class, name = "drop_table_attribute"),
-    @JsonSubTypes.Type(value = AlterTableAttribute.class, name = "alter_table_attribute")
+    @JsonSubTypes.Type(value = AlterTableAttribute.class, name = "alter_table_attribute"),
+    @JsonSubTypes.Type(value = CreateEnumType.class, name = "create_enum_type"),
+    @JsonSubTypes.Type(value = AlterEnumType.class, name = "alter_enum_type"),
+    @JsonSubTypes.Type(value = DropEnumType.class, name = "drop_enum_type")
 })
-public sealed interface Change permits CreateTable, DropTable, RenameTable, MoveTable, AddColumn, DropColumn,
-    RenameColumn, AlterColumnType, AddColumnAttribute, DropColumnAttribute, AlterColumnAttribute, AddTableAttribute,
-    DropTableAttribute, AlterTableAttribute {
-
-  /**
-   * Gives the table that the change changes.
-   *
-   * @return the table name at the time the change runs. Drops of tables, indexes, checks and foreign keys run before
-   * renames and use the old name. All other changes use the new name.
-   */
-  TableName table();
-
-  /**
-   * Gives the table that the change changes, in the schemas of a migration.
-   *
-   * @param transition the schemas before and after the migration
-   * @return the table, by its name after the migration, or before it for a change that runs before renames
-   */
-  default TableTransition table(Transition transition) {
-    return phase().precedes(Phase.RENAME_TABLES) ? transition.originTable(table()) : transition.table(table());
-  }
+public sealed interface Change permits TableChange, TypeChange {
 
   /**
    * Gives the phase of the change. The changes of a migration run phase by phase.
@@ -100,6 +81,10 @@ public sealed interface Change permits CreateTable, DropTable, RenameTable, Move
     RENAME_TABLES,
     /** Moves tables to other namespaces. */
     MOVE_TABLES,
+    /** Creates enum types, before the tables and columns that use them. */
+    CREATE_TYPES,
+    /** Changes the values of enum types, before the tables that use the new values. */
+    ALTER_TYPES,
     /** Creates tables, without their foreign keys. */
     CREATE_TABLES,
     /** Renames columns. */
@@ -123,7 +108,9 @@ public sealed interface Change permits CreateTable, DropTable, RenameTable, Move
     /** Adds foreign keys, after all the tables and columns that they read. */
     ADD_FOREIGN_KEYS,
     /** Changes the comments of tables. */
-    COMMENT_TABLES;
+    COMMENT_TABLES,
+    /** Drops enum types, after the tables and columns that used them. */
+    DROP_TYPES;
 
     /**
      * Tells if this phase runs before another phase.

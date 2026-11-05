@@ -53,6 +53,15 @@ public interface Ddl {
   CommentDdl comment();
 
   /**
+   * Gives the statements of the enum types.
+   *
+   * @return the statements. The default gives none, for a dialect without enum types.
+   */
+  default TypeDdl type() {
+    return () -> this;
+  }
+
+  /**
    * Gives the plan of the changes of a migration.
    *
    * @param changes the changes, in the order they run

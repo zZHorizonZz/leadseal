@@ -169,7 +169,7 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
     if (!name.equals(target.name)) {
       changes.add(new RenameColumn(table, name, target.name));
     }
-    if (!type.equals(target.type)) {
+    if (!type.storesLike(target.type)) {
       changes.add(new AlterColumnType(table, target.name, type, target.type));
     }
     Map<Object, ColumnAttribute> targets = new LinkedHashMap<>();

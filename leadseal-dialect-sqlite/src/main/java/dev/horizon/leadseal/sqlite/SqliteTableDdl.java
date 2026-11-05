@@ -5,7 +5,6 @@ import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.Transition.TableTransition;
 import dev.horizon.leadseal.UnsupportedChangeException;
-import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.command.Clause;
@@ -47,7 +46,7 @@ record SqliteTableDdl(SqliteDdl ddl) implements TableDdl {
     List<Clause> all = new ArrayList<>();
     table.columns().forEach(column -> all.add(ddl.column().definition(table, column)));
     all.add(new Clause.PrimaryKeyConstraint(table.primaryKey()));
-    table.attributes(Check.class).forEach(check -> all.add(new Clause.CheckConstraint(check)));
+    table.checks(ddl.dialect()).forEach(check -> all.add(new Clause.CheckConstraint(check)));
     table.attributes(ForeignKey.class).forEach(key -> all.add(ddl.constraint().foreignKey(key)));
     return all;
   }

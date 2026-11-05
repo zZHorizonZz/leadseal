@@ -20,7 +20,7 @@ Without a `type` option, the column type follows from the field type:
 | `float`                                                                 | `REAL`                             | with presence  |
 | `double`                                                                | `DOUBLE`                           | with presence  |
 | `string`                                                                | `TEXT`                             | with presence  |
-| An enum                                                                 | `TEXT`, the value name             | with presence  |
+| An enum                                                                 | `ENUM`, the value name             | with presence  |
 | `bytes`                                                                 | `BYTES`                            | with presence  |
 | `google.protobuf.Timestamp`                                             | `TIMESTAMP`                        | yes            |
 | `google.type.Date`                                                      | `DATE`                             | yes            |
@@ -51,6 +51,45 @@ A field can only have a type that holds all its values:
 | A 32-bit integer | `integer` with `FORMAT_INT64`                          |
 | `float`          | `number` with `FORMAT_DOUBLE`                          |
 
+## Enum columns
+
+An enum column accepts only the values of its enum.
+It stores the value names, or the value numbers with the `integer` type option.
+An enum with aliases, that is `option allow_alias = true`, gives each number once, under its first name.
+
+Each enum has a name: its path in its package, in snake case, such as `order_line_state` for `OrderLine.State`.
+Two enums in a schema cannot have the same name and other values, and an enum cannot have the name of a table.
+
+Each dialect writes an enum column its own way:
+
+| Dialect    | Stores names                                       | Stores numbers                                |
+| ---------- | -------------------------------------------------- | --------------------------------------------- |
+| PostgreSQL | The enum type `<enum>`                             | `integer` and the check `ck_<table>_<column>` |
+| MariaDB    | `ENUM('NEW', 'SENT')`                              | `INT` and the check `ck_<table>_<column>`     |
+| SQL Server | `NVARCHAR(63)` and the check `ck_<table>_<column>` | `INT` and the check `ck_<table>_<column>`     |
+| SQLite     | `TEXT` and the check `ck_<table>_<column>`         | `INTEGER` and the check `ck_<table>_<column>` |
+
+On PostgreSQL, the columns that store the names of an enum share its type.
+A migration creates the type before the first column that uses it, and drops it after the last column stops using it.
+The names of an enum and of its values have at most 63 characters, which is the limit of PostgreSQL.
+
+| Change of the enum                    | PostgreSQL                                                | MariaDB, SQL Server, SQLite                        |
+| ------------------------------------- | --------------------------------------------------------- | -------------------------------------------------- |
+| Add a value                           | `ADD VALUE`, at the place of the value in the enum        | The column accepts the value.                      |
+| Remove or reorder values              | The migration replaces the type and converts the columns. | The migration changes the column or its check.     |
+| Rename a value of a column of names   | `RENAME VALUE`, which renames the value in the rows too   | Leadseal stops with an error.                      |
+| Rename a value of a column of numbers | Nothing changes, because the rows hold the number.        | Nothing changes, because the rows hold the number. |
+
+A migration that removes a value fails if a row holds the value.
+A PostgreSQL transaction cannot use a value that it adds.
+So when a migration also defaults a column to a new value, PostgreSQL replaces the type instead of adding the value.
+
+To leave out a value, such as `STATE_UNSPECIFIED`, give the field a `check`, such as `state <> 'STATE_UNSPECIFIED'`.
+Refer to [Column options](column-options.md).
+
+The PostgreSQL JDBC driver sends a Java `String` as `varchar`, which an enum column does not accept.
+Add `stringtype=unspecified` to the connection URL, or write a cast, such as `CAST(? AS order_line_state)`.
+
 ## Database types
 
 | Column type | PostgreSQL         | MariaDB         | SQL Server         | SQLite    |
@@ -70,8 +109,10 @@ A field can only have a type that holds all its values:
 | `DATE`      | `date`             | `DATE`          | `DATE`             | `TEXT`    |
 | `TIME`      | `time`             | `TIME(6)`       | `TIME(6)`          | `TEXT`    |
 | `JSON`      | `jsonb`            | `JSON`          | `NVARCHAR(MAX)`    | `TEXT`    |
+| `ENUM`      | the enum type      | `ENUM(...)`     | `NVARCHAR(63)`     | `TEXT`    |
 
 `TEXT(n)` and `BYTES(n)` are columns with a `length`.
+`ENUM` is an enum column that stores names, as [Enum columns](#enum-columns) describes.
 SQL Server writes `NVARCHAR(MAX)` for a length above `4000`, and `VARBINARY(MAX)` for a length above `8000`.
 SQLite does not enforce lengths.
 

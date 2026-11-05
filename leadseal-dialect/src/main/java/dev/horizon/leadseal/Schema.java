@@ -1,14 +1,22 @@
 package dev.horizon.leadseal;
 
 import dev.horizon.leadseal.attribute.ForeignKey;
+import dev.horizon.leadseal.change.AlterEnumType;
 
 import dev.horizon.leadseal.change.Change;
+import dev.horizon.leadseal.change.CreateEnumType;
+import dev.horizon.leadseal.change.DropEnumType;
+import dev.horizon.leadseal.type.EnumType;
+import dev.horizon.leadseal.type.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * The tables of a database, in their namespaces. The constructor checks that namespaces are unique, that table ids are
@@ -37,6 +45,18 @@ public record Schema(List<Namespace> namespaces) {
       Table table = table(name).orElseThrow();
       for (ForeignKey key : table.attributes(ForeignKey.class)) {
         key.validate(table, this);
+      }
+    }
+    Map<String, List<EnumType.Value>> types = new LinkedHashMap<>();
+    for (EnumType type : columnTypes(EnumType.class).toList()) {
+      List<EnumType.Value> values = types.putIfAbsent(type.name(), type.values());
+      if (values != null && !values.equals(type.values())) {
+        throw new InvalidSchemaException("The schema has two enums named " + type.name() + " with other values. Give"
+            + " one of them another name.");
+      }
+      if (names().stream().anyMatch(name -> name.name().equals(type.name()))) {
+        throw new InvalidSchemaException("The schema has the enum " + type.name() + " and a table with the same name."
+            + " Give one of them another name.");
       }
     }
   }
@@ -111,6 +131,21 @@ public record Schema(List<Namespace> namespaces) {
   }
 
   /**
+   * Returns the enum types of the columns that store value names. A dialect with enum types, such as PostgreSQL,
+   * creates a type of each of them, which the columns share.
+   *
+   * @return the enums, each name once
+   */
+  public List<EnumType> enumTypes() {
+    return columnTypes(EnumType.class).filter(type -> type.storage().select(true, false)).distinct().toList();
+  }
+
+  private <T extends Type> Stream<T> columnTypes(Class<T> kind) {
+    return names().stream().flatMap(name -> table(name).orElseThrow().columns().stream()).map(Column::type)
+        .filter(kind::isInstance).map(kind::cast);
+  }
+
+  /**
    * Returns the changes that turn this schema into another one, in the order they run.
    *
    * <p>
@@ -137,6 +172,17 @@ public record Schema(List<Namespace> namespaces) {
         changes.addAll(table.createChanges(name));
       }
     }
+    Map<String, EnumType> origins = new LinkedHashMap<>();
+    enumTypes().forEach(type -> origins.put(type.name(), type));
+    for (EnumType type : target.enumTypes()) {
+      EnumType origin = origins.remove(type.name());
+      if (origin == null) {
+        changes.add(new CreateEnumType(type));
+      } else if (!origin.equals(type)) {
+        changes.add(new AlterEnumType(origin, type));
+      }
+    }
+    origins.values().forEach(type -> changes.add(new DropEnumType(type)));
     changes.sort(Comparator.comparing(Change::phase));
     return List.copyOf(changes);
   }

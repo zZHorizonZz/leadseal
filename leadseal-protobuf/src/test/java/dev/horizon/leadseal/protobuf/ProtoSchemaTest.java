@@ -37,6 +37,7 @@ import dev.horizon.leadseal.type.BooleanType;
 import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
@@ -57,6 +58,10 @@ class ProtoSchemaTest {
   private static final IntegerType INT = new IntegerType(IntegerType.Size.INT32);
   private static final IntegerType BIGINT = new IntegerType(IntegerType.Size.INT64);
   private static final NotNull NOT_NULL = NotNull.INSTANCE;
+  private static final List<EnumType.Value> METHODS = List.of(new EnumType.Value(0, "METHOD_UNSPECIFIED"),
+      new EnumType.Value(1, "METHOD_CARD"), new EnumType.Value(2, "METHOD_CASH"));
+  private static final EnumType STATE = new EnumType("order_line_state", List.of(new EnumType.Value(0,
+      "STATE_UNSPECIFIED"), new EnumType.Value(1, "STATE_OPEN")), EnumType.Storage.NAME);
 
   private static Table table(TableName name) {
     return SCHEMA.table(name).orElseThrow();
@@ -73,7 +78,7 @@ class ProtoSchemaTest {
         arguments(Column.of("7", "weight", new FloatType(FloatType.Size.FLOAT32), NOT_NULL)),
         arguments(Column.of("8", "price", new FloatType(FloatType.Size.FLOAT64), NOT_NULL)),
         arguments(Column.of("9", "thumbnail", BytesType.unlimited(), NOT_NULL)),
-        arguments(Column.of("10", "state", TextType.unlimited(), NOT_NULL)),
+        arguments(Column.of("10", "state", STATE, NOT_NULL)),
         arguments(Column.of("11", "created", new TimestampType())),
         arguments(Column.of("12", "discount", BIGINT)),
         arguments(Column.of("13", "attributes", new JsonType())),
@@ -159,11 +164,12 @@ class ProtoSchemaTest {
         arguments(Column.of("2", "amount", new DecimalType(12, 2), NOT_NULL, new LiteralDefault("0"))),
         arguments(Column.of("3", "paid", new TimestampType(), NOT_NULL, new NowDefault())),
         arguments(Column.of("4", "day", new DateType())),
-        arguments(Column.of("5", "method", INT, NOT_NULL, new LiteralDefault("1"))),
+        arguments(Column.of("5", "method", new EnumType("payment_method", METHODS, EnumType.Storage.NUMBER), NOT_NULL,
+            new LiteralDefault("1"))),
         arguments(Column.of("6", "reference", TextType.of(40), NOT_NULL, new Collation("postgresql", "C"))),
         arguments(Column.of("9", "token", new UuidType(), NOT_NULL, new RandomUuidDefault())),
-        arguments(Column.of("10", "fallback", TextType.unlimited(), NOT_NULL, new LiteralDefault(
-            "METHOD_CASH"))),
+        arguments(Column.of("10", "fallback", new EnumType("payment_method", METHODS, EnumType.Storage.NAME),
+            NOT_NULL, new LiteralDefault("METHOD_CASH"))),
         arguments(Column.of("11", "rate", new FloatType(FloatType.Size.FLOAT64), NOT_NULL,
             new LiteralDefault("1.5"))),
         arguments(Column.of("12", "signature", BytesType.of(64), NOT_NULL, new LiteralDefault("0aff"))),
@@ -212,5 +218,12 @@ class ProtoSchemaTest {
     assertThat(customers.column("email").orElseThrow().attribute(Comment.class))
         .contains(new Comment("The address for receipts."));
     assertThat(customers.column("id").orElseThrow().attribute(Comment.class)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Names each enum by its path in the package, and gives each number once, by its first name")
+  void readEnumTypes() {
+    assertThat(SCHEMA.enumTypes()).containsExactly(STATE, new EnumType("payment_method", METHODS,
+        EnumType.Storage.NAME));
   }
 }

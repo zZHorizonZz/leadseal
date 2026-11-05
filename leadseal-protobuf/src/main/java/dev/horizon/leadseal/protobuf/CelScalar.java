@@ -6,6 +6,7 @@ import dev.horizon.leadseal.type.BooleanType;
 import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
@@ -29,20 +30,22 @@ record CelScalar(Type type) {
       case BytesType _ -> Optional.of(Scalar.BYTES);
       case TimestampType _ -> Optional.of(Scalar.TIMESTAMP);
       case DateType _,TimeType _,JsonType _ -> Optional.empty();
+      case EnumType values -> Optional.of(values.storage().select(Scalar.STRING, Scalar.INT));
     };
   }
 
   void declare(Scope.Builder builder, String field, String column, boolean nullable) {
     switch (type) {
       case UuidType _ -> builder.uuid(field, column, nullable);
-      case BooleanType _,NumberType _,TextType _,BytesType _,TemporalType _,JsonType _ -> scalar().ifPresent(
-          scalar -> {
-            if (nullable) {
-              builder.nullable(field, scalar, column);
-            } else {
-              builder.column(field, scalar, column);
-            }
-          });
+      case BooleanType _,NumberType _,TextType _,BytesType _,TemporalType _,JsonType _,EnumType _ -> scalar()
+          .ifPresent(
+              scalar -> {
+                if (nullable) {
+                  builder.nullable(field, scalar, column);
+                } else {
+                  builder.column(field, scalar, column);
+                }
+              });
     }
   }
 }

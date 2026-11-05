@@ -13,7 +13,7 @@ import java.util.List;
  * @param table the table
  * @param attribute the attribute
  */
-public record DropTableAttribute(TableName table, TableAttribute attribute) implements Change {
+public record DropTableAttribute(TableName table, TableAttribute attribute) implements TableChange {
 
   @Override
   public String summary() {

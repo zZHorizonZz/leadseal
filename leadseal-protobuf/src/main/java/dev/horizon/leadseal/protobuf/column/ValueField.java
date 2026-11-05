@@ -4,6 +4,7 @@ import dev.horizon.leadseal.type.BooleanType;
 import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
@@ -25,6 +26,7 @@ record ValueField(String field, Type natural) implements FieldKind {
       case JsonType _,DecimalType _,DateType _,TimeType _,TimestampType _ -> natural.getClass() == type.getClass()
           || natural instanceof TextType;
       case BooleanType _,BytesType _ -> natural.getClass() == type.getClass();
+      case EnumType _ -> false;
     };
   }
 }

@@ -25,10 +25,11 @@ import dev.horizon.leadseal.SchemaException;
     @JsonSubTypes.Type(value = TimestampType.class, name = "timestamp"),
     @JsonSubTypes.Type(value = DateType.class, name = "date"),
     @JsonSubTypes.Type(value = TimeType.class, name = "time"),
-    @JsonSubTypes.Type(value = JsonType.class, name = "json")
+    @JsonSubTypes.Type(value = JsonType.class, name = "json"),
+    @JsonSubTypes.Type(value = EnumType.class, name = "enum")
 })
 public sealed interface Type permits BooleanType, NumberType, TextType, BytesType, UuidType,
-    TemporalType, JsonType {
+    TemporalType, JsonType, EnumType {
 
   /**
    * Gives the zero value of this type. Migrations fill existing rows with it when they add a column that does not
@@ -101,4 +102,14 @@ public sealed interface Type permits BooleanType, NumberType, TextType, BytesTyp
     return false;
   }
 
+  /**
+   * Tells if a column of this type holds what a column of another type holds, so that a change between the two types
+   * needs no migration.
+   *
+   * @param other the other type
+   * @return true if the database sees no difference. The default is true for an equal type.
+   */
+  default boolean storesLike(Type other) {
+    return equals(other);
+  }
 }

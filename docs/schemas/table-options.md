@@ -89,13 +89,15 @@ Use SQL that all your databases understand.
 
 ## Generated names
 
-| Object                 | Name                   |
-| ---------------------- | ---------------------- |
-| Primary key            | `pk_<table>`           |
-| Index                  | `ix_<table>_<columns>` |
-| Unique index           | `ux_<table>_<columns>` |
-| Foreign key            | `fk_<table>_<columns>` |
-| Check                  | `ck_<table>_<hash>`    |
-| Default, on SQL Server | `df_<table>_<column>`  |
+| Object                   | Name                   |
+| ------------------------ | ---------------------- |
+| Primary key              | `pk_<table>`           |
+| Index                    | `ix_<table>_<columns>` |
+| Unique index             | `ux_<table>_<columns>` |
+| Foreign key              | `fk_<table>_<columns>` |
+| Check                    | `ck_<table>_<hash>`    |
+| Enum check               | `ck_<table>_<column>`  |
+| Enum type, on PostgreSQL | `<enum>`               |
+| Default, on SQL Server   | `df_<table>_<column>`  |
 
 A name longer than 63 characters is shortened, and ends with a hash of the full name.

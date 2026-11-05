@@ -14,9 +14,8 @@ import java.util.List;
  * @param origin the table, with its new name in its old namespace
  * @param namespace the new namespace
  */
-public record MoveTable(@JsonProperty("from") TableName origin, @JsonProperty("to") Namespace.Name namespace)
-    implements
-      Change {
+public record MoveTable(@JsonProperty("from") TableName origin,
+    @JsonProperty("to") Namespace.Name namespace) implements TableChange {
 
   @Override
   public TableName table() {

@@ -1,5 +1,6 @@
 package dev.horizon.leadseal.sqlserver;
 
+import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Dialect;
 import dev.horizon.leadseal.Namespace;
 import dev.horizon.leadseal.ScriptWriter;
@@ -18,6 +19,8 @@ import dev.horizon.leadseal.command.Command.AddConstraint;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 record SqlServerDependents(Ddl ddl, ColumnTransition column) {
 
@@ -66,7 +69,13 @@ record SqlServerDependents(Ddl ddl, ColumnTransition column) {
 
   private List<Check> checks() {
     List<TableAttribute> originAttributes = originAttributes(column.table());
-    return target().attributes(Check.class).stream().filter(originAttributes::contains).toList();
+    Column origin = column.origin().orElseThrow();
+    Column target = column.definition();
+    String table = column.table().name().name();
+    Optional<Check> typeCheck = ddl.dialect().typeCheck(table, origin.name(), origin.type())
+        .filter(check -> ddl.dialect().typeCheck(table, target.name(), target.type()).equals(Optional.of(check)));
+    return Stream.concat(target().attributes(Check.class).stream().filter(originAttributes::contains),
+        typeCheck.stream()).toList();
   }
 
   private List<TableAttribute> originAttributes(TableTransition table) {

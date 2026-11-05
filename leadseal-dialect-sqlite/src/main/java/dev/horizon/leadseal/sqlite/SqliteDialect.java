@@ -8,6 +8,7 @@ import dev.horizon.leadseal.type.BooleanType;
 import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
@@ -65,6 +66,7 @@ public final class SqliteDialect implements Dialect {
       case DateType _ -> "TEXT";
       case TimeType _ -> "TEXT";
       case JsonType _ -> "TEXT";
+      case EnumType type -> type.storage().select("TEXT", "INTEGER");
     };
   }
 
@@ -82,6 +84,7 @@ public final class SqliteDialect implements Dialect {
       case DateType _ -> string(value);
       case TimeType _ -> string(value);
       case JsonType _ -> string(value);
+      case EnumType values -> values.storage().select(string(value), value);
     };
   }
 

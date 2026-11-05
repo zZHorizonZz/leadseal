@@ -14,7 +14,7 @@ import java.util.List;
  * @param namespace the namespace of the table
  * @param definition the table without its foreign keys
  */
-public record CreateTable(Namespace.Name namespace, Table definition) implements Change {
+public record CreateTable(Namespace.Name namespace, Table definition) implements TableChange {
 
   @Override
   public TableName table() {

@@ -135,6 +135,48 @@ Refer to [Table options](table-options.md).
 
 **Verify**: The migration has the foreign key.
 
+## The enum ... renames the value ... to ..., but the columns of the ... dialect store the value names.
+
+```text
+--leadseal_out: Migration generation failed: The enum order_state renames the value STATE_SENT to STATE_SHIPPED, but the columns of the mariadb dialect store the value names. Keep the name STATE_SENT, or store the value numbers with the integer type option.
+```
+
+**Cause**: An enum value kept its number but got another name, and the dialect has no enum type to rename the value in.
+The rows hold the old name.
+PostgreSQL renames the value, but MariaDB, SQL Server and SQLite cannot.
+Leadseal throws an `UnsupportedChangeException`.
+
+**Fix**: Keep the old name, and add the new name as an alias with `option allow_alias = true`.
+To rename the value, update the rows in a migration of your own first.
+
+**Verify**: The build writes no error.
+
+## The schema has two enums named ... with other values.
+
+```text
+--leadseal_out: Migration generation failed: The schema has two enums named order_state with other values. Give one of them another name.
+```
+
+**Cause**: Two enums have the same path in their packages, such as `Order.State` in `shop.v1` and in `billing.v1`, but other values.
+The columns of an enum share its name, and on PostgreSQL its type.
+
+**Fix**: Rename or move one of the enums, or give both the same values.
+
+**Verify**: The build writes no error.
+
+## The schema has the enum ... and a table with the same name.
+
+```text
+--leadseal_out: Migration generation failed: The schema has the enum order_state and a table with the same name. Give one of them another name.
+```
+
+**Cause**: An enum, such as `Order.State`, has the name of a table, such as the table of a message `OrderState`.
+PostgreSQL gives each table a type with its name, so the enum type would clash with it.
+
+**Fix**: Rename the enum, or set another `name` for the table.
+
+**Verify**: The build writes no error.
+
 ## The identity column ... must be an integer column...
 
 ```text
