@@ -7,6 +7,7 @@ import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.Transition.ColumnTransition;
 import dev.horizon.leadseal.UnsupportedChangeException;
+import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.Collation;
 import dev.horizon.leadseal.attribute.Comment;
 import dev.horizon.leadseal.attribute.Default;
@@ -14,11 +15,14 @@ import dev.horizon.leadseal.attribute.LiteralDefault;
 import dev.horizon.leadseal.command.Clause;
 import dev.horizon.leadseal.command.ColumnDdl;
 import dev.horizon.leadseal.command.Command;
+import dev.horizon.leadseal.command.Command.AddConstraint;
 import dev.horizon.leadseal.command.Command.DropColumn;
 import dev.horizon.leadseal.command.Command.DropConstraint;
 import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.type.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 record SqlServerColumnDdl(Ddl ddl) implements ColumnDdl {
 
@@ -31,7 +35,17 @@ record SqlServerColumnDdl(Ddl ddl) implements ColumnDdl {
   public List<Command> renameColumn(ColumnTransition column, String origin) {
     Dialect dialect = ddl.dialect();
     String path = dialect.quote(column.table().name()) + "." + dialect.quote(origin);
-    return List.of(new SqlServerRename(path, column.name(), ", N'COLUMN'"));
+    TableName table = column.table().name();
+    Type type = column.origin().orElseThrow().type();
+    Optional<Check> check = dialect.typeCheck(table.name(), origin, type);
+    List<Command> all = new ArrayList<>();
+    // SQL Server cannot rename a column that a check reads. The check comes back under its old name, and the rename of
+    // the change renames it after.
+    check.ifPresent(originCheck -> all.add(new DropConstraint(table, originCheck.name())));
+    all.add(new SqlServerRename(path, column.name(), ", N'COLUMN'"));
+    check.ifPresent(originCheck -> all.add(new AddConstraint(table, new Clause.CheckConstraint(new Check(
+        originCheck.name(), dialect.typeCheck(table.name(), column.name(), type).orElseThrow().expression())))));
+    return all;
   }
 
   @Override

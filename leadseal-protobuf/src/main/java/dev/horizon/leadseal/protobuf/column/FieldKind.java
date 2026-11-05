@@ -64,4 +64,8 @@ public sealed interface FieldKind permits ValueField, EnumField, DecimalField {
   default LiteralDefault text(String value) {
     return literal(value);
   }
+
+  default Type columnType(Type type) {
+    return type;
+  }
 }

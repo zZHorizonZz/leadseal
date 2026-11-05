@@ -9,6 +9,7 @@ import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
 import dev.horizon.leadseal.type.DecimalLimit;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
@@ -36,6 +37,7 @@ public final class SqlServerDialect implements Dialect {
   public static final String NAME = "sqlserver";
 
   private static final int MAX_NVARCHAR = 4000;
+  private static final int ENUM_LENGTH = 63;
   private static final int MAX_VARBINARY = 8000;
   private static final DecimalLimit DECIMAL = new DecimalLimit("SQL Server", 38, 38);
   private static final KeyLimit NVARCHAR = new KeyLimit("SQL Server", "NVARCHAR(MAX)", "Give the column a"
@@ -80,6 +82,7 @@ public final class SqlServerDialect implements Dialect {
       case DateType _ -> "DATE";
       case TimeType _ -> "TIME(6)";
       case JsonType _ -> NVARCHAR.sql(table, column);
+      case EnumType type -> type.storage().select("NVARCHAR(" + ENUM_LENGTH + ")", "INT");
     };
   }
 
@@ -97,6 +100,7 @@ public final class SqlServerDialect implements Dialect {
       case DateType _ -> string(value);
       case TimeType _ -> string(value);
       case JsonType _ -> string(value);
+      case EnumType values -> values.storage().select(string(value), value);
     };
   }
 

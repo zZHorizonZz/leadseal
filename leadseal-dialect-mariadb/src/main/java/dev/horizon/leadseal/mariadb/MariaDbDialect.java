@@ -3,12 +3,14 @@ package dev.horizon.leadseal.mariadb;
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Dialect;
 import dev.horizon.leadseal.Table;
+import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.command.Ddl;
 import dev.horizon.leadseal.type.BooleanType;
 import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
 import dev.horizon.leadseal.type.DecimalLimit;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
@@ -22,6 +24,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * The DDL of MariaDB 11.4 and later.
@@ -75,6 +79,8 @@ public final class MariaDbDialect implements Dialect {
       case DateType _ -> "DATE";
       case TimeType _ -> "TIME(6)";
       case JsonType _ -> JSON.sql(table, column);
+      case EnumType type -> type.storage().select("ENUM(" + type.literals().stream().map(this::string)
+          .collect(Collectors.joining(", ")) + ")", "INT");
     };
   }
 
@@ -92,6 +98,7 @@ public final class MariaDbDialect implements Dialect {
       case DateType _ -> string(value);
       case TimeType _ -> string(value);
       case JsonType _ -> string(value);
+      case EnumType values -> values.storage().select(string(value), value);
     };
   }
 
@@ -133,4 +140,11 @@ public final class MariaDbDialect implements Dialect {
     return "(NOT (" + old + " <=> " + current + "))";
   }
 
+  @Override
+  public Optional<Check> typeCheck(String table, String column, Type type) {
+    return switch (type) {
+      case EnumType values -> values.storage().select(Optional.empty(), Dialect.super.typeCheck(table, column, type));
+      default -> Optional.empty();
+    };
+  }
 }

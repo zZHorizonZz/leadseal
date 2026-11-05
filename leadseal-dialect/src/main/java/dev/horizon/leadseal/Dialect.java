@@ -1,7 +1,15 @@
 package dev.horizon.leadseal;
 
+import dev.horizon.leadseal.attribute.Check;
+import dev.horizon.leadseal.attribute.ConstraintName;
 import dev.horizon.leadseal.attribute.Default;
 import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.expression.ColumnReference;
+import dev.horizon.leadseal.expression.In;
+import dev.horizon.leadseal.expression.Literal;
+import dev.horizon.leadseal.expression.SqlEnvironment;
+import dev.horizon.leadseal.expression.SqlExpression;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.Type;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +63,26 @@ public interface Dialect {
    * @return the literal, for example {@code false} or {@code '2026-10-14'}
    */
   String literal(Type type, String value);
+
+  /**
+   * Gives the check that a column of an enum type needs, because the database type of the column holds more than the
+   * values of the enum. A dialect with a type that holds only the values overrides this for the enums that it writes
+   * with that type.
+   *
+   * @param table the name of the table
+   * @param column the name of the column
+   * @param type the type of the column
+   * @return the check {@code ck_<table>_<column>}, or empty for a column that needs none. The default checks every enum
+   * column.
+   */
+  default Optional<Check> typeCheck(String table, String column, Type type) {
+    return switch (type) {
+      case EnumType values -> Optional.of(new Check(new ConstraintName("ck", table, List.of(column)).value(),
+          new In(ColumnReference.of(column), values.literals().stream()
+              .<SqlExpression> map(value -> new Literal(values, value)).toList()).condition(SqlEnvironment.of(this))));
+      default -> Optional.empty();
+    };
+  }
 
   /**
    * Returns the SQL expression of the current date in UTC.

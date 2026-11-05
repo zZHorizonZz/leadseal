@@ -58,4 +58,9 @@ record SqliteConstraintDdl(SqliteDdl ddl) implements ConstraintDdl {
   private List<Command> unlessDropped(TableTransition table, Supplier<List<Command>> commands) {
     return table.target().isPresent() ? commands.get() : List.of();
   }
+
+  @Override
+  public List<Command> renameCheck(TableTransition table, Check origin, Check target) {
+    return List.of();
+  }
 }

@@ -4,7 +4,6 @@ import dev.horizon.leadseal.Namespace;
 import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.Transition.TableTransition;
-import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.Comment;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.command.Command.CreateSchema;
@@ -48,7 +47,7 @@ public interface TableDdl {
     List<Clause> elements = new ArrayList<>();
     definition.columns().forEach(column -> elements.add(ddl().column().definition(definition, column)));
     elements.add(new Clause.PrimaryKeyConstraint(definition.primaryKey()));
-    definition.attributes(Check.class).forEach(check -> elements.add(new Clause.CheckConstraint(check)));
+    definition.checks(ddl().dialect()).forEach(check -> elements.add(new Clause.CheckConstraint(check)));
     all.add(new CreateTable(name, elements));
     definition.attributes(Index.class).forEach(index -> all.addAll(ddl().constraint().addIndex(table, index)));
     if (definition.attribute(Comment.class).isPresent()) {

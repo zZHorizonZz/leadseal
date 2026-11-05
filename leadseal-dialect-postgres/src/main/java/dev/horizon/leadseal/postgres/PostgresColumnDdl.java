@@ -10,6 +10,7 @@ import dev.horizon.leadseal.command.ColumnDdl;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Command.AlterColumn;
 import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.type.EnumType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -18,12 +19,19 @@ record PostgresColumnDdl(Ddl ddl) implements ColumnDdl {
 
   @Override
   public List<Command> alterColumnType(ColumnTransition column) {
+    if (ddl.dialect().type(column.table().origin().orElseThrow(), column.origin().orElseThrow()).equals(type(column))) {
+      return List.of();
+    }
     Optional<Default> value = column.definition().attribute(Default.class);
     List<Command> all = new ArrayList<>();
     value.ifPresent(_ -> all.addAll(dropDefault(column)));
     String type = type(column);
+    String text = switch (column.origin().orElseThrow().type()) {
+      case EnumType values -> values.storage().select("::text", "");
+      default -> "";
+    };
     all.add(new AlterColumn(column.table().name(), column.name(), "TYPE " + type + collation(column) + " USING "
-        + ddl.dialect().quote(column.name()) + "::" + type));
+        + ddl.dialect().quote(column.name()) + text + "::" + type));
     value.ifPresent(_ -> all.addAll(setDefault(column)));
     return all;
   }

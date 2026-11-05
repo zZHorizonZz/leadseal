@@ -6,6 +6,7 @@ import dev.horizon.leadseal.command.CommentDdl;
 import dev.horizon.leadseal.command.ConstraintDdl;
 import dev.horizon.leadseal.command.Ddl;
 import dev.horizon.leadseal.command.TableDdl;
+import dev.horizon.leadseal.command.TypeDdl;
 
 record PostgresDdl(Dialect dialect) implements Ddl {
 
@@ -22,6 +23,11 @@ record PostgresDdl(Dialect dialect) implements Ddl {
   @Override
   public ConstraintDdl constraint() {
     return () -> this;
+  }
+
+  @Override
+  public TypeDdl type() {
+    return new PostgresTypeDdl(this);
   }
 
   @Override

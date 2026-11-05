@@ -25,10 +25,11 @@ import dev.horizon.leadseal.SchemaException;
     @JsonSubTypes.Type(value = TimestampType.class, name = "timestamp"),
     @JsonSubTypes.Type(value = DateType.class, name = "date"),
     @JsonSubTypes.Type(value = TimeType.class, name = "time"),
-    @JsonSubTypes.Type(value = JsonType.class, name = "json")
+    @JsonSubTypes.Type(value = JsonType.class, name = "json"),
+    @JsonSubTypes.Type(value = EnumType.class, name = "enum")
 })
 public sealed interface Type permits BooleanType, NumberType, TextType, BytesType, UuidType,
-    TemporalType, JsonType {
+    TemporalType, JsonType, EnumType {
 
   /**
    * Gives the zero value of this type. Migrations fill existing rows with it when they add a column that does not
@@ -100,5 +101,4 @@ public sealed interface Type permits BooleanType, NumberType, TextType, BytesTyp
   default boolean identifies() {
     return false;
   }
-
 }

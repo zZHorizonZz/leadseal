@@ -1,5 +1,6 @@
 package dev.horizon.leadseal;
 
+import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.attribute.TableAttribute;
@@ -13,6 +14,7 @@ import dev.horizon.leadseal.change.DropTable;
 import dev.horizon.leadseal.change.DropTableAttribute;
 import dev.horizon.leadseal.change.MoveTable;
 import dev.horizon.leadseal.change.RenameTable;
+import dev.horizon.leadseal.type.Type;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * A table: its name, its columns and its attributes, such as the primary key and the indexes.
@@ -154,6 +157,19 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
   public Table without(Class<? extends TableAttribute> type) {
     return new Table(id, name, columns, attributes.stream().filter(attribute -> !type.isInstance(attribute))
         .toList());
+  }
+
+  /**
+   * Gives the checks of this table as a dialect writes them: the checks of the table, and the checks that its enum
+   * columns need.
+   *
+   * @param dialect the dialect
+   * @return the checks
+   * @see Dialect#typeCheck(String, String, Type)
+   */
+  public List<Check> checks(Dialect dialect) {
+    return Stream.concat(attributes(Check.class).stream(),
+        columns.stream().flatMap(column -> dialect.typeCheck(name, column.name(), column.type()).stream())).toList();
   }
 
   /**

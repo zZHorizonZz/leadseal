@@ -9,6 +9,7 @@ import dev.horizon.leadseal.command.Command.AddConstraint;
 import dev.horizon.leadseal.command.Command.CreateIndex;
 import dev.horizon.leadseal.command.Command.DropConstraint;
 import dev.horizon.leadseal.command.Command.DropIndex;
+import dev.horizon.leadseal.command.Command.RenameConstraint;
 import java.util.List;
 
 /** The statements of primary keys, indexes, checks and foreign keys. Each has a default of standard SQL. */
@@ -77,6 +78,18 @@ public interface ConstraintDdl {
    */
   default List<Command> dropCheck(TableTransition table, Check check) {
     return List.of(new DropConstraint(table.name(), check.name()));
+  }
+
+  /**
+   * Gives the commands that rename a check, after the rename of its table or its column.
+   *
+   * @param table the table, by its name after the rename
+   * @param origin the check with the name before the rename
+   * @param target the check with the name after the rename
+   * @return the commands. The default renames the constraint.
+   */
+  default List<Command> renameCheck(TableTransition table, Check origin, Check target) {
+    return List.of(new RenameConstraint(table.name(), origin.name(), target.name()));
   }
 
   /**

@@ -16,7 +16,7 @@ import java.util.List;
  * @param target the attribute after, with the same key
  */
 public record AlterTableAttribute(TableName table, @JsonProperty("from") TableAttribute origin,
-    @JsonProperty("to") TableAttribute target) implements Change {
+    @JsonProperty("to") TableAttribute target) implements TableChange {
 
   @Override
   public String summary() {

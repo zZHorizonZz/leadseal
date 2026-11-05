@@ -11,7 +11,7 @@ import java.util.List;
  *
  * @param table the table
  */
-public record DropTable(TableName table) implements Change {
+public record DropTable(TableName table) implements TableChange {
 
   @Override
   public String summary() {

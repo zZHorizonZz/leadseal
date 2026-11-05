@@ -14,7 +14,7 @@ import java.util.List;
  * @param column the name of the column
  * @param attribute the attribute
  */
-public record DropColumnAttribute(TableName table, String column, ColumnAttribute attribute) implements Change {
+public record DropColumnAttribute(TableName table, String column, ColumnAttribute attribute) implements TableChange {
 
   @Override
   public String summary() {

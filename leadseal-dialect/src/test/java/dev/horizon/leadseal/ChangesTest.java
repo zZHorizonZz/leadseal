@@ -25,6 +25,7 @@ import dev.horizon.leadseal.change.DropTableAttribute;
 import dev.horizon.leadseal.change.MoveTable;
 import dev.horizon.leadseal.change.RenameColumn;
 import dev.horizon.leadseal.change.RenameTable;
+import dev.horizon.leadseal.change.TableChange;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.TextType;
 import dev.horizon.leadseal.type.Type;
@@ -160,8 +161,8 @@ class ChangesTest {
 
     assertThat(changes).extracting(Object::getClass).containsExactly(DropTableAttribute.class,
         RenameTable.class, AddColumn.class, DropColumn.class);
-    assertThat(changes.getFirst().table()).isEqualTo(ORDERS_NAME);
-    assertThat(changes.get(2).table()).isEqualTo(TableName.of("purchases"));
+    assertThat(((TableChange) changes.getFirst()).table()).isEqualTo(ORDERS_NAME);
+    assertThat(((TableChange) changes.get(2)).table()).isEqualTo(TableName.of("purchases"));
   }
 
   private static Schema customersAndOrders() {

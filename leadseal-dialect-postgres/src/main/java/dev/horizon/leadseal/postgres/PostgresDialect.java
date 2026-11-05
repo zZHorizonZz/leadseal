@@ -3,12 +3,14 @@ package dev.horizon.leadseal.postgres;
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Dialect;
 import dev.horizon.leadseal.Table;
+import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.command.Ddl;
 import dev.horizon.leadseal.type.BooleanType;
 import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
 import dev.horizon.leadseal.type.DecimalLimit;
 import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
@@ -17,6 +19,7 @@ import dev.horizon.leadseal.type.TimeType;
 import dev.horizon.leadseal.type.TimestampType;
 import dev.horizon.leadseal.type.Type;
 import dev.horizon.leadseal.type.UuidType;
+import java.util.Optional;
 
 /**
  * The DDL of PostgreSQL 13 and later.
@@ -58,6 +61,7 @@ public final class PostgresDialect implements Dialect {
       case DateType _ -> "date";
       case TimeType _ -> "time";
       case JsonType _ -> "jsonb";
+      case EnumType type -> type.storage().select(quote(type.name()), "integer");
     };
   }
 
@@ -75,6 +79,7 @@ public final class PostgresDialect implements Dialect {
       case DateType _ -> string(value);
       case TimeType _ -> string(value);
       case JsonType _ -> string(value);
+      case EnumType values -> values.storage().select(string(value), value);
     };
   }
 
@@ -114,4 +119,11 @@ public final class PostgresDialect implements Dialect {
     return tag + "\n" + body + "\n" + tag;
   }
 
+  @Override
+  public Optional<Check> typeCheck(String table, String column, Type type) {
+    return switch (type) {
+      case EnumType values -> values.storage().select(Optional.empty(), Dialect.super.typeCheck(table, column, type));
+      default -> Optional.empty();
+    };
+  }
 }
