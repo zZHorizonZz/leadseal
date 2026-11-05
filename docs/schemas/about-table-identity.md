@@ -9,6 +9,8 @@ Each table and column has an id.
 Leadseal compares two schemas by id, not by name.
 A table or column that keeps its id but gets another name is renamed, and keeps its rows.
 A table or column whose id changes is dropped, and a new one is created.
+The build warns about each drop.
+Refer to [About data loss](../migrations/about-data-loss.md).
 
 ## Ids of protobuf messages
 

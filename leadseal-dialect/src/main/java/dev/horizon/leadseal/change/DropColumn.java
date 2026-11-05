@@ -8,6 +8,7 @@ import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Drops a column.
@@ -36,5 +37,10 @@ public record DropColumn(TableName table, String column) implements TableChange 
         .ifPresent(check -> all.addAll(ddl.constraint().dropCheck(target, check)));
     all.addAll(ddl.column().dropColumn(origin));
     return all;
+  }
+
+  @Override
+  public Optional<String> warning() {
+    return Optional.of("drops the column " + table + "." + column + " and its values");
   }
 }

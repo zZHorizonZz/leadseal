@@ -90,7 +90,7 @@ It returns the same `MigrationPlan`, and you write each `MigrationFile` yourself
 `Dialect.of("postgresql")` finds an installed dialect module with `ServiceLoader`.
 It throws `ConfigurationException` when no installed dialect has the name.
 
-## Set the clock or the prefix
+## Set the clock, the prefix or the unsafe changes
 
 Pass `MigrationOptions` as the third argument:
 
@@ -101,6 +101,13 @@ new MigrationDirectory(directory, List.of(new PostgresDialect()), MigrationOptio
 `withClock` sets the clock that gives the version of a new migration.
 `withPrefix` sets the prefix of temporary objects.
 Refer to [Protoc plugin options](protoc-plugin-options.md#temporary-objects).
+
+`allowUnsafe` applies unsafe changes, such as a column type that holds fewer values.
+Without it, `plan` and `generate` throw an `UnsupportedChangeException` for an unsafe change.
+
+`MigrationPlan.warnings()` describes the data that the new migration deletes, such as `drops the table orders and its rows`.
+Show it to whoever runs the generation.
+Refer to [About data loss](about-data-loss.md).
 
 ## Related
 

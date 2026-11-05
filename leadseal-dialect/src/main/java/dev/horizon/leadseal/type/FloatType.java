@@ -80,4 +80,9 @@ public record FloatType(Size size) implements NumberType {
 
     public abstract <T> T select(T float32, T float64);
   }
+
+  @Override
+  public boolean isAssignableFrom(Type origin) {
+    return origin instanceof FloatType(Size other) && size.holds(other);
+  }
 }

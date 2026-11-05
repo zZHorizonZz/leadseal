@@ -177,6 +177,21 @@ PostgreSQL gives each table a type with its name, so the enum type would clash w
 
 **Verify**: The build writes no error.
 
+## The migration changes the column ... from ... to ..., which can lose data and is unsafe.
+
+```text
+--leadseal_out: Migration generation failed: The migration changes the column orders.state from text(50) to text(20), which can lose data and is unsafe. Keep a type that holds every value of text(50), or set allow_unsafe=true to apply the change.
+```
+
+**Cause**: The new type of the column holds fewer values than the old one, such as a shorter text, a smaller integer, an enum without a value, or another kind of type.
+Leadseal throws an `UnsupportedChangeException`.
+
+**Fix**: Keep a type that holds every value, such as `text(50)` or a longer text.
+To change the type anyway, set `allow_unsafe=true` for one build, after you check the rows.
+Refer to [About data loss](../migrations/about-data-loss.md).
+
+**Verify**: The build writes no error.
+
 ## The identity column ... must be an integer column...
 
 ```text

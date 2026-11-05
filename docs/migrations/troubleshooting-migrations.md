@@ -22,6 +22,19 @@ Refer to [Merge migration branches](merge-migration-branches.md).
 
 **Verify**: The build writes a new migration after the other one, and no error.
 
+## The option allow_unsafe is true or false, but is ...
+
+```text
+--leadseal_out: Migration generation failed: The option allow_unsafe is true or false, but is 'yes'.
+```
+
+**Cause**: The plugin option `allow_unsafe` has a value other than `true` or `false`.
+
+**Fix**: Set `allow_unsafe=true`, or remove the option.
+Refer to [Protoc plugin options](protoc-plugin-options.md).
+
+**Verify**: The build writes no error.
+
 ## No installed dialect is named ...
 
 ```text

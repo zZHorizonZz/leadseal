@@ -9,6 +9,7 @@ import com.google.protobuf.compiler.PluginProtos.CodeGeneratorRequest;
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse;
 import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.migration.MigrationFile;
+import dev.horizon.leadseal.migration.MigrationPlan;
 import dev.horizon.leadseal.protobuf.OptionsProto;
 import dev.horizon.leadseal.protobuf.ProtoSchema;
 import java.io.IOException;
@@ -45,7 +46,10 @@ public final class LeadsealGenerator {
           .setSupportedFeatures(FEATURES)
           .setMinimumEdition(DescriptorProtos.Edition.EDITION_PROTO2_VALUE)
           .setMaximumEdition(DescriptorProtos.Edition.EDITION_2024_VALUE);
-      for (MigrationFile file : options.directory().plan(new ProtoSchema().read(files(request))).files()) {
+      MigrationPlan plan = options.directory().plan(new ProtoSchema().read(files(request)));
+      plan.migration().ifPresent(folder -> plan.warnings().forEach(warning -> System.err.println(
+          "leadseal: The migration " + folder + " " + warning + ".")));
+      for (MigrationFile file : plan.files()) {
         response.addFile(CodeGeneratorResponse.File.newBuilder()
             .setName(file.path().toString().replace('\\', '/'))
             .setContent(file.content()));

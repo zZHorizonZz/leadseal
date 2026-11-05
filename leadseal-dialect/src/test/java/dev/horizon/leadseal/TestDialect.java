@@ -18,6 +18,7 @@ import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
+import dev.horizon.leadseal.type.Length;
 import dev.horizon.leadseal.type.NumberType;
 import dev.horizon.leadseal.type.TemporalType;
 import dev.horizon.leadseal.type.TextType;
@@ -59,8 +60,8 @@ final class TestDialect implements Dialect {
   @Override
   public String type(Table table, Column column) {
     return switch (column.type()) {
-      case TextType text -> text.length().map(characters -> "TEXT(" + characters + ")", () -> "TEXT");
-      case IntegerType integer -> integer.size().name();
+      case TextType(Length length) -> length.map(characters -> "TEXT(" + characters + ")", () -> "TEXT");
+      case IntegerType(IntegerType.Size size) -> size.name();
       case BooleanType _ -> "BOOLEAN";
       case FloatType _ -> "FLOAT";
       case DecimalType _ -> "DECIMAL";
@@ -70,7 +71,7 @@ final class TestDialect implements Dialect {
       case DateType _ -> "DATE";
       case TimeType _ -> "TIME";
       case JsonType _ -> "JSON";
-      case EnumType values -> values.storage().select("TEXT", "INT");
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select("TEXT", "INT");
     };
   }
 
@@ -78,7 +79,7 @@ final class TestDialect implements Dialect {
   public String literal(Type type, String value) {
     return switch (type) {
       case TextType _ -> string(value);
-      case EnumType values -> values.storage().select(string(value), value);
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select(string(value), value);
       case BooleanType _,NumberType _,BytesType _,UuidType _,TemporalType _,JsonType _ -> value;
     };
   }

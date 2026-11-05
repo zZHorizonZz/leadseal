@@ -66,7 +66,7 @@ public final class SqliteDialect implements Dialect {
       case DateType _ -> "TEXT";
       case TimeType _ -> "TEXT";
       case JsonType _ -> "TEXT";
-      case EnumType type -> type.storage().select("TEXT", "INTEGER");
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select("TEXT", "INTEGER");
     };
   }
 
@@ -84,7 +84,7 @@ public final class SqliteDialect implements Dialect {
       case DateType _ -> string(value);
       case TimeType _ -> string(value);
       case JsonType _ -> string(value);
-      case EnumType values -> values.storage().select(string(value), value);
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select(string(value), value);
     };
   }
 

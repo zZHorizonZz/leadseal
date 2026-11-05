@@ -12,9 +12,9 @@ import java.util.Map;
 import java.util.Set;
 import picocli.CommandLine;
 
-record GeneratorOptions(Path migrations, List<String> dialects, String prefix) {
+record GeneratorOptions(Path migrations, List<String> dialects, String prefix, boolean unsafe) {
 
-  private static final Set<String> NAMES = Set.of("migrations", "dialect", "prefix");
+  private static final Set<String> NAMES = Set.of("migrations", "dialect", "prefix", "allow_unsafe");
 
   GeneratorOptions {
     dialects = List.copyOf(dialects);
@@ -47,7 +47,8 @@ record GeneratorOptions(Path migrations, List<String> dialects, String prefix) {
         throw new ConfigurationException("The option '" + name + "' needs a value, for example " + name + "=...");
       }
       if (!NAMES.contains(name)) {
-        throw new ConfigurationException("Unknown option '" + name + "'. The options are migrations, dialect and prefix.");
+        throw new ConfigurationException("Unknown option '" + name + "'. The options are migrations, dialect, prefix"
+            + " and allow_unsafe.");
       }
       values.computeIfAbsent(name, _ -> new ArrayList<>()).add(parts[1].trim());
     }
@@ -56,12 +57,18 @@ record GeneratorOptions(Path migrations, List<String> dialects, String prefix) {
       throw new ConfigurationException("Set the migrations option to the migration directory, for example"
           + " migrations=src/main/resources/db/migration.");
     }
+    String unsafe = values.getOrDefault("allow_unsafe", List.of("false")).getLast();
+    if (!unsafe.equals("true") && !unsafe.equals("false")) {
+      throw new ConfigurationException("The option allow_unsafe is true or false, but is '" + unsafe + "'.");
+    }
     return new GeneratorOptions(Path.of(migrations.getLast()), values.getOrDefault("dialect", List.of()),
-        values.getOrDefault("prefix", List.of(MigrationOptions.DEFAULT_PREFIX)).getLast());
+        values.getOrDefault("prefix", List.of(MigrationOptions.DEFAULT_PREFIX)).getLast(),
+        Boolean.parseBoolean(unsafe));
   }
 
   MigrationDirectory directory() {
+    MigrationOptions options = MigrationOptions.defaults().withPrefix(prefix);
     return new MigrationDirectory(migrations, dialects.stream().map(Dialect::of).toList(),
-        MigrationOptions.defaults().withPrefix(prefix));
+        unsafe ? options.allowUnsafe() : options);
   }
 }

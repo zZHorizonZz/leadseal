@@ -8,8 +8,10 @@ import java.time.Clock;
  * @param clock the clock that names new migrations
  * @param prefix the prefix of the names that migrations give their own temporary objects, such as the temporary table
  * of a SQLite rebuild. An empty prefix gives them names without one.
+ * @param unsafe whether a migration applies unsafe changes, which can lose values that the schema still has, such as
+ * a column type that holds fewer values
  */
-public record MigrationOptions(Clock clock, String prefix) {
+public record MigrationOptions(Clock clock, String prefix, boolean unsafe) {
 
   /** The prefix that migrations use by default. */
   public static final String DEFAULT_PREFIX = "leadseal_";
@@ -20,12 +22,12 @@ public record MigrationOptions(Clock clock, String prefix) {
   }
 
   /**
-   * Returns the default options: the system clock in UTC and the prefix {@code leadseal_}.
+   * Returns the default options: the system clock in UTC, the prefix {@code leadseal_}, and no unsafe changes.
    *
    * @return the options
    */
   public static MigrationOptions defaults() {
-    return new MigrationOptions(Clock.systemUTC(), DEFAULT_PREFIX);
+    return new MigrationOptions(Clock.systemUTC(), DEFAULT_PREFIX, false);
   }
 
   /**
@@ -35,7 +37,7 @@ public record MigrationOptions(Clock clock, String prefix) {
    * @return the new options
    */
   public MigrationOptions withClock(Clock clock) {
-    return new MigrationOptions(clock, prefix);
+    return new MigrationOptions(clock, prefix, unsafe);
   }
 
   /**
@@ -45,6 +47,15 @@ public record MigrationOptions(Clock clock, String prefix) {
    * @return the new options
    */
   public MigrationOptions withPrefix(String prefix) {
-    return new MigrationOptions(clock, prefix);
+    return new MigrationOptions(clock, prefix, unsafe);
+  }
+
+  /**
+   * Returns a copy of these options that applies unsafe changes.
+   *
+   * @return the new options
+   */
+  public MigrationOptions allowUnsafe() {
+    return new MigrationOptions(clock, prefix, true);
   }
 }

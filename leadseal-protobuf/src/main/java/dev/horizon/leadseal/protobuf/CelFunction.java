@@ -66,12 +66,11 @@ sealed interface CelFunction extends Function permits CelFunction.CallFunction, 
 
     @Override
     public SqlExpression expression(Expression.FunctionCall call, CelTranslation translation) {
-      return switch (call.arguments().getFirst()) {
-        case Expression.FieldReference(Scope.Field field, Expression.Row.Current _, int _) ->
-          new ColumnChange(field.column());
-        default -> throw new UnsupportedExpressionException(translation,
-            "changed() takes a field of the row, as in changed(state)");
-      };
+      if (call.arguments()
+          .getFirst() instanceof Expression.FieldReference(Scope.Field field, Expression.Row.Current _, int _)) {
+        return new ColumnChange(field.column());
+      }
+      throw new UnsupportedExpressionException(translation, "changed() takes a field of the row, as in changed(state)");
     }
   }
 }

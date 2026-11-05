@@ -4,9 +4,11 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import dev.horizon.leadseal.Schema;
 import dev.horizon.leadseal.Transition;
+import dev.horizon.leadseal.UnsupportedChangeException;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * One change between two schemas. {@link Schema#changesTo} finds the changes, a migration's {@code migration.json}
@@ -66,6 +68,26 @@ public sealed interface Change permits TableChange, TypeChange {
    * @return the commands, in the order they run
    */
   List<Command> commands(Ddl ddl, Transition transition);
+
+  /**
+   * Describes the data that this change deletes, such as the rows of a dropped table. A migration warns about it.
+   *
+   * @return the description, for example {@code drops the table orders and its rows}, or empty for a change that keeps
+   * every value. The default is empty.
+   */
+  default Optional<String> warning() {
+    return Optional.empty();
+  }
+
+  /**
+   * Refuses this change if it is unsafe: if it can lose values that the schema after the migration still has, such as
+   * the values that a shorter text cannot hold. A drop is not unsafe, because the schema after it no longer has the
+   * data.
+   *
+   * @throws UnsupportedChangeException if the change is unsafe. The default does not throw.
+   */
+  default void validate() {
+  }
 
   /** The phases of a migration, in the order they run. */
   enum Phase {

@@ -48,4 +48,18 @@ public record AlterColumnType(TableName table, String column, @JsonProperty("fro
     }
     return all;
   }
+
+  @Override
+  public Optional<String> warning() {
+    return target.isAssignableFrom(origin) ? Optional.empty()
+        : Optional.of("changes the column " + table + "." + column + " from " + origin + " to " + target
+            + ", which can lose values");
+  }
+
+  @Override
+  public void validate() {
+    if (!target.isAssignableFrom(origin)) {
+      throw new LossyTypeChangeException(table, column, origin, target);
+    }
+  }
 }

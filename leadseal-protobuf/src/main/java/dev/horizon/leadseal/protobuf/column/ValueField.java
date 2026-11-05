@@ -20,8 +20,9 @@ record ValueField(String field, Type natural) implements FieldKind {
   public boolean holds(Type type) {
     return switch (type) {
       case TextType _ -> natural instanceof TextType;
-      case IntegerType integer -> natural instanceof IntegerType own && integer.size().holds(own.size());
-      case FloatType number -> natural instanceof FloatType own && number.size().holds(own.size());
+      case IntegerType(IntegerType.Size size) -> natural instanceof IntegerType(IntegerType.Size own)
+          && size.holds(own);
+      case FloatType(FloatType.Size size) -> natural instanceof FloatType(FloatType.Size own) && size.holds(own);
       case UuidType _ -> natural instanceof TextType || natural instanceof BytesType;
       case JsonType _,DecimalType _,DateType _,TimeType _,TimestampType _ -> natural.getClass() == type.getClass()
           || natural instanceof TextType;

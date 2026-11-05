@@ -101,4 +101,15 @@ public sealed interface Type permits BooleanType, NumberType, TextType, BytesTyp
   default boolean identifies() {
     return false;
   }
+
+  /**
+   * Tells if a column of this type holds every value that a column of an earlier type holds, so that a change from the
+   * earlier type loses no data.
+   *
+   * @param origin the earlier type
+   * @return true if every value of the earlier type fits. The default is true only for an equal type.
+   */
+  default boolean isAssignableFrom(Type origin) {
+    return equals(origin);
+  }
 }

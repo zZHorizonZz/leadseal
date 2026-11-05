@@ -53,9 +53,7 @@ record EnumField(String field, EnumDescriptor values) implements FieldKind {
     String path = file.isEmpty() ? values.getFullName() : values.getFullName().substring(file.length() + 1);
     String name = Arrays.stream(path.split("\\.")).map(part -> new SnakeCase(part).value())
         .collect(Collectors.joining("_"));
-    return new EnumType(name, List.copyOf(canonical.values()), switch (type) {
-      case IntegerType _ -> EnumType.Storage.NUMBER;
-      default -> EnumType.Storage.NAME;
-    });
+    return new EnumType(name, List.copyOf(canonical.values()),
+        type instanceof IntegerType ? EnumType.Storage.NUMBER : EnumType.Storage.NAME);
   }
 }

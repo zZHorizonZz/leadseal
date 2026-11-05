@@ -14,6 +14,7 @@ import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
 import dev.horizon.leadseal.type.KeyLimit;
+import dev.horizon.leadseal.type.Length;
 import dev.horizon.leadseal.type.TextType;
 import dev.horizon.leadseal.type.TimeType;
 import dev.horizon.leadseal.type.TimestampType;
@@ -68,13 +69,13 @@ public final class SqlServerDialect implements Dialect {
   public String type(Table table, Column column) {
     return switch (column.type()) {
       case BooleanType _ -> "BIT";
-      case IntegerType type -> type.size().select("INT", "BIGINT");
-      case FloatType type -> type.size().select("REAL", "FLOAT");
+      case IntegerType(IntegerType.Size size) -> size.select("INT", "BIGINT");
+      case FloatType(FloatType.Size size) -> size.select("REAL", "FLOAT");
       case DecimalType type -> DECIMAL.sql("DECIMAL", table, column, type);
-      case TextType type -> type.length().map(characters -> characters <= MAX_NVARCHAR ? "NVARCHAR(" + characters
+      case TextType(Length length) -> length.map(characters -> characters <= MAX_NVARCHAR ? "NVARCHAR(" + characters
           + ")" : NVARCHAR.sql(table, column),
           () -> NVARCHAR.sql(table, column));
-      case BytesType type -> type.length().map(bytes -> bytes <= MAX_VARBINARY ? "VARBINARY(" + bytes + ")"
+      case BytesType(Length length) -> length.map(bytes -> bytes <= MAX_VARBINARY ? "VARBINARY(" + bytes + ")"
           : VARBINARY.sql(table, column),
           () -> VARBINARY.sql(table, column));
       case UuidType _ -> "UNIQUEIDENTIFIER";
@@ -82,7 +83,7 @@ public final class SqlServerDialect implements Dialect {
       case DateType _ -> "DATE";
       case TimeType _ -> "TIME(6)";
       case JsonType _ -> NVARCHAR.sql(table, column);
-      case EnumType type -> type.storage().select("NVARCHAR(" + ENUM_LENGTH + ")", "INT");
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select("NVARCHAR(" + ENUM_LENGTH + ")", "INT");
     };
   }
 
@@ -100,7 +101,7 @@ public final class SqlServerDialect implements Dialect {
       case DateType _ -> string(value);
       case TimeType _ -> string(value);
       case JsonType _ -> string(value);
-      case EnumType values -> values.storage().select(string(value), value);
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select(string(value), value);
     };
   }
 

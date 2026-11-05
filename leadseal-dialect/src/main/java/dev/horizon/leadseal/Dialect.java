@@ -76,12 +76,12 @@ public interface Dialect {
    * column.
    */
   default Optional<Check> typeCheck(String table, String column, Type type) {
-    return switch (type) {
-      case EnumType values -> Optional.of(new Check(new ConstraintName("ck", table, List.of(column)).value(),
-          new In(ColumnReference.of(column), values.literals().stream()
-              .<SqlExpression> map(value -> new Literal(values, value)).toList()).condition(SqlEnvironment.of(this))));
-      default -> Optional.empty();
-    };
+    if (!(type instanceof EnumType values)) {
+      return Optional.empty();
+    }
+    return Optional.of(new Check(new ConstraintName("ck", table, List.of(column)).value(),
+        new In(ColumnReference.of(column), values.literals().stream()
+            .<SqlExpression> map(value -> new Literal(values, value)).toList()).condition(SqlEnvironment.of(this))));
   }
 
   /**
