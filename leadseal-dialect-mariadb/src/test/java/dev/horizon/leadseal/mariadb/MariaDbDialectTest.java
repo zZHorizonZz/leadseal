@@ -14,13 +14,15 @@ import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.contract.DialectExpressionTest;
 import dev.horizon.leadseal.type.IntegerType;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class MariaDbDialectTest {
 
   @Test
-  void rejectsPartialIndexes() {
+  @DisplayName("Rejects partial indexes")
+  void rejectPartialIndexes() {
     Column id = Column.of("1", "id", new IntegerType(IntegerType.Size.INT64), NotNull.INSTANCE);
     Table orders = Table.of("o", "orders", List.of(id), PrimaryKey.of("orders", List.of("id")),
         Index.of("orders", List.of("id"), false).withWhere("id > 0"));

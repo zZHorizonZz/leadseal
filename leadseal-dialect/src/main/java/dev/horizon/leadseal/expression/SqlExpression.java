@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
  * <p>
  * An expression is a {@link Condition}, such as a comparison, or a {@link Value}, such as a column. SQL keeps the two
  * apart: you write a condition after {@code WHERE} or {@code CHECK}, and a value as a computed column. Each expression
- * writes itself in both places with {@link #condition(SqlEnvironment)} and {@link #value(SqlEnvironment)}, in the SQL of
- * the dialect of the environment. It writes every operator in parentheses, so no dialect depends on the precedence of
- * operators.
+ * writes itself in both places with {@link #condition(SqlEnvironment)} and {@link #value(SqlEnvironment)}, in the SQL
+ * of the dialect of the environment. It writes every operator in parentheses, so no dialect depends on the precedence
+ * of operators.
  *
  * <p>
  * An expression reads columns by their names, so a migration that renames a column renames them in the expressions

@@ -12,6 +12,7 @@ import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Command.CreateIndex;
 import dev.horizon.leadseal.command.Command.CreateTable;
 import java.util.List;
+import java.util.Optional;
 
 record SqliteRebuild(SqliteDdl ddl, Transition transition, String id) implements Command {
 
@@ -43,5 +44,10 @@ record SqliteRebuild(SqliteDdl ddl, Transition transition, String id) implements
         ? "COALESCE(" + dialect.quote(source.name()) + ", " + dialect.fill(column) + ")"
         : dialect.quote(source.name()))
         .orElseGet(() -> column.nullable() ? "NULL" : dialect.zero(column.type()));
+  }
+
+  @Override
+  public Optional<Object> mergeKey() {
+    return Optional.of(List.of(SqliteRebuild.class, id));
   }
 }

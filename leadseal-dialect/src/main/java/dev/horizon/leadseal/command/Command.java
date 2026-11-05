@@ -5,6 +5,7 @@ import dev.horizon.leadseal.ScriptWriter;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.attribute.Index;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A statement of a migration script. The script ends the statement after the command writes it. The records of this
@@ -19,6 +20,16 @@ public interface Command {
    * @param script the script
    */
   void render(ScriptWriter script);
+
+  /**
+   * Gives the key of a command that runs once in a plan, however many changes give it. MariaDB uses this for its
+   * {@code MODIFY COLUMN}, which writes the whole column, so two changes of one column write it once.
+   *
+   * @return the key, or empty for a command that runs each time a change gives it. The default is empty.
+   */
+  default Optional<Object> mergeKey() {
+    return Optional.empty();
+  }
 
   /**
    * {@code CREATE SCHEMA IF NOT EXISTS namespace}.
@@ -169,6 +180,11 @@ public interface Command {
     public void render(ScriptWriter script) {
       script.append("UPDATE ").table(table).append(" SET ").name(column.name())
           .append(" = " + script.dialect().fill(column) + " WHERE ").name(column.name()).append(" IS NULL");
+    }
+
+    @Override
+    public Optional<Object> mergeKey() {
+      return Optional.of(List.of(FillNulls.class, table, column.name()));
     }
   }
 

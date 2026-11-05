@@ -44,7 +44,7 @@ Use it when your tables are not protobuf messages, or when your own tool writes 
    ```java
    MigrationDirectory migrations = new MigrationDirectory(Path.of("src/main/resources/db/migration"),
        List.of(new PostgresDialect()));
-   Plan plan = migrations.generate(schema);
+   MigrationPlan plan = migrations.generate(schema);
    ```
 
 ## Check the result
@@ -83,7 +83,7 @@ Schema schema = new ProtoSchema().read(List.of(Shop.getDescriptor()));
 ## Get the files without writing them
 
 Call `plan` instead of `generate`.
-It returns the same `Plan`, and you write each `MigrationFile` yourself with `file.write(directory)`.
+It returns the same `MigrationPlan`, and you write each `MigrationFile` yourself with `file.write(directory)`.
 
 ## Find a dialect by name
 

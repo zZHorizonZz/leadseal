@@ -1,7 +1,10 @@
 package dev.horizon.leadseal;
 
-/** leadseal is set up wrong: no installed dialect has a name, no dialect is given, or an option of the protoc plugin is invalid. The build has to change. */
-public final class ConfigurationException extends SchemaException {
+/**
+ * Thrown when leadseal is set up wrong, such as a dialect name that no installed dialect has or a protoc plugin option
+ * that does not exist. Fix the build configuration.
+ */
+public class ConfigurationException extends SchemaException {
 
   /**
    * Creates the exception.

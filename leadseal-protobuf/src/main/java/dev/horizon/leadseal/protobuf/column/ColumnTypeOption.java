@@ -1,7 +1,5 @@
 package dev.horizon.leadseal.protobuf.column;
 
-import dev.horizon.leadseal.InvalidSchemaException;
-import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.attribute.ColumnAttribute;
 import dev.horizon.leadseal.protobuf.ColumnOptions;
 import dev.horizon.leadseal.type.Type;
@@ -30,9 +28,4 @@ public sealed interface ColumnTypeOption permits NaturalOption, BooleanOption, I
   Type type(FieldKind kind);
 
   List<ColumnAttribute> attributes(FieldKind kind);
-
-  default SchemaException conflict(FieldKind kind) {
-    return new InvalidSchemaException("The field " + kind.field() + " has both a default_value and a generated default."
-        + " Set one of them.");
-  }
 }

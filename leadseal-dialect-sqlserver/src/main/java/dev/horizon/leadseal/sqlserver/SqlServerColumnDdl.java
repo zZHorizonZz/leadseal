@@ -41,8 +41,7 @@ record SqlServerColumnDdl(Ddl ddl) implements ColumnDdl {
     Column definition = column.definition();
     List<Command> all = new ArrayList<>();
     if (definition.needsFill()) {
-      Column filled = definition.with(new LiteralDefault(definition.type().zero()));
-      all.add(new AddColumn(name, definition(table, filled)));
+      all.add(new AddColumn(name, definition(table, definition.with(new LiteralDefault(definition.type().zero())))));
       all.add(new DropConstraint(name, new SqlServerDefaultName(table, definition).value()));
     } else {
       all.add(new AddColumn(name, definition(table, definition)));

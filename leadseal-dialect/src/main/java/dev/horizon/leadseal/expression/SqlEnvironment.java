@@ -8,12 +8,13 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * The place that a {@link SqlExpression} writes itself into: the dialect of the SQL, and the qualifier of the columns of
- * each row that the expression can read, such as {@code NEW} for the new row in a trigger.
+ * The place that a {@link SqlExpression} writes itself into: the dialect of the SQL, and the qualifier of the columns
+ * of each row that the expression can read, such as {@code NEW} for the new row in a trigger.
  *
  * <pre>{@code
  * SqlEnvironment check = SqlEnvironment.of(dialect);
- * SqlEnvironment trigger = SqlEnvironment.of(dialect).with(Row.CURRENT, "NEW").with(Row.NEW, "NEW").with(Row.OLD, "OLD");
+ * SqlEnvironment trigger = SqlEnvironment.of(dialect).with(Row.CURRENT, "NEW").with(Row.NEW, "NEW")
+ *     .with(Row.OLD, "OLD");
  * }</pre>
  *
  * @param dialect the dialect

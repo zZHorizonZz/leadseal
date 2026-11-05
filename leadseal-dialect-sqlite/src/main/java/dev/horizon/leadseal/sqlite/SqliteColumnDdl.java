@@ -28,17 +28,16 @@ record SqliteColumnDdl(SqliteDdl ddl) implements ColumnDdl {
     if (definition.attribute(Default.class).filter(value -> !value.constant()).isPresent()) {
       return rebuild(column);
     }
-    Column filled = definition.needsFill() ? definition.with(new LiteralDefault(definition.type().zero()))
-        : definition;
-    return List.of(new AddColumn(column.table().name(), definition(column.table().definition(), filled)));
+    return List.of(new AddColumn(column.table().name(), definition(column.table().definition(),
+        definition.needsFill() ? definition.with(new LiteralDefault(definition.type().zero())) : definition)));
   }
 
   @Override
   public List<Command> dropColumn(ColumnTransition column) {
     Table origin = column.table().origin().orElseThrow();
-    boolean keyed = origin.primaryKey().columns().contains(column.name()) || origin.attributes(ForeignKey.class)
+    boolean inKey = origin.primaryKey().columns().contains(column.name()) || origin.attributes(ForeignKey.class)
         .stream().anyMatch(key -> key.columns().contains(column.name()));
-    return keyed ? rebuild(column) : ColumnDdl.super.dropColumn(column);
+    return inKey ? rebuild(column) : ColumnDdl.super.dropColumn(column);
   }
 
   @Override

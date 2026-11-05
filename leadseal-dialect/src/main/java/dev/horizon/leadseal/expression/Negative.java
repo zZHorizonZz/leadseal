@@ -17,7 +17,7 @@ public record Negative(SqlExpression operand) implements Value {
 
   @Override
   public String sql(SqlEnvironment environment) {
-    return "(-" + operand.value(environment) + ")";
+    return "(- " + operand.value(environment) + ")";
   }
 
   @Override

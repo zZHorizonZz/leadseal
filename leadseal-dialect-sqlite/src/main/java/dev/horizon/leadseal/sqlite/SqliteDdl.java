@@ -3,17 +3,17 @@ package dev.horizon.leadseal.sqlite;
 import dev.horizon.leadseal.Dialect;
 import dev.horizon.leadseal.Transition;
 import dev.horizon.leadseal.change.Change;
-import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.CommentDdl;
 import dev.horizon.leadseal.command.ConstraintDdl;
 import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.command.Plan;
 import java.util.List;
 
 record SqliteDdl(Dialect dialect) implements Ddl {
 
   @Override
-  public List<Command> plan(List<Change> changes, Transition transition) {
-    return new SqlitePlan(this, changes, transition).commands();
+  public Plan plan(List<Change> changes, Transition transition) {
+    return new SqlitePlan(this, changes, transition);
   }
 
   @Override

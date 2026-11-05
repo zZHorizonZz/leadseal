@@ -12,6 +12,7 @@ import dev.horizon.leadseal.type.TextType;
 import dev.horizon.leadseal.type.Type;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -63,16 +64,18 @@ class ScriptWriterTest {
         arguments("drop a table", Schema.of(orders), Schema.empty(), List.of("DROP TABLE \"orders\"")));
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "({0})", quoteTextArguments = false)
   @MethodSource("migrations")
-  void writesTheStatementsOfTheChanges(String name, Schema before, Schema after, List<String> statements) {
+  @DisplayName("Writes the statements of the changes")
+  void writeChanges(String name, Schema before, Schema after, List<String> statements) {
     ScriptWriter script = new ScriptWriter(DIALECT, before, after).write(before.changesTo(after));
 
     assertThat(script.statements()).containsExactlyElementsOf(statements);
   }
 
   @Test
-  void rendersForeignKeys() {
+  @DisplayName("Renders foreign keys")
+  void renderForeignKeys() {
     Table customers = Table.of("shop.Customer", "customers", List.of(ID), PrimaryKey.of("customers",
         List.of("id")));
     Table orders = Table.of("shop.Order", "orders", List.of(ID, Column.of("2", "customer_id", BIGINT)),
@@ -89,7 +92,8 @@ class ScriptWriterTest {
   }
 
   @Test
-  void writesStatementsWithSemicolons() {
+  @DisplayName("Writes statements with semicolons")
+  void writeSemicolons() {
     ScriptWriter script = new ScriptWriter(DIALECT, Schema.empty(), Schema.empty());
 
     assertThat(script.text()).isEmpty();
@@ -97,11 +101,22 @@ class ScriptWriterTest {
   }
 
   @Test
-  void writesNoBatchSeparatorForADialectWithoutOne() {
+  @DisplayName("Writes no batch separator for a dialect without one")
+  void writeWithoutSeparator() {
     ScriptWriter script = new ScriptWriter(DIALECT, Schema.empty(), Schema.empty());
 
     script.append("A").end().isolate().append("B").end().append("C").end();
 
     assertThat(script.text()).isEqualTo("A;\n\nB;\n\nC;\n");
+  }
+
+  @Test
+  @DisplayName("Isolates only a statement with text")
+  void isolateWithText() {
+    ScriptWriter writer = new ScriptWriter(DIALECT, Schema.empty(), Schema.empty());
+
+    writer.isolate().end().append("SELECT 1").end();
+
+    assertThat(writer.script().statements()).containsExactly(new Script.Statement("SELECT 1", false));
   }
 }

@@ -18,7 +18,7 @@ record TimestampOption(TimestampColumn option) implements ColumnTypeOption {
   @Override
   public List<ColumnAttribute> attributes(FieldKind kind) {
     if (option.hasDefaultValue() && option.getDefaultNow()) {
-      throw conflict(kind);
+      throw new DefaultConflictException(kind);
     }
     if (option.hasDefaultValue()) {
       return List.of(kind.literal(Instant.ofEpochSecond(option.getDefaultValue().getSeconds(),

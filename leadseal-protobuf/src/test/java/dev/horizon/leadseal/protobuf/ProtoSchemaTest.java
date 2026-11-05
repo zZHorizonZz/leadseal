@@ -45,6 +45,7 @@ import dev.horizon.leadseal.type.TimestampType;
 import dev.horizon.leadseal.type.UuidType;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -82,20 +83,23 @@ class ProtoSchemaTest {
         arguments(Column.of("17", "payload", new JsonType(), NOT_NULL)));
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "({0})")
   @MethodSource("columns")
-  void mapsAFieldToAColumn(Column column) {
+  @DisplayName("Maps a field to a column")
+  void mapField(Column column) {
     assertThat(table(TableName.of("order_line")).columnById(column.id())).contains(column);
   }
 
   @Test
-  void readsOnlyTableMessages() {
+  @DisplayName("Reads only table messages")
+  void readTableMessages() {
     assertThat(SCHEMA.names()).containsExactly(TableName.of("customers"), TableName.of("order_line"),
         new TableName("billing", "payment"));
   }
 
   @Test
-  void identifiesTablesWithoutThePackageVersion() {
+  @DisplayName("Identifies tables without the package version")
+  void identifyWithoutVersion() {
     Schema catalog = new ProtoSchema().read(List.of(CatalogProto.getDescriptor()));
 
     assertThat(catalog.namespaces().getFirst().tables()).extracting(Table::id).containsExactly(
@@ -105,7 +109,8 @@ class ProtoSchemaTest {
   }
 
   @Test
-  void readsTheTableOptions() {
+  @DisplayName("Reads the table options")
+  void readTableOptions() {
     Table customers = table(TableName.of("customers"));
 
     assertThat(customers.columns()).extracting(Column::name).containsExactly("id", "email", "region");
@@ -117,7 +122,8 @@ class ProtoSchemaTest {
   }
 
   @Test
-  void readsTheKeysOfAField() {
+  @DisplayName("Reads the keys of a field")
+  void readFieldKeys() {
     Table lines = table(TableName.of("order_line"));
 
     assertThat(lines.primaryKey().columns()).containsExactly("order_id", "line");
@@ -139,9 +145,10 @@ class ProtoSchemaTest {
         arguments(TextIdentityOuterClass.getDescriptor(), "cannot have the column type 32-bit integer"));
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "({0})")
   @MethodSource("invalid")
-  void rejects(FileDescriptor file, String message) {
+  @DisplayName("Refuses a message whose options break a rule")
+  void reject(FileDescriptor file, String message) {
     assertThatThrownBy(() -> new ProtoSchema().read(List.of(file))).isInstanceOf(InvalidSchemaException.class)
         .hasMessageContaining(message);
   }
@@ -164,14 +171,16 @@ class ProtoSchemaTest {
         arguments(Column.of("14", "active", new BooleanType(), NOT_NULL, new LiteralDefault("true"))));
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "({0})")
   @MethodSource("paymentColumns")
-  void readsTheColumnOptions(Column column) {
+  @DisplayName("Reads the column options")
+  void readColumnOptions(Column column) {
     assertThat(table(new TableName("billing", "payment")).columnById(column.id())).contains(column);
   }
 
   @Test
-  void readsTheTableOptionsOfPayments() {
+  @DisplayName("Reads the table options of payments")
+  void readPaymentOptions() {
     Table payments = table(new TableName("billing", "payment"));
 
     assertThat(payments.attributes(Check.class)).containsExactly(Check.of("payment",
@@ -184,7 +193,8 @@ class ProtoSchemaTest {
   }
 
   @Test
-  void readsCommentsFromTheSource() throws DescriptorValidationException {
+  @DisplayName("Reads comments from the source")
+  void readComments() throws DescriptorValidationException {
     FileDescriptor original = ShopProto.getDescriptor();
     int customer = original.findMessageTypeByName("Customer").getIndex();
     FileDescriptorProto proto = original.toProto().toBuilder().setSourceCodeInfo(SourceCodeInfo.newBuilder()

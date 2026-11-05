@@ -139,10 +139,10 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
    * @throws SchemaException if the attribute does not fit the table
    */
   public Table with(TableAttribute attribute) {
-    List<TableAttribute> changed = new ArrayList<>(attributes);
-    changed.removeIf(existing -> existing.key().equals(attribute.key()));
-    changed.add(attribute);
-    return new Table(id, name, columns, changed);
+    List<TableAttribute> all = new ArrayList<>(attributes);
+    all.removeIf(own -> own.key().equals(attribute.key()));
+    all.add(attribute);
+    return new Table(id, name, columns, all);
   }
 
   /**
@@ -223,7 +223,8 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
   private List<Change> columnChanges(TableName targetName, Table target) {
     List<Change> changes = new ArrayList<>();
     for (Column column : columns) {
-      target.columnById(column.id()).ifPresentOrElse(other -> changes.addAll(column.changesTo(targetName, other)),
+      target.columnById(column.id()).ifPresentOrElse(targetColumn -> changes.addAll(column.changesTo(targetName,
+          targetColumn)),
           () -> changes.add(new DropColumn(targetName, column.name())));
     }
     target.columns.stream().filter(column -> columnById(column.id()).isEmpty())
@@ -231,23 +232,21 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
     return changes;
   }
 
-  private List<Change> attributeChanges(TableName name, TableName targetName, Table target, Transition transition) {
+  private List<Change> attributeChanges(TableName name, TableName targetName, Table targetTable,
+      Transition transition) {
+    Map<Object, TableAttribute> targets = new LinkedHashMap<>();
+    targetTable.attributes.forEach(target -> targets.put(target.key(), target));
     List<Change> changes = new ArrayList<>();
-    Map<Object, TableAttribute> added = new LinkedHashMap<>();
-    target.attributes.forEach(attribute -> added.put(attribute.key(), attribute));
-    for (TableAttribute attribute : attributes) {
-      TableAttribute origin = attribute.rename(name, transition);
-      TableAttribute other = added.remove(origin.key());
-      if (other == null) {
-        changes.add(dropChange(name, targetName, attribute));
-      } else if (!other.equals(origin) && other.alterable()) {
-        changes.add(new AlterTableAttribute(targetName, origin, other));
-      } else if (!other.equals(origin)) {
-        changes.add(dropChange(name, targetName, attribute));
-        changes.add(new AddTableAttribute(targetName, other));
+    for (TableAttribute origin : attributes) {
+      TableAttribute target = targets.remove(origin.key());
+      if (target == null) {
+        changes.add(dropChange(name, targetName, origin));
+      } else if (origin.rename(name, transition).filter(target::equals).isEmpty()) {
+        changes.addAll(target.alterable() ? List.of(new AlterTableAttribute(targetName, origin, target))
+            : List.of(dropChange(name, targetName, origin), new AddTableAttribute(targetName, target)));
       }
     }
-    added.values().forEach(attribute -> changes.add(new AddTableAttribute(targetName, attribute)));
+    targets.values().forEach(target -> changes.add(new AddTableAttribute(targetName, target)));
     return changes;
   }
 

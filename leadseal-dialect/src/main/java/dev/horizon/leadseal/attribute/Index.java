@@ -12,6 +12,7 @@ import dev.horizon.leadseal.change.Change;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -188,9 +189,9 @@ public record Index(String name, List<String> columns, boolean unique, List<Stri
   }
 
   @Override
-  public TableAttribute rename(TableName table, Transition transition) {
-    return new Index(name, transition.targetColumns(table, columns), unique, transition.targetColumns(table, descending),
-        rows);
+  public Optional<TableAttribute> rename(TableName table, Transition transition) {
+    return transition.targetColumns(table, columns).flatMap(targetColumns -> transition.targetColumns(table, descending)
+        .map(targetDescending -> new Index(name, targetColumns, unique, targetDescending, rows)));
   }
 
   @Override

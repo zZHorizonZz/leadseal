@@ -49,8 +49,8 @@ public interface ColumnDdl {
     Column definition = column.definition();
     List<Command> all = new ArrayList<>();
     if (definition.needsFill()) {
-      Column filled = definition.with(new LiteralDefault(definition.type().zero()));
-      all.add(new AddColumn(name, definition(column.table().definition(), filled)));
+      all.add(new AddColumn(name, definition(column.table().definition(),
+          definition.with(new LiteralDefault(definition.type().zero())))));
       all.add(new AlterColumn(name, definition.name(), "DROP DEFAULT"));
     } else {
       all.add(new AddColumn(name, definition(column.table().definition(), definition)));

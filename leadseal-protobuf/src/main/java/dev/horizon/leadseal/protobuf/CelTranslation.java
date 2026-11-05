@@ -2,8 +2,6 @@ package dev.horizon.leadseal.protobuf;
 
 import dev.horizon.aquery.cel.Type.Scalar;
 import dev.horizon.aquery.cel.expression.Expression;
-import dev.horizon.leadseal.InvalidSchemaException;
-import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.expression.Arithmetic;
 import dev.horizon.leadseal.expression.ColumnReference;
 import dev.horizon.leadseal.expression.Comparison;
@@ -30,7 +28,7 @@ record CelTranslation(String text) {
 
   SqlExpression expression(Expression node) {
     if (node.type() == Scalar.DURATION) {
-      throw refuse("durations are not supported in an expression yet");
+      throw new UnsupportedExpressionException(this, "durations are not supported in an expression yet");
     }
     return switch (node) {
       case Expression.Literal literal -> literal(literal.value());
@@ -44,14 +42,12 @@ record CelTranslation(String text) {
       case Expression.Membership membership -> membership(membership);
       case Expression.FunctionCall call -> call(call);
       case Expression.StringMatch _ ->
-        throw refuse("startsWith(), endsWith() and contains() are not supported in an expression yet");
-      default -> throw refuse("an expression reads only the fields of its table, not lists, maps, messages,"
-          + " parameters or related rows");
+        throw new UnsupportedExpressionException(this,
+            "startsWith(), endsWith() and contains() are not supported in an expression yet");
+      default -> throw new UnsupportedExpressionException(this,
+          "an expression reads only the fields of its table, not lists, maps, messages,"
+              + " parameters or related rows");
     };
-  }
-
-  SchemaException refuse(String reason) {
-    return new InvalidSchemaException("The expression '" + text + "' is not valid: " + reason + ".");
   }
 
   private SqlExpression literal(Object value) {
@@ -63,7 +59,7 @@ record CelTranslation(String text) {
       case String string -> new Literal(TextType.unlimited(), string);
       case byte[] bytes -> new Literal(BytesType.unlimited(), HexFormat.of().formatHex(bytes));
       case Instant instant -> new Literal(new TimestampType(), instant.toString());
-      default -> throw refuse("the constant " + value + " is not supported in an expression");
+      default -> throw new UnsupportedExpressionException(this, "the constant " + value + " is not supported in an expression");
     };
   }
 
@@ -73,7 +69,7 @@ record CelTranslation(String text) {
       case Expression.Row.Current _ -> ColumnReference.of(column);
       case Expression.Row.Named(String row) -> new ColumnReference(column, Row.valueOf(row.toUpperCase(Locale.ROOT)));
       case Expression.Row.Related _ ->
-        throw refuse("an expression reads only the fields of its table, not related rows");
+        throw new UnsupportedExpressionException(this, "an expression reads only the fields of its table, not related rows");
     };
   }
 
@@ -101,14 +97,15 @@ record CelTranslation(String text) {
 
   private SqlExpression membership(Expression.Membership membership) {
     if (!(membership.collection() instanceof Expression.ListLiteral list)) {
-      throw refuse("'in' takes a list of values, as in state in ['OPEN', 'PAID']");
+      throw new UnsupportedExpressionException(this, "'in' takes a list of values, as in state in ['OPEN', 'PAID']");
     }
     return new In(expression(membership.element()), list.elements().stream().map(this::expression).toList());
   }
 
   private SqlExpression call(Expression.FunctionCall call) {
     if (!(call.function() instanceof CelFunction function)) {
-      throw refuse("the function " + call.function().name() + "() is not supported in an expression");
+      throw new UnsupportedExpressionException(this,
+          "the function " + call.function().name() + "() is not supported in an expression");
     }
     return function.expression(call, this);
   }

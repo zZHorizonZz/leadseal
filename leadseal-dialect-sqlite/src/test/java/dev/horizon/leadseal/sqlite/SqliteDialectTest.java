@@ -24,6 +24,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +53,8 @@ class SqliteDialectTest {
   }
 
   @Test
-  void rejectsNamespaces() {
+  @DisplayName("Rejects namespaces")
+  void rejectNamespaces() {
     Schema after = Schema.of(new Namespace("sales", List.of(Table.of("t", "t", List.of(ID),
         PrimaryKey.of("t", List.of("id"))))));
 
@@ -61,7 +63,8 @@ class SqliteDialectTest {
   }
 
   @Test
-  void writesNothingForAComment() {
+  @DisplayName("Writes nothing for a comment")
+  void skipComments() {
     Table table = Table.of("t", "t", List.of(ID), PrimaryKey.of("t", List.of("id")));
     Table commented = Table.of("t", "t", List.of(ID.with(new Comment("The key."))), table.primaryKey(),
         new Comment("A table."));
@@ -70,7 +73,8 @@ class SqliteDialectTest {
   }
 
   @Test
-  void rebuildsAnUnreferencedTableInATransaction() {
+  @DisplayName("Rebuilds an unreferenced table in a transaction")
+  void rebuildInTransaction() {
     Table before = Table.of("t", "t", List.of(ID, Column.of("2", "a", new IntegerType(IntegerType.Size.INT32))),
         PrimaryKey.of("t", List.of("id")));
     Table after = Table.of("t", "t", List.of(ID, Column.of("2", "a", new IntegerType(IntegerType.Size.INT32),
@@ -80,7 +84,8 @@ class SqliteDialectTest {
   }
 
   @Test
-  void refusesToRebuildAReferencedTableWhileForeignKeysAreOn() throws SQLException {
+  @DisplayName("Refuses to rebuild a referenced table while foreign keys are on")
+  void refuseReferencedRebuild() throws SQLException {
     ScriptWriter script = script(customers(20), customers(40));
 
     assertThat(script.transactional()).isFalse();
@@ -103,13 +108,15 @@ class SqliteDialectTest {
   }
 
   @Test
-  void namesItsTemporaryObjectsWithThePrefix() {
+  @DisplayName("Names its temporary objects with the prefix")
+  void prefixTemporaryObjects() {
     assertThat(String.join(" ", script(customers(20), customers(40)).statements()))
         .contains("\"leadseal_new_customers\"").contains("\"leadseal_check\"");
   }
 
   @Test
-  void namesItsTemporaryObjectsWithoutAnEmptyPrefix() {
+  @DisplayName("Names its temporary objects without an empty prefix")
+  void omitEmptyPrefix() {
     Schema before = customers(20);
     Schema after = customers(40);
 

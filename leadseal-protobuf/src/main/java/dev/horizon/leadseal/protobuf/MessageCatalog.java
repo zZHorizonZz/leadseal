@@ -35,6 +35,6 @@ final class MessageCatalog {
     if (message.getOptions().hasExtension(OptionsProto.table)) {
       tables.put(message.getFullName(), new TableMessage(message, comments));
     }
-    message.getNestedTypes().forEach(nested -> add(nested, comments));
+    message.getNestedTypes().forEach(inner -> add(inner, comments));
   }
 }

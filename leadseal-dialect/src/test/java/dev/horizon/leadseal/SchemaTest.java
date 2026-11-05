@@ -22,6 +22,7 @@ import dev.horizon.leadseal.type.Type;
 import java.util.List;
 import java.util.stream.Stream;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -88,14 +89,16 @@ class SchemaTest {
             new Check("ck", "id > 0"), new Check("ck", "id < 9"))), "twice"));
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "({0})", quoteTextArguments = false)
   @MethodSource("invalid")
-  void rejects(String name, ThrowingCallable call, String message) {
+  @DisplayName("Refuses a schema that breaks a rule")
+  void reject(String name, ThrowingCallable call, String message) {
     assertThatThrownBy(call).isInstanceOf(InvalidSchemaException.class).hasMessageContaining(message);
   }
 
   @Test
-  void allowsTheSameTableNameInTwoNamespaces() {
+  @DisplayName("Allows the same table name in two namespaces")
+  void allowSameName() {
     Schema schema = Schema.of(Namespace.defaults(Table.of("a", "t", List.of(ID), KEY)),
         new Namespace("sales", List.of(Table.of("b", "t", List.of(ID), KEY))));
 
@@ -104,7 +107,8 @@ class SchemaTest {
   }
 
   @Test
-  void shortensLongGeneratedNames() {
+  @DisplayName("Shortens long generated names")
+  void shortenNames() {
     String table = "a_table_with_a_very_long_name_that_goes_on";
     Index index = Index.of(table, List.of("first_column_name", "second_column_name"), false);
 

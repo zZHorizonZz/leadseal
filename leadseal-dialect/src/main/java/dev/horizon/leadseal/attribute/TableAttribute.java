@@ -12,7 +12,7 @@ import dev.horizon.leadseal.change.Change;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Optional;
 
 /**
  * An attribute of a table, such as its primary key, an index or a foreign key.
@@ -110,10 +110,11 @@ public sealed interface TableAttribute permits PrimaryKey, Index, ForeignKey,
    *
    * @param table the name of the table that has this attribute, in the origin schema
    * @param transition the origin and target schemas
-   * @return the attribute with the target names. The default is this attribute.
+   * @return the attribute with the target names, or empty if it refers to a table or a column that the target schema
+   * does not have. The default is this attribute.
    */
-  default TableAttribute rename(TableName table, Transition transition) {
-    return this;
+  default Optional<TableAttribute> rename(TableName table, Transition transition) {
+    return Optional.of(this);
   }
 
   /**
@@ -135,15 +136,16 @@ public sealed interface TableAttribute permits PrimaryKey, Index, ForeignKey,
   List<Command> drop(Ddl ddl, TableTransition table);
 
   /**
-   * Gives the commands that change an attribute with the key of this attribute into this attribute.
+   * Gives the commands that change the attribute with the key of this attribute into this attribute, for an attribute
+   * that is {@linkplain #alterable() alterable}.
    *
    * @param ddl the statements of the dialect
    * @param table the table, which has this attribute after the migration
-   * @param origin the attribute before the migration
-   * @return the commands. The default drops the origin attribute and adds this one.
+   * @return the commands
+   * @throws IllegalStateException if the attribute is not alterable, so a migration drops and adds it instead
    */
-  default List<Command> alter(Ddl ddl, TableTransition table, TableAttribute origin) {
-    return Stream.concat(origin.drop(ddl, table).stream(), add(ddl, table).stream()).toList();
+  default List<Command> alter(Ddl ddl, TableTransition table) {
+    throw new IllegalStateException("A " + getClass().getSimpleName() + " is dropped and added, not changed.");
   }
 
 }

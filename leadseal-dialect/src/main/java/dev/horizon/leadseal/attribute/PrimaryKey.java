@@ -10,6 +10,7 @@ import dev.horizon.leadseal.change.Change;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * The primary key of a table. Every table has one.
@@ -64,11 +65,11 @@ public record PrimaryKey(String name, List<String> columns) implements TableAttr
   }
 
   @Override
-  public TableAttribute rename(TableName table, Transition transition) {
-    String key = name.equals(new ConstraintName(PREFIX, table.name(), List.of()).value())
-        ? new ConstraintName(PREFIX, transition.targetName(table).name(), List.of()).value()
-        : name;
-    return new PrimaryKey(key, transition.targetColumns(table, columns));
+  public Optional<TableAttribute> rename(TableName table, Transition transition) {
+    return transition.targetName(table).flatMap(target -> transition.targetColumns(table, columns).map(
+        key -> new PrimaryKey(name.equals(new ConstraintName(PREFIX, table.name(), List.of()).value())
+            ? new ConstraintName(PREFIX, target.name(), List.of()).value()
+            : name, key)));
   }
 
   @Override
@@ -92,8 +93,11 @@ public record PrimaryKey(String name, List<String> columns) implements TableAttr
   }
 
   @Override
-  public List<Command> alter(Ddl ddl, TableTransition table, TableAttribute origin) {
-    return ddl.constraint().alterPrimaryKey(table, table.origin().orElseThrow().primaryKey(), this);
+  public List<Command> alter(Ddl ddl, TableTransition table) {
+    PrimaryKey origin = table.origin().orElseThrow(() -> new IllegalStateException("The table " + table.name()
+        + " has no primary key to change, because the migration creates it.")).primaryKey();
+    String keyName = table.originName().name().equals(table.name().name()) ? origin.name() : name;
+    return ddl.constraint().alterPrimaryKey(table, new PrimaryKey(keyName, origin.columns()), this);
   }
 
   @Override

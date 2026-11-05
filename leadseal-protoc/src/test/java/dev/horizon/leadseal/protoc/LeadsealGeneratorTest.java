@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorRequest;
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse;
 import java.nio.file.Path;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,7 +15,8 @@ class LeadsealGeneratorTest {
   Path migrations;
 
   @Test
-  void reportsAnUnknownDialectAsAnError() {
+  @DisplayName("Reports an unknown dialect as an error")
+  void reportUnknownDialect() {
     CodeGeneratorRequest request = CodeGeneratorRequest.newBuilder()
         .setParameter("migrations=" + migrations + ",dialect=oracle").build();
 

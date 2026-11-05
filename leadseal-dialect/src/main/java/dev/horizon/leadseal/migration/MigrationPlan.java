@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 /** The files that bring a migration directory up to a schema. */
-public sealed interface Plan {
+public sealed interface MigrationPlan {
 
   /**
    * Gives the files to write.
@@ -27,7 +27,7 @@ public sealed interface Plan {
    *
    * @param files the files
    */
-  record Current(List<MigrationFile> files) implements Plan {
+  record Current(List<MigrationFile> files) implements MigrationPlan {
 
     public Current {
       files = List.copyOf(files);
@@ -45,7 +45,7 @@ public sealed interface Plan {
    * @param folder the folder of the migration, relative to the directory
    * @param files the files of the migration, and the SQL of dialects that an earlier migration has no file for yet
    */
-  record Step(Path folder, List<MigrationFile> files) implements Plan {
+  record Step(Path folder, List<MigrationFile> files) implements MigrationPlan {
 
     public Step {
       files = List.copyOf(files);

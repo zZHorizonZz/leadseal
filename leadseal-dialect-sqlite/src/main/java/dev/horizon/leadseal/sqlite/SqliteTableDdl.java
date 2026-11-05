@@ -27,7 +27,8 @@ record SqliteTableDdl(SqliteDdl ddl) implements TableDdl {
   @Override
   public List<Command> createTable(TableTransition table, Table definition) {
     Table target = table.definition();
-    List<Command> all = new ArrayList<>(List.of(new CreateTable(table.name(), elements(target))));
+    List<Command> all = new ArrayList<>(table.name().namespace().map(this::createSchema, List::of));
+    all.add(new CreateTable(table.name(), elements(target)));
     target.attributes(Index.class).forEach(index -> all.add(new CreateIndex(table.name(), index)));
     return all;
   }

@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -40,7 +41,8 @@ public abstract class KeyContractTest extends ContractTest {
   }
 
   @Test
-  void changesThePrimaryKey() throws SQLException {
+  @DisplayName("Changes the primary key")
+  void changePrimaryKey() throws SQLException {
     apply(schema(orders(List.of(), List.of())));
     insert("orders", 1, 1, 1);
 
@@ -53,7 +55,8 @@ public abstract class KeyContractTest extends ContractTest {
   }
 
   @Test
-  void addsAForeignKeyToAnExistingTable() throws SQLException {
+  @DisplayName("Adds a foreign key to an existing table")
+  void addForeignKey() throws SQLException {
     apply(schema(CUSTOMERS, orders(List.of(), List.of())));
     insert("customers", 1);
     insert("orders", 1, 1, 1);
@@ -66,9 +69,10 @@ public abstract class KeyContractTest extends ContractTest {
     assertThatThrownBy(() -> execute("DELETE FROM " + q("customers"))).isInstanceOf(SQLException.class);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @EnumSource(ForeignKey.Action.class)
-  void appliesTheDeleteAction(ForeignKey.Action action) throws SQLException {
+  @DisplayName("Applies the delete action")
+  void applyDeleteAction(ForeignKey.Action action) throws SQLException {
     Column customer = action == ForeignKey.Action.SET_NULL ? nullable("2", "customer_id", BIGINT)
         : CUSTOMER_ID;
     apply(schema(CUSTOMERS, table("shop.Order", "orders", List.of(ID, customer, LINE), List.of("id"), List.of(),
@@ -91,7 +95,8 @@ public abstract class KeyContractTest extends ContractTest {
   }
 
   @Test
-  void dropsAForeignKey() throws SQLException {
+  @DisplayName("Drops a foreign key")
+  void dropForeignKey() throws SQLException {
     apply(schema(CUSTOMERS, orders(List.of(), List.of(toCustomers(ForeignKey.Action.CASCADE)))));
     insert("customers", 1);
     insert("orders", 1, 1, 1);
@@ -105,7 +110,8 @@ public abstract class KeyContractTest extends ContractTest {
   }
 
   @Test
-  void addsAndDropsIndexes() throws SQLException {
+  @DisplayName("Adds and drops indexes")
+  void addAndDropIndexes() throws SQLException {
     apply(schema(orders(List.of(), List.of())));
     insert("orders", 1, 1, 1);
 
@@ -125,7 +131,8 @@ public abstract class KeyContractTest extends ContractTest {
   }
 
   @Test
-  void keepsTheRowsThatReferenceAChangedTable() throws SQLException {
+  @DisplayName("Keeps the rows that reference a changed table")
+  void keepReferencingRows() throws SQLException {
     Table customers = table("shop.Customer", "customers", List.of(ID, text("2", "name", 20)), "id");
     apply(schema(customers, orders(List.of(), List.of(toCustomers(ForeignKey.Action.CASCADE)))));
     execute("INSERT INTO " + q("customers") + " VALUES (1, 'Ada')");
@@ -139,7 +146,8 @@ public abstract class KeyContractTest extends ContractTest {
   }
 
   @Test
-  void createsADescendingIndex() throws SQLException {
+  @DisplayName("Creates a descending index")
+  void createDescendingIndex() throws SQLException {
     Index index = Index.of("orders", List.of("customer_id", "line"), false)
         .withDescending(List.of("line"));
     apply(schema(orders(List.of(index), List.of())));
@@ -149,7 +157,8 @@ public abstract class KeyContractTest extends ContractTest {
   }
 
   @Test
-  void updatesReferencingRows() throws SQLException {
+  @DisplayName("Updates referencing rows")
+  void updateReferencingRows() throws SQLException {
     ForeignKey key = toCustomers(ForeignKey.Action.CASCADE)
         .withOnUpdate(ForeignKey.Action.CASCADE);
     apply(schema(CUSTOMERS, orders(List.of(), List.of(key))));
@@ -162,7 +171,8 @@ public abstract class KeyContractTest extends ContractTest {
   }
 
   @Test
-  void createsACompositeForeignKey() throws SQLException {
+  @DisplayName("Creates a composite foreign key")
+  void createCompositeForeignKey() throws SQLException {
     Table lines = table("shop.OrderLine", "order_line", List.of(ID, CUSTOMER_ID, LINE), List.of("customer_id",
         "line"), List.of(), List.of());
     ForeignKey key = ForeignKey.of("orders", List.of("customer_id", "line"),
@@ -177,5 +187,34 @@ public abstract class KeyContractTest extends ContractTest {
     assertThatThrownBy(() -> insert("orders", 2, 1, 2)).isInstanceOf(SQLException.class);
     execute("DELETE FROM " + q("order_line"));
     assertThat(count("SELECT COUNT(*) FROM " + q("orders"))).isZero();
+  }
+
+  @Test
+  @DisplayName("Changes the primary key of a renamed table")
+  void changeRenamedTablePrimaryKey() throws SQLException {
+    apply(schema(orders(List.of(), List.of())));
+    insert("orders", 1, 1, 1);
+
+    apply(schema(table("shop.Order", "purchases", List.of(ID, CUSTOMER_ID, LINE), List.of("id", "line"), List.of(),
+        List.of())));
+    insert("purchases", 1, 1, 2);
+
+    assertThat(primaryKey("purchases")).containsExactly("id", "line");
+  }
+
+  @Test
+  @DisplayName("Changes a renamed column of a foreign key")
+  void changeRenamedForeignKeyColumn() throws SQLException {
+    apply(schema(CUSTOMERS, orders(List.of(), List.of(toCustomers(ForeignKey.Action.NO_ACTION)
+        .withName("fk_orders_customer")))));
+    insert("customers", 1);
+    insert("orders", 1, 1, 1);
+
+    apply(schema(CUSTOMERS, table("shop.Order", "orders", List.of(ID, nullable("2", "buyer_id", BIGINT), LINE),
+        List.of("id"), List.of(), List.of(ForeignKey.of("orders", List.of("buyer_id"), TableName.of("customers"),
+            List.of("id"), ForeignKey.Action.NO_ACTION).withName("fk_orders_customer")))));
+
+    assertThat(foreignKeys("orders")).containsExactly("buyer_id -> customers.id");
+    assertThat(columns("orders")).containsEntry("buyer_id", true);
   }
 }

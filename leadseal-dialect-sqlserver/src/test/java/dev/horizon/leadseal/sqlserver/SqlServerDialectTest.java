@@ -15,13 +15,15 @@ import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.contract.DialectExpressionTest;
 import dev.horizon.leadseal.type.IntegerType;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class SqlServerDialectTest {
 
   @Test
-  void rejectsIdentityChangesOfExistingColumns() {
+  @DisplayName("Rejects identity changes of existing columns")
+  void rejectIdentityChange() {
     Column id = Column.of("1", "id", new IntegerType(IntegerType.Size.INT64), NotNull.INSTANCE);
     PrimaryKey key = PrimaryKey.of("orders", List.of("id"));
     Schema before = Schema.of(Table.of("o", "orders", List.of(id), key));
@@ -33,7 +35,8 @@ class SqlServerDialectTest {
   }
 
   @Test
-  void separatesTheBatchOfAnIsolatedStatement() {
+  @DisplayName("Separates the batch of an isolated statement")
+  void separateIsolatedBatch() {
     ScriptWriter sql = new ScriptWriter(new SqlServerDialect(), Schema.empty(), Schema.empty());
     sql.append("SELECT 1").end().append("SELECT 2").end().isolate().append("CREATE TRIGGER t").end()
         .append("SELECT 3").end().isolate().append("CREATE TRIGGER u").end();

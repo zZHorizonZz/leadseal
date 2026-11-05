@@ -119,10 +119,10 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
    * @throws SchemaException if the attribute does not fit the column
    */
   public Column with(ColumnAttribute attribute) {
-    List<ColumnAttribute> changed = new ArrayList<>(attributes);
-    changed.removeIf(existing -> existing.key().equals(attribute.key()));
-    changed.add(attribute);
-    return new Column(id, name, type, changed);
+    List<ColumnAttribute> all = new ArrayList<>(attributes);
+    all.removeIf(own -> own.key().equals(attribute.key()));
+    all.add(attribute);
+    return new Column(id, name, type, all);
   }
 
   /**
@@ -172,17 +172,17 @@ public record Column(String id, String name, Type type, List<ColumnAttribute> at
     if (!type.equals(target.type)) {
       changes.add(new AlterColumnType(table, target.name, type, target.type));
     }
-    Map<Object, ColumnAttribute> added = new LinkedHashMap<>();
-    target.attributes.forEach(attribute -> added.put(attribute.key(), attribute));
-    for (ColumnAttribute attribute : attributes) {
-      ColumnAttribute now = added.remove(attribute.key());
-      if (now == null) {
-        changes.add(new DropColumnAttribute(table, target.name, attribute));
-      } else if (!now.equals(attribute)) {
-        changes.add(new AlterColumnAttribute(table, target.name, attribute, now));
+    Map<Object, ColumnAttribute> targets = new LinkedHashMap<>();
+    target.attributes.forEach(attribute -> targets.put(attribute.key(), attribute));
+    for (ColumnAttribute origin : attributes) {
+      ColumnAttribute targetAttribute = targets.remove(origin.key());
+      if (targetAttribute == null) {
+        changes.add(new DropColumnAttribute(table, target.name, origin));
+      } else if (!targetAttribute.equals(origin)) {
+        changes.add(new AlterColumnAttribute(table, target.name, origin, targetAttribute));
       }
     }
-    added.values().forEach(attribute -> changes.add(new AddColumnAttribute(table, target.name, attribute)));
+    targets.values().forEach(attribute -> changes.add(new AddColumnAttribute(table, target.name, attribute)));
     return changes;
   }
 }

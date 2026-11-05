@@ -20,6 +20,7 @@ import dev.horizon.leadseal.type.TextType;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -36,9 +37,10 @@ public abstract class DialectExpressionTest {
 
   protected abstract String sql();
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "({0})")
   @EnumSource(Example.class)
-  void writesTheSqlOfTheDatabase(Example example) {
+  @DisplayName("Writes the SQL of the database")
+  void writeSql(Example example) {
     SqlEnvironment trigger = SqlEnvironment.of(dialect()).with(Row.CURRENT, "NEW").with(Row.NEW, "NEW")
         .with(Row.OLD, "OLD");
     Map<Example, String> expected = new EnumMap<>(Example.class);

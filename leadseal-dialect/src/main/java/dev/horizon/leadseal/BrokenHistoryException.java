@@ -1,10 +1,10 @@
 package dev.horizon.leadseal;
 
 /**
- * The migration history does not hold together: a migration does not follow the one before it, or a migration or snapshot file is missing, unreadable or of another format version. The migration
- * directory has to be repaired.
+ * Thrown when the migration directory is broken: a migration does not follow the one before it, or a migration or
+ * snapshot file is missing, unreadable or in an unknown format. Repair the migration directory.
  */
-public final class BrokenHistoryException extends SchemaException {
+public class BrokenHistoryException extends SchemaException {
 
   /**
    * Creates the exception.

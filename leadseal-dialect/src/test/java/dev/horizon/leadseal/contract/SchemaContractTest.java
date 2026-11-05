@@ -12,6 +12,7 @@ import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.Index;
 import java.sql.SQLException;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public abstract class SchemaContractTest extends ContractTest {
@@ -36,7 +37,8 @@ public abstract class SchemaContractTest extends ContractTest {
   }
 
   @Test
-  void createsTablesInSchemas() throws SQLException {
+  @DisplayName("Creates tables in schemas")
+  void createInSchemas() throws SQLException {
     String sales = uniqueSchema();
     String crm = uniqueSchema();
 
@@ -52,7 +54,8 @@ public abstract class SchemaContractTest extends ContractTest {
   }
 
   @Test
-  void allowsTheSameTableNameInTwoSchemas() throws SQLException {
+  @DisplayName("Allows the same table name in two schemas")
+  void allowSameName() throws SQLException {
     String sales = uniqueSchema();
     String archive = uniqueSchema();
 
@@ -65,7 +68,8 @@ public abstract class SchemaContractTest extends ContractTest {
   }
 
   @Test
-  void movesATableToAnotherSchemaAndKeepsItsRows() throws SQLException {
+  @DisplayName("Moves a table to another schema and keeps its rows")
+  void moveToSchema() throws SQLException {
     String crm = uniqueSchema();
     String archive = uniqueSchema();
     apply(in(crm, customers("customers")));
@@ -79,7 +83,8 @@ public abstract class SchemaContractTest extends ContractTest {
   }
 
   @Test
-  void movesATableToTheDefaultSchema() throws SQLException {
+  @DisplayName("Moves a table to the default schema")
+  void moveToDefault() throws SQLException {
     String crm = uniqueSchema();
     apply(in(crm, customers("customers")));
     execute("INSERT INTO " + q(crm, "customers") + " (" + q("id") + ", " + q("name") + ") VALUES (1, 'Ada')");
@@ -90,7 +95,8 @@ public abstract class SchemaContractTest extends ContractTest {
   }
 
   @Test
-  void renamesATableInASchema() throws SQLException {
+  @DisplayName("Renames a table in a schema")
+  void renameInSchema() throws SQLException {
     String crm = uniqueSchema();
     apply(in(crm, customers("customers"), orders(new TableName(crm, "customers"))));
     execute("INSERT INTO " + q(crm, "customers") + " (" + q("id") + ", " + q("name") + ") VALUES (1, 'Ada')");

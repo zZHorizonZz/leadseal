@@ -13,6 +13,7 @@ import dev.horizon.leadseal.type.Type;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -48,9 +49,10 @@ public abstract class DefaultContractTest extends ContractTest {
         + dialect.literal(column.type(), value));
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("values")
-  void fillsNewRowsWithTheDefault(Type type, String value) throws SQLException {
+  @DisplayName("Fills new rows with the default")
+  void fillNewRows(Type type, String value) throws SQLException {
     Column column = column("2", "value", type).with(new LiteralDefault(value));
     apply(schema(orders(ID, column)));
 
@@ -59,9 +61,10 @@ public abstract class DefaultContractTest extends ContractTest {
     assertThat(matching(column, value)).isEqualTo(1);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("values")
-  void fillsExistingRowsWithTheDefaultOfANewColumn(Type type, String value) throws SQLException {
+  @DisplayName("Fills existing rows with the default of a new column")
+  void fillExistingRows(Type type, String value) throws SQLException {
     apply(schema(orders(ID)));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
     Column column = column("2", "value", type).with(new LiteralDefault(value));
@@ -71,9 +74,10 @@ public abstract class DefaultContractTest extends ContractTest {
     assertThat(matching(column, value)).isEqualTo(1);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("dates")
-  void generatesTheCurrentTime(Type type) throws SQLException {
+  @DisplayName("Generates the current time")
+  void generateCurrentTime(Type type) throws SQLException {
     apply(schema(orders(ID)));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
 
@@ -85,7 +89,8 @@ public abstract class DefaultContractTest extends ContractTest {
   }
 
   @Test
-  void generatesRandomUuids() throws SQLException {
+  @DisplayName("Generates random UUIDs")
+  void generateRandomUuids() throws SQLException {
     apply(schema(orders(ID)));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
 
@@ -97,7 +102,8 @@ public abstract class DefaultContractTest extends ContractTest {
   }
 
   @Test
-  void changesTheDefault() throws SQLException {
+  @DisplayName("Changes the default")
+  void changeDefault() throws SQLException {
     Column total = column("2", "total", INT);
     apply(schema(orders(ID, total.with(new LiteralDefault("1")))));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
@@ -110,7 +116,8 @@ public abstract class DefaultContractTest extends ContractTest {
   }
 
   @Test
-  void removesTheDefault() throws SQLException {
+  @DisplayName("Removes the default")
+  void removeDefault() throws SQLException {
     Column total = column("2", "total", INT);
     apply(schema(orders(ID, total.with(new LiteralDefault("1")))));
 
@@ -121,7 +128,8 @@ public abstract class DefaultContractTest extends ContractTest {
   }
 
   @Test
-  void fillsNullsWithTheDefaultWhenAColumnBecomesRequired() throws SQLException {
+  @DisplayName("Fills nulls with the default when a column becomes required")
+  void fillNulls() throws SQLException {
     apply(schema(orders(ID, nullable("2", "state", TEXT))));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ") VALUES (1)");
 

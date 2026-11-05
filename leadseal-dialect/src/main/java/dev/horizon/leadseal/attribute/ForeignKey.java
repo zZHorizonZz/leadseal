@@ -12,6 +12,7 @@ import dev.horizon.leadseal.change.Change;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A foreign key of a table.
@@ -91,10 +92,10 @@ public record ForeignKey(String name, List<String> columns, TableName table, Lis
 
   @Override
   public void validate(Table owner) {
-    for (String column : columns) {
-      Column found = owner.column(column).orElseThrow(() -> new InvalidSchemaException("The foreign key '" + name + "'"
-          + " refers to the column '" + column + "', which the table '" + owner.name() + "' does not have."));
-      if (found.nullable() || !onDelete.setsNull() && !onUpdate.setsNull()) {
+    for (String columnName : columns) {
+      Column column = owner.column(columnName).orElseThrow(() -> new InvalidSchemaException("The foreign key '" + name
+          + "' refers to the column '" + columnName + "', which the table '" + owner.name() + "' does not have."));
+      if (column.nullable() || !onDelete.setsNull() && !onUpdate.setsNull()) {
         continue;
       }
       throw new InvalidSchemaException("The foreign key '" + name + "' sets " + owner.name() + "." + column + " to NULL,"
@@ -122,19 +123,20 @@ public record ForeignKey(String name, List<String> columns, TableName table, Lis
     }
     for (int i = 0; i < columns.size(); i++) {
       Column column = owner.column(columns.get(i)).orElseThrow();
-      Column referenced = target.column(referencedColumns.get(i)).orElseThrow();
-      if (!column.type().equals(referenced.type())) {
+      Column targetColumn = target.column(referencedColumns.get(i)).orElseThrow();
+      if (!column.type().equals(targetColumn.type())) {
         throw new InvalidSchemaException("The foreign key '" + name + "' joins " + owner.name() + "." + column.name() + " ("
-            + column.type() + ") with " + target.name() + "." + referenced.name() + " (" + referenced.type()
+            + column.type() + ") with " + target.name() + "." + targetColumn.name() + " (" + targetColumn.type()
             + "). The types must be the same.");
       }
     }
   }
 
   @Override
-  public TableAttribute rename(TableName owner, Transition transition) {
-    return new ForeignKey(name, transition.targetColumns(owner, columns), transition.targetName(table),
-        transition.targetColumns(table, referencedColumns), onDelete, onUpdate);
+  public Optional<TableAttribute> rename(TableName owner, Transition transition) {
+    return transition.targetColumns(owner, columns).flatMap(targetColumns -> transition.targetName(table)
+        .flatMap(targetTable -> transition.targetColumns(table, referencedColumns)
+            .map(targetReferences -> new ForeignKey(name, targetColumns, targetTable, targetReferences, onDelete, onUpdate))));
   }
 
   /** What happens to referencing rows when the referenced row is deleted or its key changes. */

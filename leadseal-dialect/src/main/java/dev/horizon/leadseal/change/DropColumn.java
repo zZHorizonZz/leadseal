@@ -26,6 +26,6 @@ public record DropColumn(TableName table, String column) implements Change {
 
   @Override
   public List<Command> commands(Ddl ddl, Transition transition) {
-    return ddl.column().dropColumn(table(transition).column(column));
+    return ddl.column().dropColumn(table(transition).originColumn(column));
   }
 }

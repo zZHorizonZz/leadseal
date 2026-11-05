@@ -69,7 +69,8 @@ sealed interface CelFunction extends Function permits CelFunction.CallFunction, 
       return switch (call.arguments().getFirst()) {
         case Expression.FieldReference(Scope.Field field, Expression.Row.Current _, int _) ->
           new ColumnChange(field.column());
-        default -> throw translation.refuse("changed() takes a field of the row, as in changed(state)");
+        default -> throw new UnsupportedExpressionException(translation,
+            "changed() takes a field of the row, as in changed(state)");
       };
     }
   }

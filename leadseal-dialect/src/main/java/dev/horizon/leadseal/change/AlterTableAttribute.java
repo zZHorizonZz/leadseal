@@ -35,6 +35,6 @@ public record AlterTableAttribute(TableName table, @JsonProperty("from") TableAt
 
   @Override
   public List<Command> commands(Ddl ddl, Transition transition) {
-    return target.alter(ddl, table(transition), origin);
+    return target.alter(ddl, table(transition));
   }
 }

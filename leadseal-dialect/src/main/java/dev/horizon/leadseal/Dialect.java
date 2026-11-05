@@ -210,9 +210,9 @@ public interface Dialect {
    * @throws SchemaException if no installed dialect has that name
    */
   static Dialect of(String name) {
-    List<Dialect> installed = ServiceLoader.load(Dialect.class).stream().map(ServiceLoader.Provider::get).toList();
-    return installed.stream().filter(dialect -> dialect.name().equals(name)).findFirst()
+    List<Dialect> dialects = ServiceLoader.load(Dialect.class).stream().map(ServiceLoader.Provider::get).toList();
+    return dialects.stream().filter(dialect -> dialect.name().equals(name)).findFirst()
         .orElseThrow(() -> new ConfigurationException("No installed dialect is named '" + name + "'. Installed dialects: "
-            + installed.stream().map(Dialect::name).sorted().toList() + "."));
+            + dialects.stream().map(Dialect::name).sorted().toList() + "."));
   }
 }

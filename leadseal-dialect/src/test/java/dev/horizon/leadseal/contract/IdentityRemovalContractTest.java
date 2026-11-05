@@ -9,6 +9,7 @@ import dev.horizon.leadseal.attribute.Identity;
 import dev.horizon.leadseal.type.Type;
 import java.sql.SQLException;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -24,9 +25,10 @@ public abstract class IdentityRemovalContractTest extends ContractTest {
     execute("INSERT INTO " + q("customers") + " (" + q("name") + ") VALUES (?)", name);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("integers")
-  void stopsGeneratingKeys(Type type) throws SQLException {
+  @DisplayName("Stops generating keys")
+  void stopGenerating(Type type) throws SQLException {
     Column id = column("1", "id", type);
     apply(schema(customers(id.with(Identity.INSTANCE))));
     insert("Ada");

@@ -29,6 +29,7 @@ import dev.horizon.leadseal.type.TextType;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -63,7 +64,8 @@ class SqlExpressionTest {
             "((\"name\" IS NOT NULL) OR (\"quantity\" IS NULL))"),
         Arguments.of(new Not(new Comparison(Comparison.Operator.EQUALS, QUANTITY, TWO)), "(NOT (\"quantity\" = 2))"),
         Arguments.of(new Comparison(Comparison.Operator.NOT_EQUALS, new Negative(QUANTITY), TWO),
-            "((-\"quantity\") <> 2)"),
+            "((- \"quantity\") <> 2)"),
+        Arguments.of(new Negative(new Literal(new IntegerType(IntegerType.Size.INT64), "-5")), "(- -5)"),
         Arguments.of(new Arithmetic(Arithmetic.Operator.MODULO, new Arithmetic(Arithmetic.Operator.INTEGER_DIVIDE,
             QUANTITY, TWO), TWO), "((\"quantity\" / 2) % 2)"),
         Arguments.of(new Arithmetic(Arithmetic.Operator.CONCAT, NAME, EMPTY), "(\"name\" || '')"),
@@ -78,15 +80,17 @@ class SqlExpressionTest {
         Arguments.of(call(Function.NOW), "CURRENT_TIMESTAMP"));
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("examples")
-  void writesTheSqlOfTheTestDialect(SqlExpression expression, String sql) {
+  @DisplayName("Writes the SQL of the test dialect")
+  void writeSql(SqlExpression expression, String sql) {
     assertThat(expression.value(CURRENT)).isEqualTo(sql);
     assertThat(expression.condition(CURRENT)).isEqualTo(sql);
   }
 
   @Test
-  void writesTheColumnsOfTheRowsWithTheirQualifiers() {
+  @DisplayName("Writes the columns of the rows with their qualifiers")
+  void writeQualifiedColumns() {
     SqlExpression expression = new Logic(Logic.Operator.AND, new ColumnChange("quantity"), new Comparison(
         Comparison.Operator.GREATER, new ColumnReference("quantity", Row.NEW), new ColumnReference("quantity",
             Row.OLD)));
@@ -96,18 +100,21 @@ class SqlExpressionTest {
   }
 
   @Test
-  void refusesARowThatTheEnvironmentDoesNotHave() {
+  @DisplayName("Refuses a row that the environment does not have")
+  void refuseRow() {
     assertThatThrownBy(() -> new ColumnReference("quantity", Row.OLD).value(CURRENT))
         .isInstanceOf(InvalidSchemaException.class).hasMessageContaining("old row");
   }
 
   @Test
-  void negatesANegationIntoItsOperand() {
+  @DisplayName("Negates a negation into its operand")
+  void negateNegation() {
     assertThat(new IsNull(NAME).negate().negate()).isEqualTo(new IsNull(NAME));
   }
 
   @Test
-  void keepsAnExpressionInJson() throws Exception {
+  @DisplayName("Keeps an expression in JSON")
+  void keepInJson() throws Exception {
     SqlExpression expression = new Conditional(new In(QUANTITY, List.of()), call(Function.COALESCE, NAME, EMPTY),
         new Arithmetic(Arithmetic.Operator.CONCAT, NAME, call(Function.UUID)));
 
@@ -115,7 +122,8 @@ class SqlExpressionTest {
   }
 
   @Test
-  void renamesItsColumns() {
+  @DisplayName("Renames its columns")
+  void renameColumns() {
     SqlExpression expression = new Logic(Logic.Operator.OR, new Comparison(Comparison.Operator.EQUALS, QUANTITY,
         call(Function.LENGTH, NAME)), new ColumnChange("name"));
 
@@ -135,14 +143,16 @@ class SqlExpressionTest {
         Arguments.of(call(Function.LOWER, call(Function.UUID)), false));
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("determinism")
-  void tellsIfItHasTheSameValueEachTime(SqlExpression expression, boolean deterministic) {
+  @DisplayName("Tells if it has the same value each time")
+  void tellConstancy(SqlExpression expression, boolean deterministic) {
     assertThat(expression.deterministic()).isEqualTo(deterministic);
   }
 
   @Test
-  void fitsATableThatHasItsColumnsAndRows() {
+  @DisplayName("Fits a table that has its columns and rows")
+  void fitTable() {
     new Comparison(Comparison.Operator.GREATER, QUANTITY, TWO).validate(ORDERS, Set.of(Row.CURRENT));
     new ColumnChange("quantity").validate(ORDERS, Set.of(Row.CURRENT, Row.NEW, Row.OLD));
   }
@@ -155,21 +165,24 @@ class SqlExpressionTest {
         Arguments.of(new ColumnChange("total"), Set.of(Row.CURRENT, Row.NEW, Row.OLD), "total, which the table does not"));
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("misfits")
-  void refusesATableThatLacksItsColumnsOrRows(SqlExpression expression, Set<Row> rows, String message) {
+  @DisplayName("Refuses a table that lacks its columns or rows")
+  void refuseTable(SqlExpression expression, Set<Row> rows, String message) {
     assertThatThrownBy(() -> expression.validate(ORDERS, rows)).isInstanceOf(InvalidSchemaException.class)
         .hasMessageContaining(message);
   }
 
   @Test
-  void refusesACallWithTheWrongNumberOfArguments() {
+  @DisplayName("Refuses a call with the wrong number of arguments")
+  void refuseArity() {
     assertThatThrownBy(() -> call(Function.LOWER)).isInstanceOf(InvalidSchemaException.class)
         .hasMessageContaining("lower takes 1 arguments, not 0");
   }
 
   @Test
-  void refusesAConstantThatIsNotAValueOfItsType() {
+  @DisplayName("Refuses a constant that is not a value of its type")
+  void refuseConstant() {
     assertThatThrownBy(() -> new Literal(new IntegerType(IntegerType.Size.INT32), "two"))
         .isInstanceOf(InvalidSchemaException.class).hasMessageContaining("not a value of its type");
   }

@@ -11,6 +11,7 @@ import dev.horizon.leadseal.attribute.Index;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public abstract class TableContractTest extends ContractTest {
@@ -27,7 +28,8 @@ public abstract class TableContractTest extends ContractTest {
           TableName.of("customers"), List.of("id"), ForeignKey.Action.CASCADE)));
 
   @Test
-  void createsTablesWithKeysAndIndexes() throws SQLException {
+  @DisplayName("Creates tables with keys and indexes")
+  void createWithKeys() throws SQLException {
     apply(schema(ORDERS, CUSTOMERS));
 
     assertThat(columns("customers")).containsExactly(Map.entry("id", false), Map.entry("email", false));
@@ -40,7 +42,8 @@ public abstract class TableContractTest extends ContractTest {
   }
 
   @Test
-  void enforcesTheKeys() throws SQLException {
+  @DisplayName("Enforces the keys")
+  void enforceKeys() throws SQLException {
     apply(schema(ORDERS, CUSTOMERS));
     execute("INSERT INTO " + q("customers") + " (" + q("id") + ", " + q("email") + ") VALUES (1, 'a@example.com')");
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("customer_id") + ", " + q("state")
@@ -57,7 +60,8 @@ public abstract class TableContractTest extends ContractTest {
   }
 
   @Test
-  void renamesATableAndKeepsItsRows() throws SQLException {
+  @DisplayName("Renames a table and keeps its rows")
+  void renameTable() throws SQLException {
     apply(schema(CUSTOMERS));
     execute("INSERT INTO " + q("customers") + " (" + q("id") + ", " + q("email") + ") VALUES (1, 'a@example.com')");
 
@@ -72,7 +76,8 @@ public abstract class TableContractTest extends ContractTest {
   }
 
   @Test
-  void dropsTablesThatReferenceEachOther() throws SQLException {
+  @DisplayName("Drops tables that reference each other")
+  void dropReferencingTables() throws SQLException {
     apply(schema(ORDERS, CUSTOMERS));
 
     apply(Schema.empty());
@@ -82,7 +87,8 @@ public abstract class TableContractTest extends ContractTest {
   }
 
   @Test
-  void runsEachMigrationOnce() {
+  @DisplayName("Runs each migration once")
+  void runOnce() {
     generate(schema(CUSTOMERS));
 
     assertThat(migrate()).isEqualTo(1);

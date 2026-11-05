@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -98,14 +99,16 @@ class CelTableTest {
                 call(Function.NOW)))));
   }
 
-  @ParameterizedTest(name = "[{0}]")
+  @ParameterizedTest(name = "({0})", quoteTextArguments = false)
   @MethodSource("expressions")
-  void readsAnExpression(String text, Type result, SqlExpression expression) {
+  @DisplayName("Reads an expression")
+  void readExpression(String text, Type result, SqlExpression expression) {
     assertThat(TABLE.parse(text, Set.of(Row.CURRENT), result)).isEqualTo(expression);
   }
 
   @Test
-  void readsTheRowsOfATrigger() {
+  @DisplayName("Reads the rows of a trigger")
+  void readTriggerRows() {
     assertThat(TABLE.parse("changed(state) && new.quantity > old.quantity", Set.of(Row.CURRENT, Row.NEW, Row.OLD),
         BOOLEAN)).isEqualTo(new Logic(Logic.Operator.AND, new ColumnChange("state"),
             new Comparison(
@@ -114,12 +117,13 @@ class CelTableTest {
   }
 
   @Test
-  void readsFieldsByOtherNames() {
+  @DisplayName("Reads fields by other names")
+  void readRenamedFields() {
     assertThat(new CelTable(ORDERS, Map.of("nickName", "nick_name")).parse("nickName == 'x'", Set.of(Row.CURRENT),
         BOOLEAN)).isEqualTo(new Comparison(Comparison.Operator.EQUALS, NICK_NAME, text("x")));
   }
 
-  @ParameterizedTest(name = "[{0}]")
+  @ParameterizedTest(name = "({0})", quoteTextArguments = false)
   @CsvSource(delimiter = '|', quoteCharacter = '`', textBlock = """
       quantity + 1                          | expected an expression of type bool
       missing > 0                           | undeclared reference to 'missing'

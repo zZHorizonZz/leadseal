@@ -17,7 +17,7 @@ record UuidOption(UuidColumn option) implements ColumnTypeOption {
   @Override
   public List<ColumnAttribute> attributes(FieldKind kind) {
     if (option.hasDefaultValue() && option.getDefaultRandom()) {
-      throw conflict(kind);
+      throw new DefaultConflictException(kind);
     }
     if (option.hasDefaultValue()) {
       return List.of(kind.literal(option.getDefaultValue()));

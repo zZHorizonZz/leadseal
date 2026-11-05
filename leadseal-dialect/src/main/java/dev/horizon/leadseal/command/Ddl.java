@@ -53,14 +53,13 @@ public interface Ddl {
   CommentDdl comment();
 
   /**
-   * Gives the commands of the changes of a migration. By default, each change gives its commands, and a command that
-   * an earlier change gave already runs once.
+   * Gives the plan of the changes of a migration.
    *
    * @param changes the changes, in the order they run
    * @param transition the schemas before and after the migration
-   * @return the commands, in the order they run
+   * @return the plan. The default is a {@link DefaultPlan}.
    */
-  default List<Command> plan(List<Change> changes, Transition transition) {
-    return changes.stream().flatMap(change -> change.commands(this, transition).stream()).distinct().toList();
+  default Plan plan(List<Change> changes, Transition transition) {
+    return new DefaultPlan(this, changes, transition);
   }
 }

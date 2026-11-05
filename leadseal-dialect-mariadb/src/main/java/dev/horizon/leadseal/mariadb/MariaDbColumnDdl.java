@@ -16,6 +16,7 @@ import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Command.FillNulls;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.List;
+import java.util.Optional;
 
 record MariaDbColumnDdl(Ddl ddl) implements ColumnDdl {
 
@@ -66,9 +67,10 @@ record MariaDbColumnDdl(Ddl ddl) implements ColumnDdl {
 
   List<Command> modify(ColumnTransition column) {
     Column target = column.definition();
-    Command modify = new ModifyColumn(column.table().name(), definition(column.table().definition(), target));
-    boolean required = !target.nullable() && column.origin().map(Column::nullable).orElse(false);
-    return required ? List.of(new FillNulls(column.table().name(), target), modify) : List.of(modify);
+    Command modify = new ModifyColumn(column.table().name(), target.name(),
+        definition(column.table().definition(), target));
+    boolean needsFill = !target.nullable() && column.origin().map(Column::nullable).orElse(false);
+    return needsFill ? List.of(new FillNulls(column.table().name(), target), modify) : List.of(modify);
   }
 
   private record ColumnDefinition(Table table, Column column) implements Clause {
@@ -90,11 +92,16 @@ record MariaDbColumnDdl(Ddl ddl) implements ColumnDdl {
     }
   }
 
-  private record ModifyColumn(TableName table, Clause definition) implements Command {
+  private record ModifyColumn(TableName table, String column, Clause definition) implements Command {
 
     @Override
     public void render(ScriptWriter script) {
       script.append("ALTER TABLE ").table(table).append(" MODIFY COLUMN ").clause(definition);
+    }
+
+    @Override
+    public Optional<Object> mergeKey() {
+      return Optional.of(List.of(ModifyColumn.class, table, column));
     }
   }
 }

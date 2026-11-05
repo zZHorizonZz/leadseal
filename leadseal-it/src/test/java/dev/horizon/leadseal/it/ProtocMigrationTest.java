@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.stream.Stream;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -83,7 +84,8 @@ class ProtocMigrationTest {
   }
 
   @Test
-  void writesAMigrationForEachChangedStepAndDialect() throws Exception {
+  @DisplayName("Writes a migration for each changed step and dialect")
+  void writeEachStep() throws Exception {
     List<Path> steps = steps();
 
     assertThat(steps).hasSize(3);
@@ -96,9 +98,10 @@ class ProtocMigrationTest {
     }
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @EnumSource(Database.class)
-  void appliesEachStepAndKeepsTheRows(Database database) throws Exception {
+  @DisplayName("Applies each step and keeps the rows")
+  void applyEachStep(Database database) throws Exception {
     Database.Location location = database.create();
     List<Path> steps = steps();
 

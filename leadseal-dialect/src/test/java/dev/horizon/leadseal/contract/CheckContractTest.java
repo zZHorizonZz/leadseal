@@ -9,6 +9,7 @@ import dev.horizon.leadseal.attribute.Check;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public abstract class CheckContractTest extends ContractTest {
@@ -26,7 +27,8 @@ public abstract class CheckContractTest extends ContractTest {
   }
 
   @Test
-  void createsATableWithChecks() throws SQLException {
+  @DisplayName("Creates a table with checks")
+  void createWithChecks() throws SQLException {
     apply(schema(orders("quantity >= 0")));
 
     insert(1, 0);
@@ -35,7 +37,8 @@ public abstract class CheckContractTest extends ContractTest {
   }
 
   @Test
-  void addsACheckToAnExistingTable() throws SQLException {
+  @DisplayName("Adds a check to an existing table")
+  void addCheck() throws SQLException {
     apply(schema(orders()));
     insert(1, 5);
 
@@ -46,7 +49,8 @@ public abstract class CheckContractTest extends ContractTest {
   }
 
   @Test
-  void changesACheck() throws SQLException {
+  @DisplayName("Changes a check")
+  void changeCheck() throws SQLException {
     apply(schema(orders("quantity >= 0")));
     insert(1, 5);
 
@@ -57,7 +61,8 @@ public abstract class CheckContractTest extends ContractTest {
   }
 
   @Test
-  void dropsACheck() throws SQLException {
+  @DisplayName("Drops a check")
+  void dropCheck() throws SQLException {
     apply(schema(orders("quantity >= 0")));
 
     apply(schema(orders()));

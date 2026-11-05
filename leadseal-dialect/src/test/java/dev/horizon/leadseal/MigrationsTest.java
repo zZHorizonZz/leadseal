@@ -14,7 +14,7 @@ import dev.horizon.leadseal.attribute.NowDefault;
 import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.migration.MigrationDirectory;
 import dev.horizon.leadseal.migration.MigrationOptions;
-import dev.horizon.leadseal.migration.Plan;
+import dev.horizon.leadseal.migration.MigrationPlan;
 import dev.horizon.leadseal.type.DecimalType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.TextType;
@@ -28,6 +28,7 @@ import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -58,8 +59,9 @@ class MigrationsTest {
   }
 
   @Test
-  void writesTheFirstMigration() throws IOException {
-    Plan result = migrations("postgresql", "sqlite").generate(FIRST);
+  @DisplayName("Writes the first migration")
+  void writeFirstMigration() throws IOException {
+    MigrationPlan result = migrations("postgresql", "sqlite").generate(FIRST);
 
     Path folder = directory.resolve("20261014070000");
     assertThat(result.migration()).contains(Path.of("20261014070000"));
@@ -75,14 +77,16 @@ class MigrationsTest {
   }
 
   @Test
-  void hashesTheSameSchemaTheSame() {
+  @DisplayName("Hashes the same schema the same")
+  void hashStably() {
     assertThat(hash(FIRST)).isEqualTo(hash(Schema.of(orders(ID, STATE)))).hasSize(16);
     assertThat(hash(FIRST)).isNotEqualTo(hash(SECOND));
   }
 
   @Test
-  void plansWithoutWriting() throws IOException {
-    Plan result = migrations("postgresql").plan(FIRST);
+  @DisplayName("Plans without writing")
+  void planWithoutWriting() throws IOException {
+    MigrationPlan result = migrations("postgresql").plan(FIRST);
 
     assertThat(result.files()).extracting(file -> file.path().toString().replace('\\', '/')).containsExactly(
         "snapshots/" + hash(FIRST) + "/contract.json", "20261014070000/migration.json",
@@ -93,17 +97,19 @@ class MigrationsTest {
   }
 
   @Test
-  void writesNothingWhenTheSchemaDidNotChange() {
+  @DisplayName("Writes nothing when the schema did not change")
+  void writeNothingUnchanged() {
     migrations("postgresql").generate(FIRST);
 
-    Plan result = migrations("postgresql").generate(FIRST);
+    MigrationPlan result = migrations("postgresql").generate(FIRST);
 
     assertThat(result.migration()).isEmpty();
     assertThat(result.files()).isEmpty();
   }
 
   @Test
-  void continuesFromTheLatestSnapshot() throws IOException {
+  @DisplayName("Continues from the latest snapshot")
+  void continueFromSnapshot() throws IOException {
     migrations("postgresql").generate(FIRST);
 
     Path second = directory.resolve(migrations("postgresql").generate(SECOND).migration().orElseThrow());
@@ -115,7 +121,8 @@ class MigrationsTest {
   }
 
   @Test
-  void neverRewritesAnExistingMigration() throws IOException {
+  @DisplayName("Never rewrites an existing migration")
+  void keepExistingMigration() throws IOException {
     Path first = directory.resolve(migrations("postgresql").generate(FIRST).migration().orElseThrow());
     Path file = first.resolve("postgresql/V20261014070000.sql");
     Files.writeString(file, "-- edited by hand\n");
@@ -126,7 +133,8 @@ class MigrationsTest {
   }
 
   @Test
-  void readsEveryAttributeBackFromItsFiles() {
+  @DisplayName("Reads every attribute back from its files")
+  void readAttributesBack() {
     Column state = Column.of("2", "state", TextType.of(20), NotNull.INSTANCE,
         new LiteralDefault(""), new Collation("postgresql", "C"),
         new Comment("State."));
@@ -141,7 +149,7 @@ class MigrationsTest {
     Schema schema = Schema.of(new Namespace("sales", List.of(orders)));
     migrations("postgresql").generate(schema);
 
-    Plan result = migrations("postgresql", "mariadb").generate(schema);
+    MigrationPlan result = migrations("postgresql", "mariadb").generate(schema);
 
     assertThat(result.migration()).isEmpty();
     assertThat(result.files()).singleElement()
@@ -149,11 +157,12 @@ class MigrationsTest {
   }
 
   @Test
-  void addsTheFilesOfANewDialectToEveryMigration() {
+  @DisplayName("Adds the files of a new dialect to every migration")
+  void addNewDialect() {
     migrations("postgresql").generate(FIRST);
     migrations("postgresql").generate(SECOND);
 
-    Plan result = migrations("postgresql", "mariadb").generate(SECOND);
+    MigrationPlan result = migrations("postgresql", "mariadb").generate(SECOND);
 
     assertThat(result.migration()).isEmpty();
     assertThat(result.files()).hasSize(2).allSatisfy(file -> assertThat(file.path().toString()).contains("mariadb"));
@@ -162,7 +171,8 @@ class MigrationsTest {
   }
 
   @Test
-  void rejectsTwoBranches() throws IOException {
+  @DisplayName("Rejects two branches")
+  void rejectBranches() throws IOException {
     migrations("postgresql").generate(FIRST);
     migrations("postgresql").generate(SECOND);
     Path second = directory.resolve("20261014070001");
@@ -175,7 +185,8 @@ class MigrationsTest {
   }
 
   @Test
-  void rejectsAMissingParent() throws IOException {
+  @DisplayName("Rejects a missing parent")
+  void rejectMissingParent() throws IOException {
     migrations("postgresql").generate(FIRST);
     migrations("postgresql").generate(SECOND);
     try (Stream<Path> files = Files.walk(directory.resolve("20261014070000"))) {
@@ -187,7 +198,8 @@ class MigrationsTest {
   }
 
   @Test
-  void rejectsAFolderThatDoesNotMatchItsMigration() throws IOException {
+  @DisplayName("Rejects a folder that does not match its migration")
+  void rejectMismatchedFolder() throws IOException {
     Path first = directory.resolve(migrations("postgresql").generate(FIRST).migration().orElseThrow());
     Files.move(first, directory.resolve("20261014070000_orders"));
 
@@ -196,7 +208,22 @@ class MigrationsTest {
   }
 
   @Test
-  void needsADialect() {
+  @DisplayName("Needs a dialect")
+  void needDialect() {
     assertThatThrownBy(() -> new MigrationDirectory(directory, List.of())).isInstanceOf(ConfigurationException.class);
+  }
+
+  @Test
+  @DisplayName("Plans nothing for the latest schema without its snapshot")
+  void planUpToDate() throws IOException {
+    migrations("postgresql").generate(FIRST);
+    try (Stream<Path> files = Files.walk(directory.resolve("snapshots"))) {
+      files.sorted(Comparator.reverseOrder()).forEach(file -> file.toFile().delete());
+    }
+
+    MigrationPlan plan = migrations("postgresql").plan(FIRST);
+
+    assertThat(plan.migration()).isEmpty();
+    assertThat(plan.files()).isEmpty();
   }
 }

@@ -1,7 +1,10 @@
 package dev.horizon.leadseal;
 
-/** The schema is invalid: a table, column, attribute, type or expression breaks a rule of leadseal, or a protobuf option is invalid. The schema has to change. */
-public final class InvalidSchemaException extends SchemaException {
+/**
+ * Thrown when a schema breaks a rule, such as a table without a primary key or a protobuf option with a wrong value.
+ * Fix the schema.
+ */
+public class InvalidSchemaException extends SchemaException {
 
   /**
    * Creates the exception.

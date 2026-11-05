@@ -71,7 +71,7 @@ public final class MigrationDirectory {
    * @return the plan
    * @throws SchemaException if the migrations of the directory do not form one chain
    */
-  public Plan plan(Schema schema) {
+  public MigrationPlan plan(Schema schema) {
     MigrationChain chain = MigrationChain.read(directory, json);
     SnapshotFolder snapshots = new SnapshotFolder(directory, json);
     List<MigrationFile> files = new ArrayList<>();
@@ -81,17 +81,20 @@ public final class MigrationDirectory {
               snapshots.schema(migration.target()), options)));
     }
     SchemaHash hash = json.hash(schema);
+    if (hash.equals(chain.latest())) {
+      return new MigrationPlan.Current(absent(files));
+    }
     Schema latest = snapshots.schema(chain.latest());
-    List<Change> changes = hash.equals(chain.latest()) ? List.of() : latest.changesTo(schema);
+    List<Change> changes = latest.changesTo(schema);
     if (changes.isEmpty()) {
-      return new Plan.Current(absent(files));
+      return new MigrationPlan.Current(absent(files));
     }
     Migration migration = Migration.of(chain.next(options.clock().instant()), chain.latest(), hash,
         options.clock().instant().toString(), changes);
     files.add(snapshots.file(schema, hash));
     files.add(migration.file(json));
     dialects.forEach(dialect -> files.addAll(migration.scripts(dialect, latest, schema, options)));
-    return new Plan.Step(migration.folder(), absent(files));
+    return new MigrationPlan.Step(migration.folder(), absent(files));
   }
 
   /**
@@ -101,8 +104,8 @@ public final class MigrationDirectory {
    * @return the plan, whose files are written
    * @throws SchemaException if the migrations of the directory do not form one chain
    */
-  public Plan generate(Schema schema) {
-    Plan plan = plan(schema);
+  public MigrationPlan generate(Schema schema) {
+    MigrationPlan plan = plan(schema);
     plan.files().forEach(file -> file.write(directory));
     return plan;
   }

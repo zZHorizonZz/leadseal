@@ -7,6 +7,7 @@ import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.attribute.Index;
 import java.sql.SQLException;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public abstract class PartialIndexContractTest extends ContractTest {
@@ -28,7 +29,8 @@ public abstract class PartialIndexContractTest extends ContractTest {
   }
 
   @Test
-  void createsAPartialUniqueIndex() throws SQLException {
+  @DisplayName("Creates a partial unique index")
+  void createPartialUnique() throws SQLException {
     Index index = Index.of("orders", List.of("customer_id"), true).withWhere("line = 1");
     apply(schema(orders(index)));
     insert("orders", 1, 1, 1);
@@ -39,7 +41,8 @@ public abstract class PartialIndexContractTest extends ContractTest {
   }
 
   @Test
-  void changesTheConditionOfAPartialIndex() throws SQLException {
+  @DisplayName("Changes the condition of a partial index")
+  void changeCondition() throws SQLException {
     Index index = Index.of("orders", List.of("customer_id"), true);
     apply(schema(orders(index.withWhere("line = 1"))));
     insert("orders", 1, 1, 1);

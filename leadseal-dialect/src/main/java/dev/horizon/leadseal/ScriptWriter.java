@@ -43,7 +43,7 @@ public final class ScriptWriter {
    * @throws SchemaException if the dialect cannot write a change
    */
   public ScriptWriter write(List<Change> changes) {
-    for (Command command : dialect.ddl().plan(changes, transition)) {
+    for (Command command : dialect.ddl().plan(changes, transition).commands()) {
       render(command).end();
     }
     return end();
@@ -219,16 +219,16 @@ public final class ScriptWriter {
   }
 
   /**
-   * Ends the current statement. A statement without text is skipped.
+   * Ends the current statement. A statement without text is skipped, and the next statement is not isolated.
    *
    * @return this writer
    */
   public ScriptWriter end() {
     if (!statement.isEmpty()) {
       statements.add(new Script.Statement(statement.toString(), isolated));
-      isolated = false;
       statement.setLength(0);
     }
+    isolated = false;
     return this;
   }
 }

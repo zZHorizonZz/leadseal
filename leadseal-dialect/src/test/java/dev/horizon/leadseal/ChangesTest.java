@@ -30,6 +30,7 @@ import dev.horizon.leadseal.type.TextType;
 import dev.horizon.leadseal.type.Type;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -100,14 +101,16 @@ class ChangesTest {
         arguments("no change", Schema.of(ORDERS), Schema.of(ORDERS), List.of()));
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "({0})", quoteTextArguments = false)
   @MethodSource("changes")
-  void findsTheChanges(String name, Schema before, Schema after, List<Change> expected) {
+  @DisplayName("Finds the changes")
+  void findChanges(String name, Schema before, Schema after, List<Change> expected) {
     assertThat(before.changesTo(after)).containsExactlyElementsOf(expected);
   }
 
   @Test
-  void addsForeignKeysAfterAllTablesExist() {
+  @DisplayName("Adds foreign keys after all tables exist")
+  void addForeignKeysLast() {
     List<Change> changes = Schema.empty().changesTo(customersAndOrders());
 
     assertThat(changes).extracting(Object::getClass).containsExactly(CreateTable.class,
@@ -115,7 +118,8 @@ class ChangesTest {
   }
 
   @Test
-  void dropsForeignKeysBeforeTheirTables() {
+  @DisplayName("Drops foreign keys before their tables")
+  void dropForeignKeysFirst() {
     List<Change> changes = customersAndOrders().changesTo(Schema.empty());
 
     assertThat(changes).extracting(Object::getClass).containsExactly(DropTableAttribute.class,
@@ -123,7 +127,8 @@ class ChangesTest {
   }
 
   @Test
-  void keepsAnIndexWhenItsColumnIsRenamed() {
+  @DisplayName("Keeps an index when its column is renamed")
+  void keepIndexOnRename() {
     Index index = Index.of("orders", List.of("state"), false);
     Table after = orders(ID, STATE.withName("status"))
         .with(new Index(index.name(), List.of("status"), false, List.of(), null));
@@ -134,7 +139,8 @@ class ChangesTest {
   }
 
   @Test
-  void keepsAGeneratedPrimaryKeyNameWhenTheTableIsRenamed() {
+  @DisplayName("Keeps a generated primary key name when the table is renamed")
+  void keepPrimaryKeyName() {
     Table renamed = Table.of("shop.Order", "purchases", ORDERS.columns(), PrimaryKey.of("purchases",
         List.of("id")));
 
@@ -144,7 +150,8 @@ class ChangesTest {
   }
 
   @Test
-  void ordersChangesByPhase() {
+  @DisplayName("Orders changes by phase")
+  void orderByPhase() {
     Table before = ORDERS.with(Index.of("orders", List.of("state"), false));
     Table after = Table.of("shop.Order", "purchases", List.of(ID, Column.of("3", "note", TextType.unlimited())),
         PrimaryKey.of("purchases", List.of("id")));

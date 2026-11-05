@@ -1,8 +1,6 @@
 package dev.horizon.leadseal.protobuf.column;
 
 import com.google.protobuf.Descriptors.EnumDescriptor;
-import dev.horizon.leadseal.InvalidSchemaException;
-import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.attribute.LiteralDefault;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.TextType;
@@ -23,7 +21,7 @@ record EnumField(String field, EnumDescriptor values) implements FieldKind {
   @Override
   public LiteralDefault text(String value) {
     if (values.findValueByName(value) == null) {
-      throw refuse(value, "name");
+      throw new UnknownEnumValueException(field, values, value, "name");
     }
     return new LiteralDefault(value);
   }
@@ -35,13 +33,8 @@ record EnumField(String field, EnumDescriptor values) implements FieldKind {
         return new LiteralDefault(value);
       }
     } catch (NumberFormatException _) {
-      throw refuse(value, "number");
+      throw new UnknownEnumValueException(field, values, value, "number");
     }
-    throw refuse(value, "number");
-  }
-
-  private SchemaException refuse(String value, String form) {
-    return new InvalidSchemaException("The default '" + value + "' of the field " + field + " is not a value of "
-        + values.getFullName() + ". Use a value " + form + ".");
+    throw new UnknownEnumValueException(field, values, value, "number");
   }
 }

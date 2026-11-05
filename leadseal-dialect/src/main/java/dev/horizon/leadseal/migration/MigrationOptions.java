@@ -6,8 +6,8 @@ import java.time.Clock;
  * The options of migration generation.
  *
  * @param clock the clock that names new migrations
- * @param prefix the prefix of the names that migrations give their own temporary objects, such as the temporary table of
- * a SQLite rebuild. An empty prefix gives them names without one.
+ * @param prefix the prefix of the names that migrations give their own temporary objects, such as the temporary table
+ * of a SQLite rebuild. An empty prefix gives them names without one.
  */
 public record MigrationOptions(Clock clock, String prefix) {
 

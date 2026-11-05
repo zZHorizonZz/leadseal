@@ -120,7 +120,7 @@ public final class CelTable {
     try {
       return grammar.compile(translation.text(), environment(rows), type);
     } catch (InvalidExpressionException invalid) {
-      throw translation.refuse(reason(invalid));
+      throw new UnsupportedExpressionException(translation, reason(invalid));
     }
   }
 

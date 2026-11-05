@@ -72,7 +72,7 @@ public record Comment(String text) implements TableAttribute, ColumnAttribute {
   }
 
   @Override
-  public List<Command> alter(Ddl ddl, TableTransition table, TableAttribute origin) {
+  public List<Command> alter(Ddl ddl, TableTransition table) {
     return ddl.comment().commentTable(table);
   }
 }

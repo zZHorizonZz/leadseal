@@ -32,7 +32,7 @@ The [documentation](docs/README.md) covers every option, dialect and error.
 | `leadseal-dialect`           | `dev.horizon.leadseal.change`     | The changes between two schemas, such as `AddColumn`                      |
 | `leadseal-dialect`           | `dev.horizon.leadseal.command`    | The `Ddl` of a dialect, its commands and clauses                          |
 | `leadseal-dialect`           | `dev.horizon.leadseal.expression` | The SQL expressions of checks and triggers, such as `Comparison`          |
-| `leadseal-dialect`           | `dev.horizon.leadseal.migration`  | `MigrationDirectory`, `Plan` and `MigrationOptions`                       |
+| `leadseal-dialect`           | `dev.horizon.leadseal.migration`  | `MigrationDirectory`, `MigrationPlan` and `MigrationOptions`                       |
 | `leadseal-dialect`           | `dev.horizon.leadseal.type`       | The column types, such as `TextType` and `IntegerType`                    |
 | `leadseal-dialect-postgres`  | `dev.horizon.leadseal.postgres`   | `PostgresDialect`                                                         |
 | `leadseal-dialect-mariadb`   | `dev.horizon.leadseal.mariadb`    | `MariaDbDialect`                                                          |

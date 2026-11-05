@@ -24,6 +24,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -134,9 +135,10 @@ public abstract class SqlExpressionContractTest extends ContractTest {
             List.of("1", "2")));
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("conditions")
-  void selectsTheRowsOfACondition(SqlExpression condition, List<String> ids) throws SQLException {
+  @DisplayName("Selects the rows of a condition")
+  void selectRows(SqlExpression condition, List<String> ids) throws SQLException {
     String select = "SELECT " + q("id") + " FROM " + q("samples") + " WHERE " + condition.condition(SqlEnvironment.of(
         dialect)) + " ORDER BY " + q("id");
 
@@ -155,9 +157,10 @@ public abstract class SqlExpressionContractTest extends ContractTest {
         Arguments.of(new Conditional(new IsNull(NICKNAME), text("unset"), NICKNAME), "unset"));
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("values")
-  void selectsTheValueOfAnExpression(SqlExpression value, String expected) throws SQLException {
+  @DisplayName("Selects the value of an expression")
+  void selectValue(SqlExpression value, String expected) throws SQLException {
     String select = "SELECT " + value.value(SqlEnvironment.of(dialect)) + " FROM " + q("samples") + " WHERE "
         + q("id") + " = 1";
 
@@ -178,9 +181,10 @@ public abstract class SqlExpressionContractTest extends ContractTest {
             0));
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("changes")
-  void comparesTheOldAndTheNewRow(SqlExpression condition, long old, long current, long expected)
+  @DisplayName("Compares the old and the new row")
+  void compareRows(SqlExpression condition, long old, long current, long expected)
       throws SQLException {
     SqlEnvironment environment = SqlEnvironment.of(dialect).with(Row.OLD, q("o")).with(Row.NEW, q("n"))
         .with(Row.CURRENT, q("n"));

@@ -1,6 +1,7 @@
 package dev.horizon.leadseal.sqlserver;
 
 import dev.horizon.leadseal.Dialect;
+import dev.horizon.leadseal.Namespace;
 import dev.horizon.leadseal.ScriptWriter;
 import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
@@ -10,6 +11,7 @@ import dev.horizon.leadseal.Transition.TableTransition;
 import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.Index;
+import dev.horizon.leadseal.attribute.TableAttribute;
 import dev.horizon.leadseal.command.Clause;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Command.AddConstraint;
@@ -56,26 +58,37 @@ record SqlServerDependents(Ddl ddl, ColumnTransition column) {
   }
 
   private List<Index> indexes() {
+    List<TableAttribute> originAttributes = originAttributes(column.table());
     return target().attributes(Index.class).stream()
-        .filter(index -> index.contains(column.name()) && origin().attributes().contains(index)).toList();
+        .filter(index -> index.contains(column.name()) && originAttributes.contains(index))
+        .toList();
   }
 
   private List<Check> checks() {
-    return target().attributes(Check.class).stream().filter(origin().attributes()::contains).toList();
+    List<TableAttribute> originAttributes = originAttributes(column.table());
+    return target().attributes(Check.class).stream().filter(originAttributes::contains).toList();
+  }
+
+  private List<TableAttribute> originAttributes(TableTransition table) {
+    return table.origin().map(origin -> origin.attributes().stream()
+        .flatMap(attribute -> attribute.rename(table.originName(), table.transition()).stream()).toList())
+        .orElse(List.of());
   }
 
   private List<Key> keys() {
     Transition transition = column.table().transition();
-    TableName name = column.table().name();
+    TableName owner = column.table().name();
     List<Key> all = new ArrayList<>();
-    for (TableName other : transition.target().names()) {
-      TableTransition table = transition.table(other);
-      List<ForeignKey> kept = table.origin().map(origin -> origin.attributes(ForeignKey.class))
-          .orElse(List.of());
-      table.definition().attributes(ForeignKey.class).stream()
-          .filter(key -> kept.contains(key) && (other.equals(name) && key.columns().contains(column.name())
-              || key.table().equals(name) && key.referencedColumns().contains(column.name())))
-          .forEach(key -> all.add(new Key(table, key)));
+    for (Namespace namespace : transition.target().namespaces()) {
+      for (Table definition : namespace.tables()) {
+        TableName name = namespace.nameOf(definition);
+        TableTransition table = new TableTransition(transition, name, definition.id());
+        List<TableAttribute> originAttributes = originAttributes(table);
+        definition.attributes(ForeignKey.class).stream()
+            .filter(key -> originAttributes.contains(key) && (name.equals(owner) && key.columns().contains(column.name())
+                || key.table().equals(owner) && key.referencedColumns().contains(column.name())))
+            .forEach(key -> all.add(new Key(table, key)));
+      }
     }
     return all;
   }

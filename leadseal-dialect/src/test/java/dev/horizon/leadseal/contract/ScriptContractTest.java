@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public abstract class ScriptContractTest extends ContractTest {
@@ -40,7 +41,8 @@ public abstract class ScriptContractTest extends ContractTest {
   }
 
   @Test
-  void runsAStatementWithABodyBetweenOtherStatements() throws IOException, SQLException {
+  @DisplayName("Runs a statement with a body between other statements")
+  void runBody() throws IOException, SQLException {
     apply(schema());
     Path file = migrations.resolve("99990101000000").resolve(dialect.name()).resolve("V99990101000000__trigger.sql");
     Files.createDirectories(file.getParent());

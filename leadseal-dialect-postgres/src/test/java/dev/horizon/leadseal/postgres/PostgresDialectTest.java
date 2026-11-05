@@ -10,7 +10,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class PostgresDialectTest {
 
-  @ParameterizedTest(name = "[{0}]")
+  @ParameterizedTest(name = "({0})", quoteTextArguments = false)
   @CsvSource(delimiter = '|', quoteCharacter = '~', textBlock = """
       BEGIN RETURN NEW; END;               | $leadseal$
       SELECT '$leadseal$', '$leadseal1$'   | $leadseal2$

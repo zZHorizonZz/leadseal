@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.flywaydb.core.internal.resource.StringResource;
 import org.flywaydb.core.internal.sqlscript.SqlStatementIterator;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public abstract class ScriptParserTest {
@@ -14,7 +15,8 @@ public abstract class ScriptParserTest {
   protected abstract TestDatabase database();
 
   @Test
-  void splitsTheTextIntoTheStatementsOfTheScript() {
+  @DisplayName("Splits the text into the statements of the script")
+  void splitStatements() {
     ScriptWriter script = ScriptContractTest.script(database());
 
     assertThat(parse(script.text())).containsExactlyElementsOf(script.statements());

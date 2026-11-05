@@ -1,10 +1,10 @@
 package dev.horizon.leadseal;
 
 /**
- * The database of a dialect cannot do what the schema or a change asks for, such as a namespace in SQLite or a new {@code IDENTITY} on an existing SQL Server column. The schema has to change, or the
- * dialect.
+ * Thrown when a database cannot make a change, such as a namespace on SQLite or a new {@code IDENTITY} on an existing
+ * SQL Server column. Change the schema, or leave out the dialect of that database.
  */
-public final class UnsupportedChangeException extends SchemaException {
+public class UnsupportedChangeException extends SchemaException {
 
   /**
    * Creates the exception.
