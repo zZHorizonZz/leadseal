@@ -1,10 +1,13 @@
 package dev.horizon.leadseal.contract;
 
 import dev.horizon.leadseal.Dialect;
+import dev.horizon.leadseal.TableName;
+import dev.horizon.leadseal.command.Command;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import org.flywaydb.core.internal.parser.Parser;
 
 public interface TestDatabase {
 
@@ -14,21 +17,9 @@ public interface TestDatabase {
 
   String binaryCollation();
 
-  default boolean supportsSchemas() {
-    return true;
-  }
+  Parser flywayParser();
 
-  default boolean supportsPartialIndexes() {
-    return true;
-  }
-
-  default boolean supportsIdentityChanges() {
-    return true;
-  }
-
-  default boolean supportsComments() {
-    return true;
-  }
+  Command trigger(TableName items, TableName log);
 
   default String tableComment(Connection connection, String table) throws SQLException {
     try (ResultSet result = connection.getMetaData().getTables(connection.getCatalog(), connection.getSchema(), table,

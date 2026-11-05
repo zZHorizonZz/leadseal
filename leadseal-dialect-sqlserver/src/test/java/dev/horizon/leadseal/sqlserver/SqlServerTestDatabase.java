@@ -1,22 +1,28 @@
 package dev.horizon.leadseal.sqlserver;
 
 import dev.horizon.leadseal.Dialect;
-import dev.horizon.leadseal.contract.TestDatabase;
+import dev.horizon.leadseal.TableName;
+import dev.horizon.leadseal.command.Command;
+import dev.horizon.leadseal.contract.ContainerDatabase;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.concurrent.atomic.AtomicInteger;
+import org.flywaydb.core.api.configuration.ClassicConfiguration;
+import org.flywaydb.core.internal.parser.Parser;
+import org.flywaydb.core.internal.parser.ParsingContext;
+import org.flywaydb.database.sqlserver.SQLServerParser;
 import org.testcontainers.mssqlserver.MSSQLServerContainer;
 
-final class SqlServerTestDatabase implements TestDatabase {
+final class SqlServerTestDatabase extends ContainerDatabase {
 
   private static final MSSQLServerContainer CONTAINER = new MSSQLServerContainer(
       System.getProperty("leadseal.test.sqlserver.image", "mcr.microsoft.com/mssql/server:2022-latest"))
       .acceptLicense();
-  private static final AtomicInteger DATABASES = new AtomicInteger();
+
+  SqlServerTestDatabase() {
+    super(CONTAINER);
+  }
 
   @Override
   public Dialect dialect() {
@@ -29,8 +35,18 @@ final class SqlServerTestDatabase implements TestDatabase {
   }
 
   @Override
-  public boolean supportsIdentityChanges() {
-    return false;
+  public Parser flywayParser() {
+    return new SQLServerParser(new ClassicConfiguration(), new ParsingContext());
+  }
+
+  @Override
+  public Command trigger(TableName items, TableName log) {
+    return sql -> {
+      String insert = "  INSERT INTO " + sql.dialect().quote(log) + " ([item], [note]) SELECT [id], ";
+      sql.isolate().append("CREATE TRIGGER [tg_items_log] ON ").table(items).append(" AFTER INSERT AS\nBEGIN\n"
+          + "  SET NOCOUNT ON;\n" + insert + "N'first' FROM inserted;\n" + insert + "N'second' FROM inserted;\n"
+          + "END");
+    };
   }
 
   @Override
@@ -46,7 +62,12 @@ final class SqlServerTestDatabase implements TestDatabase {
         + " 'ColumnId')", table, table, column);
   }
 
-  private static String description(Connection connection, String sql, String... params) throws SQLException {
+  @Override
+  protected String url(String server, String database) {
+    return server + ";databaseName=" + database;
+  }
+
+  private String description(Connection connection, String sql, String... params) throws SQLException {
     try (PreparedStatement statement = connection.prepareStatement(sql)) {
       for (int i = 0; i < params.length; i++) {
         statement.setString(i + 1, params[i]);
@@ -55,21 +76,5 @@ final class SqlServerTestDatabase implements TestDatabase {
         return result.next() ? result.getString(1) : null;
       }
     }
-  }
-
-  @Override
-  public Database create() throws SQLException {
-    synchronized (CONTAINER) {
-      if (!CONTAINER.isRunning()) {
-        CONTAINER.start();
-      }
-    }
-    String name = "test_" + DATABASES.incrementAndGet();
-    try (Connection connection = DriverManager.getConnection(CONTAINER.getJdbcUrl(), CONTAINER.getUsername(),
-        CONTAINER.getPassword()); Statement statement = connection.createStatement()) {
-      statement.execute("CREATE DATABASE " + name);
-    }
-    return new Database(CONTAINER.getJdbcUrl() + ";databaseName=" + name, CONTAINER.getUsername(),
-        CONTAINER.getPassword());
   }
 }

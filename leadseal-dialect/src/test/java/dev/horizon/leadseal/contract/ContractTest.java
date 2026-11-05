@@ -1,26 +1,26 @@
 package dev.horizon.leadseal.contract;
 
-import dev.horizon.leadseal.BooleanType;
-import dev.horizon.leadseal.BytesType;
 import dev.horizon.leadseal.Column;
-import dev.horizon.leadseal.DateType;
-import dev.horizon.leadseal.DecimalType;
 import dev.horizon.leadseal.Dialect;
-import dev.horizon.leadseal.FloatType;
-import dev.horizon.leadseal.IntegerType;
-import dev.horizon.leadseal.JsonType;
-import dev.horizon.leadseal.MigrationOptions;
-import dev.horizon.leadseal.Migrations;
 import dev.horizon.leadseal.Schema;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.TextType;
-import dev.horizon.leadseal.TimeType;
-import dev.horizon.leadseal.TimestampType;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.UuidType;
-import dev.horizon.leadseal.attribute.NotNullAttribute;
-import dev.horizon.leadseal.attribute.PrimaryKeyAttribute;
+import dev.horizon.leadseal.attribute.NotNull;
+import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.attribute.TableAttribute;
+import dev.horizon.leadseal.migration.MigrationDirectory;
+import dev.horizon.leadseal.migration.MigrationOptions;
+import dev.horizon.leadseal.type.BooleanType;
+import dev.horizon.leadseal.type.BytesType;
+import dev.horizon.leadseal.type.DateType;
+import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.FloatType;
+import dev.horizon.leadseal.type.IntegerType;
+import dev.horizon.leadseal.type.JsonType;
+import dev.horizon.leadseal.type.TextType;
+import dev.horizon.leadseal.type.TimeType;
+import dev.horizon.leadseal.type.TimestampType;
+import dev.horizon.leadseal.type.Type;
+import dev.horizon.leadseal.type.UuidType;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -56,8 +56,8 @@ public abstract class ContractTest {
   protected static final Type REAL = new FloatType(FloatType.Size.FLOAT32);
   protected static final Type DOUBLE = new FloatType(FloatType.Size.FLOAT64);
   protected static final Type DECIMAL = new DecimalType(12, 2);
-  protected static final Type TEXT = new TextType(null);
-  protected static final Type BYTES = new BytesType(null);
+  protected static final Type TEXT = TextType.unlimited();
+  protected static final Type BYTES = BytesType.unlimited();
   protected static final Type UUID = new UuidType();
   protected static final Type TIMESTAMP = new TimestampType();
   protected static final Type DATE = new DateType();
@@ -95,7 +95,8 @@ public abstract class ContractTest {
 
   protected void generate(Schema schema) {
     now = now.plus(Duration.ofMinutes(1));
-    new Migrations(migrations, List.of(dialect), MigrationOptions.defaults().withClock(Clock.fixed(now, ZoneOffset.UTC)))
+    new MigrationDirectory(migrations, List.of(dialect),
+        MigrationOptions.defaults().withClock(Clock.fixed(now, ZoneOffset.UTC)))
         .generate(schema);
   }
 
@@ -216,7 +217,7 @@ public abstract class ContractTest {
   }
 
   protected static Column column(String id, String name, Type type) {
-    return Column.of(id, name, type, NotNullAttribute.INSTANCE);
+    return Column.of(id, name, type, NotNull.INSTANCE);
   }
 
   protected static Column nullable(String id, String name, Type type) {
@@ -224,13 +225,13 @@ public abstract class ContractTest {
   }
 
   protected static Column text(String id, String name, int length) {
-    return column(id, name, new TextType(length));
+    return column(id, name, TextType.of(length));
   }
 
   protected static Table table(String id, String name, List<Column> columns, List<String> key,
       List<? extends TableAttribute> indexes, List<? extends TableAttribute> keys) {
     List<TableAttribute> all = new ArrayList<>();
-    all.add(PrimaryKeyAttribute.of(name, key));
+    all.add(PrimaryKey.of(name, key));
     all.addAll(indexes);
     all.addAll(keys);
     return new Table(id, name, columns, all);

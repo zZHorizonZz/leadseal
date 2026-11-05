@@ -1,19 +1,23 @@
 package dev.horizon.leadseal.mariadb;
 
 import dev.horizon.leadseal.Dialect;
-import dev.horizon.leadseal.contract.TestDatabase;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.concurrent.atomic.AtomicInteger;
+import dev.horizon.leadseal.TableName;
+import dev.horizon.leadseal.command.Command;
+import dev.horizon.leadseal.contract.ContainerDatabase;
+import org.flywaydb.core.api.configuration.ClassicConfiguration;
+import org.flywaydb.core.internal.parser.Parser;
+import org.flywaydb.core.internal.parser.ParsingContext;
+import org.flywaydb.database.mysql.mariadb.MariaDBParser;
 import org.testcontainers.mariadb.MariaDBContainer;
 
-final class MariaDbTestDatabase implements TestDatabase {
+final class MariaDbTestDatabase extends ContainerDatabase {
 
   private static final MariaDBContainer CONTAINER = new MariaDBContainer(
       System.getProperty("leadseal.test.mariadb.image", "mariadb:13.0")).withUsername("root").withPassword("test");
-  private static final AtomicInteger DATABASES = new AtomicInteger();
+
+  MariaDbTestDatabase() {
+    super(CONTAINER);
+  }
 
   @Override
   public Dialect dialect() {
@@ -26,23 +30,16 @@ final class MariaDbTestDatabase implements TestDatabase {
   }
 
   @Override
-  public boolean supportsPartialIndexes() {
-    return false;
+  public Parser flywayParser() {
+    return new MariaDBParser(new ClassicConfiguration(), new ParsingContext());
   }
 
   @Override
-  public Database create() throws SQLException {
-    synchronized (CONTAINER) {
-      if (!CONTAINER.isRunning()) {
-        CONTAINER.start();
-      }
-    }
-    String name = "test_" + DATABASES.incrementAndGet();
-    try (Connection connection = DriverManager.getConnection(CONTAINER.getJdbcUrl(), CONTAINER.getUsername(),
-        CONTAINER.getPassword()); Statement statement = connection.createStatement()) {
-      statement.execute("CREATE DATABASE " + name);
-    }
-    String url = CONTAINER.getJdbcUrl().replaceFirst("/[^/?]+(\\?|$)", "/" + name + "$1");
-    return new Database(url, CONTAINER.getUsername(), CONTAINER.getPassword());
+  public Command trigger(TableName items, TableName log) {
+    return sql -> {
+      String insert = "  INSERT INTO " + sql.dialect().quote(log) + " (`item`, `note`) VALUES (NEW.`id`, ";
+      sql.append("CREATE TRIGGER `tg_items_log` AFTER INSERT ON ").table(items).append(" FOR EACH ROW BEGIN\n"
+          + insert + "'first');\n" + insert + "'second');\nEND");
+    };
   }
 }

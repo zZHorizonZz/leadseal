@@ -4,15 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.TextType;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.attribute.CollationAttribute;
-import dev.horizon.leadseal.attribute.IndexAttribute;
-import dev.horizon.leadseal.attribute.LiteralDefaultAttribute;
+import dev.horizon.leadseal.attribute.Collation;
+import dev.horizon.leadseal.attribute.Index;
+import dev.horizon.leadseal.attribute.LiteralDefault;
+import dev.horizon.leadseal.type.TextType;
+import dev.horizon.leadseal.type.Type;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -30,18 +31,20 @@ public abstract class ColumnContractTest extends ContractTest {
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("state") + ") VALUES (1, 'new')");
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("types")
-  void createsAColumnOfEachType(Type type) throws SQLException {
+  @DisplayName("Creates a column of each type")
+  void createEachType(Type type) throws SQLException {
     apply(schema(orders(ID, column("2", "value", type), nullable("3", "optional", type))));
 
     assertThat(columns("orders")).containsExactly(Map.entry("id", false), Map.entry("value", false),
         Map.entry("optional", true));
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "({0})")
   @MethodSource("types")
-  void addsARequiredColumnToATableWithRows(Type type) throws SQLException {
+  @DisplayName("Adds a required column to a table with rows")
+  void addRequired(Type type) throws SQLException {
     apply(schema(orders(ID, STATE)));
     insertOrder();
 
@@ -53,7 +56,8 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void addsAnOptionalColumn() throws SQLException {
+  @DisplayName("Adds an optional column")
+  void addOptional() throws SQLException {
     apply(schema(orders(ID, STATE)));
     insertOrder();
 
@@ -64,7 +68,8 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void renamesAColumnAndKeepsItsValues() throws SQLException {
+  @DisplayName("Renames a column and keeps its values")
+  void renameColumn() throws SQLException {
     apply(schema(orders(ID, STATE)));
     insertOrder();
 
@@ -75,7 +80,8 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void widensATextColumn() throws SQLException {
+  @DisplayName("Widens a text column")
+  void widenText() throws SQLException {
     apply(schema(orders(ID, STATE)));
     insertOrder();
 
@@ -86,7 +92,8 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void widensAnIntegerColumn() throws SQLException {
+  @DisplayName("Widens an integer column")
+  void widenInteger() throws SQLException {
     apply(schema(orders(ID, STATE, column("3", "total", INT))));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("state") + ", " + q("total")
         + ") VALUES (1, 'new', 7)");
@@ -98,7 +105,8 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void makesAColumnRequiredAndFillsItsNulls() throws SQLException {
+  @DisplayName("Makes a column required and fills its nulls")
+  void makeRequired() throws SQLException {
     apply(schema(orders(ID, STATE, nullable("3", "note", TEXT))));
     insertOrder();
 
@@ -109,31 +117,34 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void makesAColumnOptional() throws SQLException {
+  @DisplayName("Makes a column optional")
+  void makeOptional() throws SQLException {
     apply(schema(orders(ID, STATE)));
     insertOrder();
 
-    apply(schema(orders(ID, Column.of("2", "state", new TextType(20)))));
+    apply(schema(orders(ID, Column.of("2", "state", TextType.of(20)))));
     execute("UPDATE " + q("orders") + " SET " + q("state") + " = NULL");
 
     assertThat(columns("orders")).containsEntry("state", true);
   }
 
   @Test
-  void changesAnIndexedColumn() throws SQLException {
-    apply(schema(table("shop.Order", "orders", List.of(ID, STATE), List.of("id"), List.of(IndexAttribute.of("orders",
+  @DisplayName("Changes an indexed column")
+  void changeIndexed() throws SQLException {
+    apply(schema(table("shop.Order", "orders", List.of(ID, STATE), List.of("id"), List.of(Index.of("orders",
         List.of("state"), false)), List.of())));
     insertOrder();
 
     apply(schema(table("shop.Order", "orders", List.of(ID, text("2", "state", 200)), List.of("id"),
-        List.of(IndexAttribute.of("orders", List.of("state"), false)), List.of())));
+        List.of(Index.of("orders", List.of("state"), false)), List.of())));
 
     assertThat(indexes("orders")).containsExactly(Map.entry("ix_orders_state", false));
     assertThat(query("SELECT " + q("state") + " FROM " + q("orders"))).containsExactly(List.of("new"));
   }
 
   @Test
-  void dropsAColumn() throws SQLException {
+  @DisplayName("Drops a column")
+  void dropColumn() throws SQLException {
     apply(schema(orders(ID, STATE, nullable("3", "note", TEXT))));
     insertOrder();
 
@@ -144,7 +155,8 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void keepsTheDigitsOfADecimal() throws SQLException {
+  @DisplayName("Keeps the digits of a decimal")
+  void keepDecimalDigits() throws SQLException {
     apply(schema(orders(ID, column("2", "price", DECIMAL))));
 
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("price") + ") VALUES (1, '1234567890.12')");
@@ -153,7 +165,8 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void storesDatesAndTimes() throws SQLException {
+  @DisplayName("Stores dates and times")
+  void storeDatesAndTimes() throws SQLException {
     apply(schema(orders(ID, column("2", "day", DATE), column("3", "hour", TIME))));
 
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("day") + ", " + q("hour")
@@ -165,9 +178,10 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void createsAColumnWithACollation() throws SQLException {
-    Column code = text("2", "code", 20).with(new CollationAttribute(dialect.name(), testDatabase().binaryCollation()));
-    apply(schema(table("shop.Order", "orders", List.of(ID, code), List.of("id"), List.of(IndexAttribute.of("orders",
+  @DisplayName("Creates a column with a collation")
+  void createWithCollation() throws SQLException {
+    Column code = text("2", "code", 20).with(new Collation(dialect.name(), testDatabase().binaryCollation()));
+    apply(schema(table("shop.Order", "orders", List.of(ID, code), List.of("id"), List.of(Index.of("orders",
         List.of("code"), true)), List.of())));
 
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("code") + ") VALUES (1, 'a')");
@@ -177,15 +191,16 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void changesTheCollationOfAColumn() throws SQLException {
+  @DisplayName("Changes the collation of a column")
+  void changeCollation() throws SQLException {
     Column code = text("2", "code", 20);
-    apply(schema(table("shop.Order", "orders", List.of(ID, code), List.of("id"), List.of(IndexAttribute.of("orders",
+    apply(schema(table("shop.Order", "orders", List.of(ID, code), List.of("id"), List.of(Index.of("orders",
         List.of("code"), false)), List.of())));
     execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("code") + ") VALUES (1, 'a')");
 
     apply(schema(table("shop.Order", "orders",
-        List.of(ID, code.with(new CollationAttribute(dialect.name(), testDatabase().binaryCollation()))), List.of("id"),
-        List.of(IndexAttribute.of("orders", List.of("code"), false)),
+        List.of(ID, code.with(new Collation(dialect.name(), testDatabase().binaryCollation()))), List.of("id"),
+        List.of(Index.of("orders", List.of("code"), false)),
         List.of())));
 
     assertThat(count("SELECT COUNT(*) FROM " + q("orders") + " WHERE " + q("code") + " = 'A'")).isZero();
@@ -193,16 +208,49 @@ public abstract class ColumnContractTest extends ContractTest {
   }
 
   @Test
-  void addsAnIndexedColumnWithADefault() throws SQLException {
+  @DisplayName("Adds an indexed column with a default")
+  void addIndexedWithDefault() throws SQLException {
     apply(schema(orders(ID, STATE)));
     insertOrder();
 
     apply(schema(table("shop.Order", "orders", List.of(ID, STATE, column("3", "total", INT)
-        .with(new LiteralDefaultAttribute("5"))), List.of("id"), List.of(IndexAttribute.of("orders", List.of("total"), false)),
+        .with(new LiteralDefault("5"))), List.of("id"),
+        List.of(Index.of("orders", List.of("total"), false)),
         List.of())));
     execute("UPDATE " + q("orders") + " SET " + q("total") + " = " + q("total") + " + 1");
 
     assertThat(query("SELECT " + q("total") + " FROM " + q("orders"))).containsExactly(List.of("6"));
     assertThat(indexes("orders")).containsOnlyKeys("ix_orders_total");
+  }
+
+  @Test
+  @DisplayName("Retypes two columns of one index")
+  void retypeIndexColumns() throws SQLException {
+    Index index = new Index("ix_orders_count_line", List.of("count", "line"), false, List.of(), Index.Rows.ALL);
+    apply(schema(table("shop.Order", "orders", List.of(ID, column("3", "count", INT), column("4", "line", INT)),
+        List.of("id"), List.of(index), List.of())));
+    execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("count") + ", " + q("line") + ") VALUES (1, 7,"
+        + " 2)");
+
+    apply(schema(table("shop.Order", "orders", List.of(ID, column("3", "count", BIGINT), column("4", "line", BIGINT)),
+        List.of("id"), List.of(index), List.of())));
+
+    assertThat(indexes("orders")).containsExactly(Map.entry("ix_orders_count_line", false));
+    assertThat(query("SELECT " + q("count") + ", " + q("line") + " FROM " + q("orders")))
+        .containsExactly(List.of("7", "2"));
+  }
+
+  @Test
+  @DisplayName("Renames and retypes an indexed column")
+  void renameAndRetypeIndexed() throws SQLException {
+    apply(schema(table("shop.Order", "orders", List.of(ID, column("3", "count", INT)), List.of("id"),
+        List.of(new Index("ix_orders_count", List.of("count"), false, List.of(), Index.Rows.ALL)), List.of())));
+    execute("INSERT INTO " + q("orders") + " (" + q("id") + ", " + q("count") + ") VALUES (1, 7)");
+
+    apply(schema(table("shop.Order", "orders", List.of(ID, column("3", "total", BIGINT)), List.of("id"),
+        List.of(new Index("ix_orders_count", List.of("total"), false, List.of(), Index.Rows.ALL)), List.of())));
+
+    assertThat(indexes("orders")).containsExactly(Map.entry("ix_orders_count", false));
+    assertThat(query("SELECT " + q("total") + " FROM " + q("orders"))).containsExactly(List.of("7"));
   }
 }

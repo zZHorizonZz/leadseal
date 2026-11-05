@@ -1,37 +1,33 @@
 package dev.horizon.leadseal.postgres;
 
-import dev.horizon.leadseal.BooleanType;
-import dev.horizon.leadseal.BytesType;
 import dev.horizon.leadseal.Column;
-import dev.horizon.leadseal.DateType;
-import dev.horizon.leadseal.DecimalType;
 import dev.horizon.leadseal.Dialect;
-import dev.horizon.leadseal.FloatType;
-import dev.horizon.leadseal.IntegerType;
-import dev.horizon.leadseal.JsonType;
-import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.TextType;
-import dev.horizon.leadseal.TimeType;
-import dev.horizon.leadseal.TimestampType;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.UuidType;
-import dev.horizon.leadseal.attribute.DefaultAttribute;
-import dev.horizon.leadseal.attribute.NowDefaultAttribute;
-import dev.horizon.leadseal.attribute.RandomUuidDefaultAttribute;
-import dev.horizon.leadseal.command.CommandFactory;
+import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.type.BooleanType;
+import dev.horizon.leadseal.type.BytesType;
+import dev.horizon.leadseal.type.DateType;
+import dev.horizon.leadseal.type.DecimalLimit;
+import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.FloatType;
+import dev.horizon.leadseal.type.IntegerType;
+import dev.horizon.leadseal.type.JsonType;
+import dev.horizon.leadseal.type.TextType;
+import dev.horizon.leadseal.type.TimeType;
+import dev.horizon.leadseal.type.TimestampType;
+import dev.horizon.leadseal.type.Type;
+import dev.horizon.leadseal.type.UuidType;
 
 /**
- * The DDL of PostgreSQL 13 and later. PostgreSQL writes every command as standard SQL, so this dialect only maps types
- * and values.
+ * The DDL of PostgreSQL 13 and later.
  */
 public final class PostgresDialect implements Dialect {
 
   public static final String NAME = "postgresql";
 
-  private static final int MAX_PRECISION = 1000;
+  private static final DecimalLimit DECIMAL = new DecimalLimit("PostgreSQL", 1000, 1000);
 
-  private final CommandFactory commands = new CommandFactory();
+  private final Ddl ddl = new PostgresDdl(this);
 
   @Override
   public String name() {
@@ -52,10 +48,10 @@ public final class PostgresDialect implements Dialect {
   public String type(Table table, Column column) {
     return switch (column.type()) {
       case BooleanType _ -> "boolean";
-      case IntegerType type -> type.size() == IntegerType.Size.INT32 ? "integer" : "bigint";
-      case FloatType type -> type.size() == FloatType.Size.FLOAT32 ? "real" : "double precision";
-      case DecimalType type -> decimal(table, column, type);
-      case TextType type -> type.length() == null ? "text" : "varchar(" + type.length() + ")";
+      case IntegerType type -> type.size().select("integer", "bigint");
+      case FloatType type -> type.size().select("real", "double precision");
+      case DecimalType type -> DECIMAL.sql("numeric", table, column, type);
+      case TextType type -> type.length().map(characters -> "varchar(" + characters + ")", () -> "text");
       case BytesType _ -> "bytea";
       case UuidType _ -> "uuid";
       case TimestampType _ -> "timestamptz";
@@ -83,26 +79,39 @@ public final class PostgresDialect implements Dialect {
   }
 
   @Override
-  public String generated(Column column, DefaultAttribute value) {
-    return switch (value) {
-      case NowDefaultAttribute _ -> column.type() instanceof DateType
-          ? "((CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date)"
-          : "CURRENT_TIMESTAMP";
-      case RandomUuidDefaultAttribute _ -> "gen_random_uuid()";
-      default -> throw new IllegalArgumentException("A literal default is not generated.");
-    };
+  public String currentDate() {
+    return "((CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date)";
   }
 
   @Override
-  public CommandFactory commands() {
-    return commands;
+  public String currentTimestamp() {
+    return "CURRENT_TIMESTAMP";
   }
 
-  private static String decimal(Table table, Column column, DecimalType type) {
-    if (type.precision() > MAX_PRECISION) {
-      throw new SchemaException("PostgreSQL cannot store the column " + table.name() + "." + column.name()
-          + " with a precision of " + type.precision() + ". The maximum is " + MAX_PRECISION + ".");
-    }
-    return "numeric(" + type.precision() + ", " + type.scale() + ")";
+  @Override
+  public String randomUuid() {
+    return "gen_random_uuid()";
   }
+
+  @Override
+  public Ddl ddl() {
+    return ddl;
+  }
+
+  /**
+   * Returns a body in dollar quotes, such as the body of a plpgsql function: {@code $leadseal$ ... $leadseal$}. The
+   * tag is the first of {@code leadseal}, {@code leadseal1}, {@code leadseal2} and so on that the body does not
+   * contain, so the body needs no escaping. Flyway keeps the semicolons inside dollar quotes in one statement.
+   *
+   * @param body the body, for example {@code BEGIN NEW.total := 0; RETURN NEW; END;}
+   * @return the quoted body
+   */
+  public String dollarQuote(String body) {
+    String tag = "$leadseal$";
+    for (int i = 1; body.contains(tag); i++) {
+      tag = "$leadseal" + i + "$";
+    }
+    return tag + "\n" + body + "\n" + tag;
+  }
+
 }

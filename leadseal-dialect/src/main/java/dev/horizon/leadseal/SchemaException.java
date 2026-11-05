@@ -1,13 +1,28 @@
 package dev.horizon.leadseal;
 
-/** Thrown when a schema, a migration history or a migration cannot be read, written or rendered. */
-public class SchemaException extends RuntimeException {
+/**
+ * Thrown when leadseal cannot read a schema or write a migration. Each subclass says who has to fix the problem:
+ * {@link InvalidSchemaException}, {@link UnsupportedChangeException}, {@link BrokenHistoryException} or
+ * {@link ConfigurationException}.
+ */
+public abstract class SchemaException extends RuntimeException {
 
-  public SchemaException(String message) {
+  /**
+   * Creates the exception.
+   *
+   * @param message what is wrong and how to fix it
+   */
+  protected SchemaException(String message) {
     super(message);
   }
 
-  public SchemaException(String message, Throwable cause) {
+  /**
+   * Creates the exception with its cause.
+   *
+   * @param message what is wrong and how to fix it
+   * @param cause the exception that revealed the problem
+   */
+  protected SchemaException(String message, Throwable cause) {
     super(message, cause);
   }
 }

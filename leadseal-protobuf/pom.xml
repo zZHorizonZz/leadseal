@@ -26,6 +26,10 @@
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
     </dependency>
+    <dependency>
+      <groupId>dev.horizon</groupId>
+      <artifactId>aquery-grammar-cel</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

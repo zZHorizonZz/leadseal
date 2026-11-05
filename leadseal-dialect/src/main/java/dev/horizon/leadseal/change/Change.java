@@ -4,36 +4,39 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import dev.horizon.leadseal.Schema;
 import dev.horizon.leadseal.TableName;
-import dev.horizon.leadseal.command.CommandFactory;
+import dev.horizon.leadseal.Transition;
+import dev.horizon.leadseal.Transition.TableTransition;
+import dev.horizon.leadseal.command.Command;
+import dev.horizon.leadseal.command.Ddl;
+import java.util.List;
 
 /**
  * One change between two schemas. {@link Schema#changesTo} finds the changes, a migration's {@code migration.json}
- * stores them, and a dialect's {@link CommandFactory} turns them into commands.
+ * stores them, and each change gives the commands that make it in the {@link Ddl} of a dialect.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "change")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = CreateTableChange.class, name = "create_table"),
-    @JsonSubTypes.Type(value = DropTableChange.class, name = "drop_table"),
-    @JsonSubTypes.Type(value = RenameTableChange.class, name = "rename_table"),
-    @JsonSubTypes.Type(value = MoveTableChange.class, name = "move_table"),
-    @JsonSubTypes.Type(value = AddColumnChange.class, name = "add_column"),
-    @JsonSubTypes.Type(value = DropColumnChange.class, name = "drop_column"),
-    @JsonSubTypes.Type(value = RenameColumnChange.class, name = "rename_column"),
-    @JsonSubTypes.Type(value = AlterColumnTypeChange.class, name = "alter_column_type"),
-    @JsonSubTypes.Type(value = AddColumnAttributeChange.class, name = "add_column_attribute"),
-    @JsonSubTypes.Type(value = DropColumnAttributeChange.class, name = "drop_column_attribute"),
-    @JsonSubTypes.Type(value = AlterColumnAttributeChange.class, name = "alter_column_attribute"),
-    @JsonSubTypes.Type(value = AddTableAttributeChange.class, name = "add_table_attribute"),
-    @JsonSubTypes.Type(value = DropTableAttributeChange.class, name = "drop_table_attribute"),
-    @JsonSubTypes.Type(value = AlterTableAttributeChange.class, name = "alter_table_attribute")
+    @JsonSubTypes.Type(value = CreateTable.class, name = "create_table"),
+    @JsonSubTypes.Type(value = DropTable.class, name = "drop_table"),
+    @JsonSubTypes.Type(value = RenameTable.class, name = "rename_table"),
+    @JsonSubTypes.Type(value = MoveTable.class, name = "move_table"),
+    @JsonSubTypes.Type(value = AddColumn.class, name = "add_column"),
+    @JsonSubTypes.Type(value = DropColumn.class, name = "drop_column"),
+    @JsonSubTypes.Type(value = RenameColumn.class, name = "rename_column"),
+    @JsonSubTypes.Type(value = AlterColumnType.class, name = "alter_column_type"),
+    @JsonSubTypes.Type(value = AddColumnAttribute.class, name = "add_column_attribute"),
+    @JsonSubTypes.Type(value = DropColumnAttribute.class, name = "drop_column_attribute"),
+    @JsonSubTypes.Type(value = AlterColumnAttribute.class, name = "alter_column_attribute"),
+    @JsonSubTypes.Type(value = AddTableAttribute.class, name = "add_table_attribute"),
+    @JsonSubTypes.Type(value = DropTableAttribute.class, name = "drop_table_attribute"),
+    @JsonSubTypes.Type(value = AlterTableAttribute.class, name = "alter_table_attribute")
 })
-public sealed interface Change permits CreateTableChange, DropTableChange, RenameTableChange, MoveTableChange,
-    AddColumnChange,
-    DropColumnChange, RenameColumnChange, AlterColumnTypeChange, AddColumnAttributeChange, DropColumnAttributeChange,
-    AlterColumnAttributeChange, AddTableAttributeChange, DropTableAttributeChange, AlterTableAttributeChange {
+public sealed interface Change permits CreateTable, DropTable, RenameTable, MoveTable, AddColumn, DropColumn,
+    RenameColumn, AlterColumnType, AddColumnAttribute, DropColumnAttribute, AlterColumnAttribute, AddTableAttribute,
+    DropTableAttribute, AlterTableAttribute {
 
   /**
-   * Returns the table that the change changes.
+   * Gives the table that the change changes.
    *
    * @return the table name at the time the change runs. Drops of tables, indexes, checks and foreign keys run before
    * renames and use the old name. All other changes use the new name.
@@ -41,69 +44,96 @@ public sealed interface Change permits CreateTableChange, DropTableChange, Renam
   TableName table();
 
   /**
-   * Returns the phase in which the change runs. A migration runs its changes phase by phase.
+   * Gives the table that the change changes, in the schemas of a migration.
+   *
+   * @param transition the schemas before and after the migration
+   * @return the table, by its name after the migration, or before it for a change that runs before renames
+   */
+  default TableTransition table(Transition transition) {
+    return phase().precedes(Phase.RENAME_TABLES) ? transition.originTable(table()) : transition.table(table());
+  }
+
+  /**
+   * Gives the phase of the change. The changes of a migration run phase by phase.
    *
    * @return the phase
    */
   Phase phase();
 
   /**
-   * Returns a short description of the change, which names a migration.
+   * Gives the part of a migration name that describes the change, for example {@code add_orders_note}.
    *
-   * @return the description, for example {@code create_orders}
+   * @return the summary
    */
   String summary();
 
   /**
-   * Returns whether the change only supports other changes, such as a new index. A migration is named after its
-   * changes that are not minor.
+   * Tells if the change is minor, such as a new index. A minor change names a migration only when the migration has
+   * no other changes.
    *
-   * @return {@code true} for a minor change
+   * @return true for a minor change
    */
   default boolean minor() {
     return false;
   }
 
   /**
-   * The order in which the changes of a migration run. For example, foreign keys are dropped before their tables and
-   * added after every table exists.
+   * Gives the commands that make this change.
+   *
+   * @param ddl the statements of the dialect
+   * @param transition the schemas before and after the migration
+   * @return the commands, in the order they run
    */
+  List<Command> commands(Ddl ddl, Transition transition);
+
+  /** The phases of a migration, in the order they run. */
   enum Phase {
-    /** Drop the foreign keys of dropped tables, and changed or removed foreign keys. */
+    /** Drops foreign keys, before the tables and columns that they read. */
     DROP_FOREIGN_KEYS,
-    /** Drop changed or removed checks. */
+    /** Drops checks. */
     DROP_CHECKS,
-    /** Drop changed or removed indexes. */
+    /** Drops indexes. */
     DROP_INDEXES,
-    /** Drop tables. */
+    /** Drops tables. */
     DROP_TABLES,
-    /** Rename tables. */
+    /** Renames tables. */
     RENAME_TABLES,
-    /** Move tables to other namespaces. */
+    /** Moves tables to other namespaces. */
     MOVE_TABLES,
-    /** Create tables. */
+    /** Creates tables, without their foreign keys. */
     CREATE_TABLES,
-    /** Rename columns. */
+    /** Renames columns. */
     RENAME_COLUMNS,
-    /** Add columns. */
+    /** Adds columns. */
     ADD_COLUMNS,
-    /** Drop column attributes, such as defaults that the next phases would not accept. */
+    /** Drops attributes of columns. */
     DROP_COLUMN_ATTRIBUTES,
-    /** Change column types. */
+    /** Changes the types of columns. */
     ALTER_COLUMN_TYPES,
-    /** Add or change column attributes. */
+    /** Adds and changes attributes of columns. */
     ALTER_COLUMN_ATTRIBUTES,
-    /** Add or change primary keys. */
+    /** Changes primary keys. */
     ALTER_PRIMARY_KEYS,
-    /** Drop columns. */
+    /** Drops columns. */
     DROP_COLUMNS,
-    /** Add indexes. */
+    /** Adds indexes. */
     ADD_INDEXES,
-    /** Add checks. */
+    /** Adds checks. */
     ADD_CHECKS,
-    /** Add foreign keys. */
+    /** Adds foreign keys, after all the tables and columns that they read. */
     ADD_FOREIGN_KEYS,
-    /** Add, change or drop table comments. */
-    COMMENT_TABLES
+    /** Changes the comments of tables. */
+    COMMENT_TABLES;
+
+    /**
+     * Tells if this phase runs before another phase.
+     *
+     * @param other the other phase
+     * @return true if this phase runs first
+     */
+    public boolean precedes(Phase other) {
+      return compareTo(other) < 0;
+    }
   }
+
 }

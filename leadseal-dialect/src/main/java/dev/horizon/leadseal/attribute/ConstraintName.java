@@ -1,9 +1,7 @@
 package dev.horizon.leadseal.attribute;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
+import dev.horizon.leadseal.Digest;
+
 import java.util.List;
 
 /**
@@ -34,7 +32,7 @@ public record ConstraintName(String prefix, String table, List<String> parts) {
     if (name.length() <= MAX_LENGTH) {
       return name;
     }
-    return name.substring(0, MAX_LENGTH - HASH_LENGTH - 1) + "_" + hash(name);
+    return name.substring(0, MAX_LENGTH - HASH_LENGTH - 1) + "_" + new Digest(name).hex(HASH_LENGTH);
   }
 
   /**
@@ -45,16 +43,8 @@ public record ConstraintName(String prefix, String table, List<String> parts) {
    * @param text the text to hash, such as the check expression
    * @return the name
    */
-  public static ConstraintName hashed(String prefix, String table, String text) {
-    return new ConstraintName(prefix, table, List.of(hash(text)));
+  public static ConstraintName digest(String prefix, String table, String text) {
+    return new ConstraintName(prefix, table, List.of(new Digest(text).hex(HASH_LENGTH)));
   }
 
-  private static String hash(String text) {
-    try {
-      byte[] digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
-      return HexFormat.of().formatHex(digest).substring(0, HASH_LENGTH);
-    } catch (NoSuchAlgorithmException missing) {
-      throw new IllegalStateException(missing);
-    }
-  }
 }

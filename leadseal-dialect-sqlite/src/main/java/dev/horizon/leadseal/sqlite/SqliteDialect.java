@@ -1,24 +1,21 @@
 package dev.horizon.leadseal.sqlite;
 
-import dev.horizon.leadseal.BooleanType;
-import dev.horizon.leadseal.BytesType;
 import dev.horizon.leadseal.Column;
-import dev.horizon.leadseal.DateType;
-import dev.horizon.leadseal.DecimalType;
 import dev.horizon.leadseal.Dialect;
-import dev.horizon.leadseal.FloatType;
-import dev.horizon.leadseal.IntegerType;
-import dev.horizon.leadseal.JsonType;
 import dev.horizon.leadseal.Table;
-import dev.horizon.leadseal.TextType;
-import dev.horizon.leadseal.TimeType;
-import dev.horizon.leadseal.TimestampType;
-import dev.horizon.leadseal.Type;
-import dev.horizon.leadseal.UuidType;
-import dev.horizon.leadseal.attribute.DefaultAttribute;
-import dev.horizon.leadseal.attribute.NowDefaultAttribute;
-import dev.horizon.leadseal.attribute.RandomUuidDefaultAttribute;
-import dev.horizon.leadseal.command.CommandFactory;
+import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.type.BooleanType;
+import dev.horizon.leadseal.type.BytesType;
+import dev.horizon.leadseal.type.DateType;
+import dev.horizon.leadseal.type.DecimalType;
+import dev.horizon.leadseal.type.FloatType;
+import dev.horizon.leadseal.type.IntegerType;
+import dev.horizon.leadseal.type.JsonType;
+import dev.horizon.leadseal.type.TextType;
+import dev.horizon.leadseal.type.TimeType;
+import dev.horizon.leadseal.type.TimestampType;
+import dev.horizon.leadseal.type.Type;
+import dev.horizon.leadseal.type.UuidType;
 
 /**
  * The DDL of SQLite 3.35 and later.
@@ -37,7 +34,7 @@ public final class SqliteDialect implements Dialect {
       + " || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1)"
       + " || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))))";
 
-  private final CommandFactory commands = new SqliteCommandFactory();
+  private final Ddl ddl = new SqliteDdl(this);
 
   @Override
   public String name() {
@@ -89,17 +86,35 @@ public final class SqliteDialect implements Dialect {
   }
 
   @Override
-  public String generated(Column column, DefaultAttribute value) {
-    return switch (value) {
-      case NowDefaultAttribute _ -> column.type() instanceof DateType ? "(date('now'))"
-          : "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))";
-      case RandomUuidDefaultAttribute _ -> RANDOM_UUID;
-      default -> throw new IllegalArgumentException("A literal default is not generated.");
-    };
+  public String currentDate() {
+    return "(date('now'))";
   }
 
   @Override
-  public CommandFactory commands() {
-    return commands;
+  public String currentTimestamp() {
+    return "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))";
   }
+
+  @Override
+  public String randomUuid() {
+    return RANDOM_UUID;
+  }
+
+  @Override
+  public Ddl ddl() {
+    return ddl;
+  }
+
+  /** SQLite counts the characters of a text with {@code length}. */
+  @Override
+  public String length(String text) {
+    return "length(" + text + ")";
+  }
+
+  /** SQLite compares values where {@code NULL} equals itself with {@code IS NOT}. */
+  @Override
+  public String difference(String old, String current) {
+    return "(" + old + " IS NOT " + current + ")";
+  }
+
 }
