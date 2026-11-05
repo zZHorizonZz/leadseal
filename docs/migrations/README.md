@@ -26,6 +26,12 @@ Refer to [Generate migrations from Java](generate-migrations-from-java.md).
 The SQL file names follow the Flyway format, and one wildcard location finds the files of one database.
 Refer to [Apply migrations with Flyway](apply-migrations-with-flyway.md).
 
+### Warnings about data loss
+
+A removed field or message drops its column or table, and the build warns about each drop.
+A type change that can lose values stops the build, unless you allow unsafe changes.
+Refer to [About data loss](about-data-loss.md).
+
 ### Merge branches
 
 Two branches that each add a migration give two migrations on top of the same schema.

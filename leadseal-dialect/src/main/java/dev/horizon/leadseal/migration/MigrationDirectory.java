@@ -69,7 +69,8 @@ public final class MigrationDirectory {
    *
    * @param schema the schema
    * @return the plan
-   * @throws SchemaException if the migrations of the directory do not form one chain
+   * @throws SchemaException if the migrations of the directory do not form one chain, or if the new migration has an
+   * unsafe change and the options do not allow unsafe changes
    */
   public MigrationPlan plan(Schema schema) {
     MigrationChain chain = MigrationChain.read(directory, json);
@@ -89,12 +90,16 @@ public final class MigrationDirectory {
     if (changes.isEmpty()) {
       return new MigrationPlan.Current(absent(files));
     }
+    if (!options.unsafe()) {
+      changes.forEach(Change::validate);
+    }
     Migration migration = Migration.of(chain.next(options.clock().instant()), chain.latest(), hash,
         options.clock().instant().toString(), changes);
     files.add(snapshots.file(schema, hash));
     files.add(migration.file(json));
     dialects.forEach(dialect -> files.addAll(migration.scripts(dialect, latest, schema, options)));
-    return new MigrationPlan.Step(migration.folder(), absent(files));
+    return new MigrationPlan.Step(migration.folder(), absent(files),
+        changes.stream().flatMap(change -> change.warning().stream()).toList());
   }
 
   /**

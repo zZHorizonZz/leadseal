@@ -96,7 +96,7 @@ public abstract class ContractTest {
   protected void generate(Schema schema) {
     now = now.plus(Duration.ofMinutes(1));
     new MigrationDirectory(migrations, List.of(dialect),
-        MigrationOptions.defaults().withClock(Clock.fixed(now, ZoneOffset.UTC)))
+        MigrationOptions.defaults().withClock(Clock.fixed(now, ZoneOffset.UTC)).allowUnsafe())
         .generate(schema);
   }
 

@@ -5,6 +5,7 @@ import dev.horizon.leadseal.Transition;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Drops a table.
@@ -26,5 +27,10 @@ public record DropTable(TableName table) implements TableChange {
   @Override
   public List<Command> commands(Ddl ddl, Transition transition) {
     return ddl.table().dropTable(table(transition));
+  }
+
+  @Override
+  public Optional<String> warning() {
+    return Optional.of("drops the table " + table + " and its rows");
   }
 }

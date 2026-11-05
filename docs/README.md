@@ -33,8 +33,8 @@ Refer to [About migration history](migrations/about-migration-history.md).
 ### Tables that keep their rows
 
 Each table and column has a stable id.
-A rename keeps the rows, and a field number change drops the column.
-Refer to [About table identity](schemas/about-table-identity.md).
+A rename keeps the rows, and the build warns about each drop.
+Refer to [About table identity](schemas/about-table-identity.md) and [About data loss](migrations/about-data-loss.md).
 
 ### Four databases
 

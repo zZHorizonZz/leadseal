@@ -43,4 +43,10 @@ public record DecimalType(int precision, int scale) implements NumberType {
   public String toString() {
     return "decimal(" + precision + ", " + scale + ")";
   }
+
+  @Override
+  public boolean isAssignableFrom(Type origin) {
+    return origin instanceof DecimalType(int otherPrecision, int otherScale) && scale >= otherScale
+        && precision - scale >= otherPrecision - otherScale;
+  }
 }

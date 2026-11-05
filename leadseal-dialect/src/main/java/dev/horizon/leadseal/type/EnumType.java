@@ -89,6 +89,18 @@ public record EnumType(String name, List<Value> values, Storage storage) impleme
     return Objects.hash(name, storage, storage.select(values, numbers()));
   }
 
+  /**
+   * Tells if this enum holds every value of an earlier enum: it stores the values the same way, and has every value
+   * number of the earlier enum, under its name or a new one.
+   *
+   * @param origin the earlier type
+   * @return true if every value of the earlier type fits
+   */
+  @Override
+  public boolean isAssignableFrom(Type origin) {
+    return origin instanceof EnumType type && storage == type.storage && numbers().containsAll(type.numbers());
+  }
+
   private List<Integer> numbers() {
     return values.stream().map(Value::number).toList();
   }

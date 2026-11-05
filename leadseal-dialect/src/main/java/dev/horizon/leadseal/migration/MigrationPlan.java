@@ -22,6 +22,14 @@ public sealed interface MigrationPlan {
   Optional<Path> migration();
 
   /**
+   * Describes the data that the new migration deletes, such as the rows of a dropped table.
+   *
+   * @return the descriptions, for example {@code drops the table orders and its rows}, or empty if the migration keeps
+   * every value or if there is no new migration
+   */
+  List<String> warnings();
+
+  /**
    * The schema is the schema of the last migration. The files are the SQL of dialects that a migration has no file
    * for yet.
    *
@@ -37,6 +45,11 @@ public sealed interface MigrationPlan {
     public Optional<Path> migration() {
       return Optional.empty();
     }
+
+    @Override
+    public List<String> warnings() {
+      return List.of();
+    }
   }
 
   /**
@@ -44,11 +57,13 @@ public sealed interface MigrationPlan {
    *
    * @param folder the folder of the migration, relative to the directory
    * @param files the files of the migration, and the SQL of dialects that an earlier migration has no file for yet
+   * @param warnings the descriptions of the data that the migration deletes
    */
-  record Step(Path folder, List<MigrationFile> files) implements MigrationPlan {
+  record Step(Path folder, List<MigrationFile> files, List<String> warnings) implements MigrationPlan {
 
     public Step {
       files = List.copyOf(files);
+      warnings = List.copyOf(warnings);
     }
 
     @Override

@@ -14,6 +14,7 @@ import dev.horizon.leadseal.type.EnumType;
 import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
+import dev.horizon.leadseal.type.Length;
 import dev.horizon.leadseal.type.TextType;
 import dev.horizon.leadseal.type.TimeType;
 import dev.horizon.leadseal.type.TimestampType;
@@ -51,17 +52,17 @@ public final class PostgresDialect implements Dialect {
   public String type(Table table, Column column) {
     return switch (column.type()) {
       case BooleanType _ -> "boolean";
-      case IntegerType type -> type.size().select("integer", "bigint");
-      case FloatType type -> type.size().select("real", "double precision");
+      case IntegerType(IntegerType.Size size) -> size.select("integer", "bigint");
+      case FloatType(FloatType.Size size) -> size.select("real", "double precision");
       case DecimalType type -> DECIMAL.sql("numeric", table, column, type);
-      case TextType type -> type.length().map(characters -> "varchar(" + characters + ")", () -> "text");
+      case TextType(Length length) -> length.map(characters -> "varchar(" + characters + ")", () -> "text");
       case BytesType _ -> "bytea";
       case UuidType _ -> "uuid";
       case TimestampType _ -> "timestamptz";
       case DateType _ -> "date";
       case TimeType _ -> "time";
       case JsonType _ -> "jsonb";
-      case EnumType type -> type.storage().select(quote(type.name()), "integer");
+      case EnumType(String name, _, EnumType.Storage storage) -> storage.select(quote(name), "integer");
     };
   }
 
@@ -79,7 +80,7 @@ public final class PostgresDialect implements Dialect {
       case DateType _ -> string(value);
       case TimeType _ -> string(value);
       case JsonType _ -> string(value);
-      case EnumType values -> values.storage().select(string(value), value);
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select(string(value), value);
     };
   }
 
@@ -121,9 +122,8 @@ public final class PostgresDialect implements Dialect {
 
   @Override
   public Optional<Check> typeCheck(String table, String column, Type type) {
-    return switch (type) {
-      case EnumType values -> values.storage().select(Optional.empty(), Dialect.super.typeCheck(table, column, type));
-      default -> Optional.empty();
-    };
+    return type instanceof EnumType(_, _, EnumType.Storage storage)
+        ? storage.select(Optional.empty(), Dialect.super.typeCheck(table, column, type))
+        : Optional.empty();
   }
 }

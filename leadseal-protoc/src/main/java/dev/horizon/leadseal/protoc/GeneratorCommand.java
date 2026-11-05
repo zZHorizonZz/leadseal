@@ -21,7 +21,11 @@ final class GeneratorCommand {
       + " temporary objects of migrations. The default is leadseal_. Set it to an empty text to remove it.")
   private String prefix;
 
+  @Option(names = "--allow-unsafe", description = "Apply unsafe changes, which can lose values that the schema still"
+      + " has, such as a column type that holds fewer values.")
+  private boolean unsafe;
+
   GeneratorOptions options() {
-    return new GeneratorOptions(migrations, dialects, prefix);
+    return new GeneratorOptions(migrations, dialects, prefix, unsafe);
   }
 }

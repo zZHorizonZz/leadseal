@@ -26,10 +26,9 @@ record PostgresColumnDdl(Ddl ddl) implements ColumnDdl {
     List<Command> all = new ArrayList<>();
     value.ifPresent(_ -> all.addAll(dropDefault(column)));
     String type = type(column);
-    String text = switch (column.origin().orElseThrow().type()) {
-      case EnumType values -> values.storage().select("::text", "");
-      default -> "";
-    };
+    String text = column.origin().orElseThrow().type() instanceof EnumType(_, _, EnumType.Storage storage)
+        ? storage.select("::text", "")
+        : "";
     all.add(new AlterColumn(column.table().name(), column.name(), "TYPE " + type + collation(column) + " USING "
         + ddl.dialect().quote(column.name()) + text + "::" + type));
     value.ifPresent(_ -> all.addAll(setDefault(column)));

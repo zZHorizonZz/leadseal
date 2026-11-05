@@ -18,7 +18,7 @@ record NumberOption(NumberColumn option) implements ColumnTypeOption {
     return switch (option.getFormat()) {
       case FORMAT_FLOAT -> FloatType.Size.FLOAT32;
       case FORMAT_DOUBLE -> FloatType.Size.FLOAT64;
-      case FORMAT_UNSPECIFIED, UNRECOGNIZED -> kind.natural() instanceof FloatType number ? number.size()
+      case FORMAT_UNSPECIFIED, UNRECOGNIZED -> kind.natural() instanceof FloatType(FloatType.Size size) ? size
           : FloatType.Size.FLOAT64;
     };
   }

@@ -22,6 +22,7 @@ import dev.horizon.leadseal.type.TimestampType;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Locale;
 
 record CelTranslation(String text) {
@@ -96,10 +97,10 @@ record CelTranslation(String text) {
   }
 
   private SqlExpression membership(Expression.Membership membership) {
-    if (!(membership.collection() instanceof Expression.ListLiteral list)) {
+    if (!(membership.collection() instanceof Expression.ListLiteral(List<Expression> elements, _, _))) {
       throw new UnsupportedExpressionException(this, "'in' takes a list of values, as in state in ['OPEN', 'PAID']");
     }
-    return new In(expression(membership.element()), list.elements().stream().map(this::expression).toList());
+    return new In(expression(membership.element()), elements.stream().map(this::expression).toList());
   }
 
   private SqlExpression call(Expression.FunctionCall call) {

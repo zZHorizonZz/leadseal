@@ -19,7 +19,7 @@ record IntegerOption(IntegerColumn option) implements ColumnTypeOption {
     return switch (option.getFormat()) {
       case FORMAT_INT32 -> IntegerType.Size.INT32;
       case FORMAT_INT64 -> IntegerType.Size.INT64;
-      case FORMAT_UNSPECIFIED, UNRECOGNIZED -> kind.natural() instanceof IntegerType integer ? integer.size()
+      case FORMAT_UNSPECIFIED, UNRECOGNIZED -> kind.natural() instanceof IntegerType(IntegerType.Size size) ? size
           : IntegerType.Size.INT32;
     };
   }

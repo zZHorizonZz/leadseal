@@ -30,7 +30,7 @@ record CelScalar(Type type) {
       case BytesType _ -> Optional.of(Scalar.BYTES);
       case TimestampType _ -> Optional.of(Scalar.TIMESTAMP);
       case DateType _,TimeType _,JsonType _ -> Optional.empty();
-      case EnumType values -> Optional.of(values.storage().select(Scalar.STRING, Scalar.INT));
+      case EnumType(_, _, EnumType.Storage storage) -> Optional.of(storage.select(Scalar.STRING, Scalar.INT));
     };
   }
 

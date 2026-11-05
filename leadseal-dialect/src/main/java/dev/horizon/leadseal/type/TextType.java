@@ -7,6 +7,8 @@ package dev.horizon.leadseal.type;
  */
 public record TextType(Length length) implements Type {
 
+  private static final int UUID_LENGTH = 36;
+
   public TextType {
     length = length == null ? Length.UNLIMITED : length;
   }
@@ -53,5 +55,16 @@ public record TextType(Length length) implements Type {
   @Override
   public String toString() {
     return length.map(characters -> "text(" + characters + ")", () -> "text");
+  }
+
+  @Override
+  public boolean isAssignableFrom(Type origin) {
+    return switch (origin) {
+      case TextType(Length other) -> other.map(length::fits, () -> length.fits(Integer.MAX_VALUE));
+      case EnumType values -> values.literals().stream()
+          .allMatch(literal -> length.fits(literal.codePointCount(0, literal.length())));
+      case UuidType _ -> length.fits(UUID_LENGTH);
+      default -> false;
+    };
   }
 }

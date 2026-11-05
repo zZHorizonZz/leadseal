@@ -15,6 +15,7 @@ import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
 import dev.horizon.leadseal.type.JsonType;
 import dev.horizon.leadseal.type.KeyLimit;
+import dev.horizon.leadseal.type.Length;
 import dev.horizon.leadseal.type.TextType;
 import dev.horizon.leadseal.type.TimeType;
 import dev.horizon.leadseal.type.TimestampType;
@@ -67,12 +68,12 @@ public final class MariaDbDialect implements Dialect {
   public String type(Table table, Column column) {
     return switch (column.type()) {
       case BooleanType _ -> "BOOLEAN";
-      case IntegerType type -> type.size().select("INT", "BIGINT");
-      case FloatType type -> type.size().select("FLOAT", "DOUBLE");
+      case IntegerType(IntegerType.Size size) -> size.select("INT", "BIGINT");
+      case FloatType(FloatType.Size size) -> size.select("FLOAT", "DOUBLE");
       case DecimalType type -> DECIMAL.sql("DECIMAL", table, column, type);
-      case TextType type -> type.length().map(characters -> "VARCHAR(" + characters + ")",
+      case TextType(Length length) -> length.map(characters -> "VARCHAR(" + characters + ")",
           () -> LONGTEXT.sql(table, column));
-      case BytesType type -> type.length().map(bytes -> "VARBINARY(" + bytes + ")",
+      case BytesType(Length length) -> length.map(bytes -> "VARBINARY(" + bytes + ")",
           () -> LONGBLOB.sql(table, column));
       case UuidType _ -> "UUID";
       case TimestampType _ -> "DATETIME(6)";
@@ -98,7 +99,7 @@ public final class MariaDbDialect implements Dialect {
       case DateType _ -> string(value);
       case TimeType _ -> string(value);
       case JsonType _ -> string(value);
-      case EnumType values -> values.storage().select(string(value), value);
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select(string(value), value);
     };
   }
 
@@ -142,9 +143,8 @@ public final class MariaDbDialect implements Dialect {
 
   @Override
   public Optional<Check> typeCheck(String table, String column, Type type) {
-    return switch (type) {
-      case EnumType values -> values.storage().select(Optional.empty(), Dialect.super.typeCheck(table, column, type));
-      default -> Optional.empty();
-    };
+    return type instanceof EnumType(_, _, EnumType.Storage storage)
+        ? storage.select(Optional.empty(), Dialect.super.typeCheck(table, column, type))
+        : Optional.empty();
   }
 }

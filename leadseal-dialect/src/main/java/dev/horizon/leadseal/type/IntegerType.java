@@ -96,4 +96,13 @@ public record IntegerType(Size size) implements NumberType {
 
     public abstract <T> T select(T int32, T int64);
   }
+
+  @Override
+  public boolean isAssignableFrom(Type origin) {
+    return switch (origin) {
+      case IntegerType(Size other) -> size.holds(other);
+      case EnumType(_, _, EnumType.Storage storage) -> storage.select(false, size.holds(Size.INT32));
+      default -> false;
+    };
+  }
 }

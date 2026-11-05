@@ -55,4 +55,9 @@ public record BytesType(Length length) implements Type {
   public String toString() {
     return length.map(bytes -> "bytes(" + bytes + ")", () -> "bytes");
   }
+
+  @Override
+  public boolean isAssignableFrom(Type origin) {
+    return origin instanceof BytesType(Length other) && other.map(length::fits, () -> length.fits(Integer.MAX_VALUE));
+  }
 }

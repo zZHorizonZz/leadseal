@@ -21,6 +21,7 @@ public final class ScriptWriter {
   private final Transition transition;
   private final String prefix;
   private final List<Script.Statement> statements = new ArrayList<>();
+  private final List<String> warnings = new ArrayList<>();
   private final StringBuilder statement = new StringBuilder();
   private boolean transactional = true;
   private boolean isolated;
@@ -43,6 +44,7 @@ public final class ScriptWriter {
    * @throws SchemaException if the dialect cannot write a change
    */
   public ScriptWriter write(List<Change> changes) {
+    changes.forEach(change -> change.warning().ifPresent(warnings::add));
     for (Command command : dialect.ddl().plan(changes, transition).commands()) {
       render(command).end();
     }
@@ -55,7 +57,7 @@ public final class ScriptWriter {
    * @return the script
    */
   public Script script() {
-    return new Script(statements, transactional);
+    return new Script(statements, transactional, warnings);
   }
 
   /**
