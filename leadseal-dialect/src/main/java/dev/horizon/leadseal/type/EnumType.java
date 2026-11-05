@@ -5,6 +5,7 @@ import dev.horizon.leadseal.InvalidSchemaException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -70,19 +71,22 @@ public record EnumType(String name, List<Value> values, Storage storage) impleme
   }
 
   /**
-   * Tells if a column of this type holds what a column of another type holds. A column that stores numbers holds the
-   * same with other value names, so renaming a value needs no migration.
+   * Compares this enum with another object. An enum that stores numbers equals an enum with the same name and the same
+   * value numbers, whatever the value names, because the column holds only the numbers. So renaming such a value is no
+   * change of the column.
    *
-   * @param other the other type
-   * @return true for an equal enum, or for an enum with the same name and value numbers that stores numbers too
+   * @param other the other object
+   * @return true for an equal enum
    */
   @Override
-  public boolean storesLike(Type other) {
-    return switch (other) {
-      case EnumType type -> storage.select(equals(type), type.storage == storage && name.equals(type.name)
-          && numbers().equals(type.numbers()));
-      default -> false;
-    };
+  public boolean equals(Object other) {
+    return other instanceof EnumType type && name.equals(type.name) && storage == type.storage
+        && storage.select(values, numbers()).equals(storage.select(type.values, type.numbers()));
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name, storage, storage.select(values, numbers()));
   }
 
   private List<Integer> numbers() {

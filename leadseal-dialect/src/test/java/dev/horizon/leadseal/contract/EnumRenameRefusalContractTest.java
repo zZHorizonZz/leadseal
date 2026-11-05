@@ -7,7 +7,6 @@ import dev.horizon.leadseal.type.EnumType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** The renames of enum values, for a dialect whose enum columns store the value names. */
 public abstract class EnumRenameRefusalContractTest extends EnumContractTest {
 
   @Test

@@ -8,7 +8,6 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** The renames of enum values, for a dialect with enum types. */
 public abstract class EnumRenameContractTest extends EnumContractTest {
 
   @Test

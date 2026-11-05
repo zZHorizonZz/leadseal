@@ -101,15 +101,4 @@ public sealed interface Type permits BooleanType, NumberType, TextType, BytesTyp
   default boolean identifies() {
     return false;
   }
-
-  /**
-   * Tells if a column of this type holds what a column of another type holds, so that a change between the two types
-   * needs no migration.
-   *
-   * @param other the other type
-   * @return true if the database sees no difference. The default is true for an equal type.
-   */
-  default boolean storesLike(Type other) {
-    return equals(other);
-  }
 }
