@@ -111,6 +111,12 @@ message ColumnOptions {
   // rewrite: the default of the column gives its value.
   string rewrite = 9;
 
+  // The value of this column as an expression of the other fields of the row, in a subset of CEL, for example
+  // `price * quantity` or `lower(email)`. The database writes it on each insert and update, and stores it. The
+  // expression reads no generated field and no other table, and calls no `now()` or `uuid()`. A generated column
+  // accepts `NULL`, and has no default, key or index.
+  string generated = 10;
+
   // The column type and its options. The default type follows from the field type. A field can only have a type that
   // holds all its values: for example a `string` field can be `uuid` or `date`, but an `int64` field cannot be an
   // `INT32` integer.

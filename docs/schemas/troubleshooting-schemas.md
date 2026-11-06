@@ -294,6 +294,57 @@ SQL Server refuses such a write, so the trigger would fail on every mutation.
 
 **Verify**: The build writes no error.
 
+## The generated column ... must accept NULL, and have no default, no identity and no collation.
+
+```text
+--leadseal_out: Migration generation failed: The generated column 'total' must accept NULL, and have no default, no identity and no collation.
+```
+
+**Cause**: A generated field also has a default, an identity, a collation, or `nullable: false`.
+The database writes the values of a generated column, so it has no default, and MariaDB cannot declare one `NOT NULL`.
+
+**Fix**: Remove the default, the identity, the collation or `nullable` from the field.
+
+**Verify**: The build writes no error.
+
+## The generated column ... reads the generated column ...
+
+```text
+--leadseal_out: Migration generation failed: The generated column 'orders.twice' reads the generated column total. A generated column reads only columns that are not generated.
+```
+
+**Cause**: The expression of a generated field reads another generated field.
+PostgreSQL and SQL Server cannot compute one generated column from another.
+
+**Fix**: Write the expression from the fields that the other generated field reads, such as `price * quantity * 2`.
+
+**Verify**: The build writes no error.
+
+## The generated column ... calls now() or uuid() ...
+
+```text
+--leadseal_out: Migration generation failed: The generated column 'stamp' calls now() or uuid(), whose value changes each time. A generated column needs the same value for the same row.
+```
+
+**Cause**: The expression of a generated field calls a function whose value changes from one call to the next.
+
+**Fix**: Use a [rewrite](about-rewrites.md), or a default such as `timestamp.default_now`, for such a value.
+
+**Verify**: The build writes no error.
+
+## The migration makes the generated column ... a column that is not generated ...
+
+```text
+--leadseal_out: Migration generation failed: The migration makes the generated column orders.total a column that is not generated, which would lose its values. Add a new field for the values instead.
+```
+
+**Cause**: A migration removes the `generated` option of a field.
+The database has no values of its own for the column, so the change would lose them.
+
+**Fix**: Keep the field generated, and add a new field for the values that the rows should keep.
+
+**Verify**: The build writes no error.
+
 ## The trigger ... of the message ... has no action.
 
 ```text

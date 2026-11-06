@@ -18,6 +18,9 @@ Each trigger of a table runs a function with the same name, in the schema of the
 A migration that drops a trigger drops its function too.
 The triggers of a row run at the end of the statement, so they read the table after the whole statement.
 
+A generated column is `GENERATED ALWAYS AS (...) STORED`.
+PostgreSQL cannot change the type of a column that a generated column reads, so a migration drops the generated column first and adds it again after the change.
+
 ## MariaDB
 
 MariaDB names every primary key `PRIMARY`.
@@ -33,6 +36,8 @@ A migration that creates a table in a schema creates the database when it does n
 The rewrites of a table run in a trigger before the update, and its triggers in one trigger for each mutation after it.
 The triggers of a table run after each row, so a trigger that reads other rows of its table during a statement reads them partly changed.
 
+A generated column is `GENERATED ALWAYS AS (...) STORED`, without `NULL` or `NOT NULL`, which MariaDB does not accept on it.
+
 ## SQL Server
 
 SQL Server cannot change a column while an index, a key, a check or a default uses it.
@@ -47,6 +52,9 @@ SQL Server has no `RESTRICT` action.
 A foreign key with `ACTION_RESTRICT` uses `NO ACTION`, which also rejects the change.
 SQL Server cannot add `IDENTITY` to an existing column or remove it.
 
+A generated column is a persisted computed column, `name AS CAST((...) AS type) PERSISTED`.
+SQL Server gives a computed column the type of its expression, so the cast keeps the type of the field.
+
 The triggers of a table run once for all the rows of a statement, after it.
 The trigger of an update first updates the updated rows again with the rewrites, with an `UPDATE` that joins them by primary key, and then runs the triggers of the update.
 The trigger returns at once when that `UPDATE` runs it again, so it works with `RECURSIVE_TRIGGERS` on or off.
@@ -57,6 +65,8 @@ When an update changes the primary key of a row, `old` reads `NULL` for that row
 SQLite cannot change a column, a primary key, a foreign key or a check of an existing table.
 A migration with such a change rebuilds the table, as the [SQLite documentation](https://www.sqlite.org/lang_altertable.html#otheralter) describes.
 The rebuild creates the new table under a temporary name, copies the rows by column id, drops the old table, renames the new one, and creates its indexes.
+The rebuild copies no generated column: the new table writes its values from the copied rows.
+SQLite cannot add a stored generated column to an existing table, so a migration that adds one rebuilds the table.
 
 A migration also rebuilds a table when it drops a column of the primary key or of a foreign key.
 It rebuilds a table to add a column with a generated default too, because `ADD COLUMN` takes only constant defaults.

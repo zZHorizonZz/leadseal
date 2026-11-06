@@ -5,7 +5,8 @@ import dev.horizon.leadseal.Transition;
 import dev.horizon.leadseal.Transition.TableTransition;
 
 /** A change of one table, such as a new column or a dropped index. */
-public sealed interface TableChange extends Change permits CreateTable, DropTable, RenameTable, MoveTable, AddColumn,
+public sealed interface TableChange extends Change
+    permits CreateTable, DropTable, RenameTable, MoveTable, AddColumn, DropGeneratedColumn,
     DropColumn, RenameColumn, AlterColumnType, AddColumnAttribute, DropColumnAttribute, AlterColumnAttribute,
     AddTableAttribute, DropTableAttribute, AlterTableAttribute {
 

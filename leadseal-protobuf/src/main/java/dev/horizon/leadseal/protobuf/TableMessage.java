@@ -66,15 +66,18 @@ final class TableMessage {
         .attribute(this, catalog)));
     comments.of(message).ifPresent(comment -> attributes.add(new Comment(comment)));
     Table table = new Table(id, name.name(), columns, attributes);
-    if (fields.stream().noneMatch(ColumnField::rewrites) && options.getTriggerList().isEmpty()) {
+    if (fields.stream().noneMatch(field -> field.rewrites() || field.generates()) && options.getTriggerList()
+        .isEmpty()) {
       return table;
     }
     CelTable expressions = new CelTable(table, fields(), links(table, catalog));
+    Table definition = table.withColumns(fields.stream().map(field -> field.generate(expressions, table.column(field
+        .name()).orElseThrow())).toList());
     List<Rewrite> rewrites = fields.stream().flatMap(field -> field.rewrite(expressions, table.column(field.name())
         .orElseThrow().type()).stream()).toList();
     List<Trigger> triggers = options.getTriggerList().stream().map(trigger -> new TriggerOption(trigger, message
         .getFullName()).trigger(expressions, catalog)).toList();
-    return rewrites.isEmpty() && triggers.isEmpty() ? table : table.with(new Triggers(rewrites, triggers));
+    return rewrites.isEmpty() && triggers.isEmpty() ? definition : definition.with(new Triggers(rewrites, triggers));
   }
 
   Table shape() {

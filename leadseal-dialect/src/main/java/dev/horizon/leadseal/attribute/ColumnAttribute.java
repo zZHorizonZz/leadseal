@@ -26,10 +26,11 @@ import java.util.List;
     @JsonSubTypes.Type(value = RandomUuidDefault.class, name = "default_random_uuid"),
     @JsonSubTypes.Type(value = Identity.class, name = "identity"),
     @JsonSubTypes.Type(value = Collation.class, name = "collation"),
-    @JsonSubTypes.Type(value = Comment.class, name = "comment")
+    @JsonSubTypes.Type(value = Comment.class, name = "comment"),
+    @JsonSubTypes.Type(value = Generated.class, name = "generated")
 })
 public sealed interface ColumnAttribute permits NotNull, Default, Identity,
-    Collation, Comment {
+    Collation, Comment, Generated {
 
   /**
    * Returns the key of this attribute. A column has at most one attribute with each key.

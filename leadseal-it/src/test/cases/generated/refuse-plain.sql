@@ -1,0 +1,4 @@
+-- A migration cannot make a generated column a column that is not generated, which would lose its values.
+-- migrate: v1
+-- migrate: v6
+-- error: a column that is not generated

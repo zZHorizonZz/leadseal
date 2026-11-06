@@ -59,6 +59,17 @@ public record Rewrite(String column, SqlExpression expression) {
       throw new InvalidSchemaException("A rewrite of the table " + table.name() + " writes the column " + column
           + ", which is part of the primary key. A rewrite cannot change the key of a row.");
     }
+    if (table.column(column).orElseThrow().attribute(Generated.class).isPresent()) {
+      throw new InvalidSchemaException("A rewrite of the table " + table.name() + " writes the column " + column
+          + ", which is a generated column. The database writes its values from its expression.");
+    }
+    for (String read : reads()) {
+      if (table.column(read).flatMap(own -> own.attribute(Generated.class)).isPresent()) {
+        throw new InvalidSchemaException("The rewrite of the column " + table.name() + "." + column + " reads the"
+            + " generated column " + read + ", whose value the database writes only after the rewrites. Read the"
+            + " columns of its expression instead.");
+      }
+    }
     try {
       expression.validate(table, Mutation.UPDATE.rows());
     } catch (SchemaException invalid) {

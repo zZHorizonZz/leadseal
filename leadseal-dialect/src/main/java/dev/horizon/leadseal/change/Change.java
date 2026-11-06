@@ -22,6 +22,7 @@ import java.util.Optional;
     @JsonSubTypes.Type(value = MoveTable.class, name = "move_table"),
     @JsonSubTypes.Type(value = AddColumn.class, name = "add_column"),
     @JsonSubTypes.Type(value = DropColumn.class, name = "drop_column"),
+    @JsonSubTypes.Type(value = DropGeneratedColumn.class, name = "drop_generated_column"),
     @JsonSubTypes.Type(value = RenameColumn.class, name = "rename_column"),
     @JsonSubTypes.Type(value = AlterColumnType.class, name = "alter_column_type"),
     @JsonSubTypes.Type(value = AddColumnAttribute.class, name = "add_column_attribute"),
@@ -105,6 +106,8 @@ public sealed interface Change permits TableChange, TypeChange {
     RENAME_TABLES,
     /** Moves tables to other namespaces. */
     MOVE_TABLES,
+    /** Drops generated columns, before the changes of the columns that they read. */
+    DROP_GENERATED_COLUMNS,
     /** Creates enum types, before the tables and columns that use them. */
     CREATE_TYPES,
     /** Changes the values of enum types, before the tables that use the new values. */
@@ -125,6 +128,8 @@ public sealed interface Change permits TableChange, TypeChange {
     ALTER_PRIMARY_KEYS,
     /** Drops columns. */
     DROP_COLUMNS,
+    /** Adds generated columns, after the changes of the columns that they read. */
+    ADD_GENERATED_COLUMNS,
     /** Adds indexes. */
     ADD_INDEXES,
     /** Adds checks. */

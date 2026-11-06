@@ -26,6 +26,11 @@ Refer to [Column types](column-types.md).
 A rewrite sets a column on each update, such as the time of the last change.
 Refer to [About rewrites](about-rewrites.md).
 
+### Values of an expression of the row
+
+A generated column holds the value of an expression of its row, such as a total, which the database writes on each insert and update.
+Refer to [About generated columns](about-generated-columns.md).
+
 ### Triggers
 
 A trigger writes a row into another table after a mutation, or refuses the mutation with a message.
