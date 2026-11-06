@@ -8,6 +8,7 @@ import dev.horizon.leadseal.attribute.ColumnAttribute;
 import dev.horizon.leadseal.attribute.Comment;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.attribute.NotNull;
+import dev.horizon.leadseal.attribute.Rewrite;
 import dev.horizon.leadseal.attribute.TableAttribute;
 import dev.horizon.leadseal.protobuf.column.ColumnTypeOption;
 import dev.horizon.leadseal.protobuf.column.FieldKind;
@@ -45,6 +46,10 @@ final class ColumnField {
     return this.field.getName().equals(field);
   }
 
+  String field() {
+    return field.getName();
+  }
+
   boolean key() {
     return options.getPrimaryKey();
   }
@@ -76,6 +81,15 @@ final class ColumnField {
       attributes.add(ForeignKeyOption.of(options.getForeignKey(), field).attribute(owner, catalog));
     }
     return attributes;
+  }
+
+  boolean rewrites() {
+    return !options.getRewrite().isBlank();
+  }
+
+  Optional<Rewrite> rewrite(CelTable table, Type type) {
+    return options.getRewrite().isBlank() ? Optional.empty()
+        : Optional.of(new Rewrite(name, table.parse(options.getRewrite(), Rewrite.ROWS, type)));
   }
 
   private boolean nullable() {

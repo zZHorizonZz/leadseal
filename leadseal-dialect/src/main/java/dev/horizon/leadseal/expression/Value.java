@@ -5,7 +5,7 @@ package dev.horizon.leadseal.expression;
  * value into one.
  */
 public sealed interface Value extends SqlExpression permits ColumnReference, Literal, Negative, Arithmetic, Conditional,
-    Call {
+    Call, ForeignColumn {
 
   /**
    * Writes this value as SQL writes it.

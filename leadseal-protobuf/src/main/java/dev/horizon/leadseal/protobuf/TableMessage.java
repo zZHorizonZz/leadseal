@@ -8,12 +8,19 @@ import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.Comment;
+import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.attribute.PrimaryKey;
+import dev.horizon.leadseal.attribute.Rewrite;
 import dev.horizon.leadseal.attribute.TableAttribute;
+import dev.horizon.leadseal.attribute.Trigger;
+import dev.horizon.leadseal.attribute.Triggers;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 final class TableMessage {
 
@@ -58,7 +65,42 @@ final class TableMessage {
     options.getForeignKeyList().forEach(foreignKey -> attributes.add(ForeignKeyOption.of(foreignKey, message.getFullName())
         .attribute(this, catalog)));
     comments.of(message).ifPresent(comment -> attributes.add(new Comment(comment)));
-    return new Table(id, name.name(), columns, attributes);
+    Table table = new Table(id, name.name(), columns, attributes);
+    if (fields.stream().noneMatch(ColumnField::rewrites) && options.getTriggerList().isEmpty()) {
+      return table;
+    }
+    CelTable expressions = new CelTable(table, fields(), links(table, catalog));
+    List<Rewrite> rewrites = fields.stream().flatMap(field -> field.rewrite(expressions, table.column(field.name())
+        .orElseThrow().type()).stream()).toList();
+    List<Trigger> triggers = options.getTriggerList().stream().map(trigger -> new TriggerOption(trigger, message
+        .getFullName()).trigger(expressions, catalog)).toList();
+    return rewrites.isEmpty() && triggers.isEmpty() ? table : table.with(new Triggers(rewrites, triggers));
+  }
+
+  Table shape() {
+    return new Table(id, name.name(), fields.stream().map(field -> field.column(comments)).toList(),
+        List.of(PrimaryKey.of(name.name(), primaryKey())));
+  }
+
+  Map<String, String> fields() {
+    return fields.stream().collect(Collectors.toMap(ColumnField::field, ColumnField::name, (first, _) -> first,
+        LinkedHashMap::new));
+  }
+
+  private List<CelTable.Link> links(Table table, MessageCatalog catalog) {
+    Map<String, CelTable.Link> links = new LinkedHashMap<>();
+    for (ForeignKey key : table.attributes(ForeignKey.class)) {
+      if (key.columns().size() != 1) {
+        continue;
+      }
+      String column = key.columns().getFirst();
+      fields.stream().filter(field -> field.name().equals(column) && field.field().endsWith("_id")).findFirst()
+          .map(field -> field.field().substring(0, field.field().length() - 3))
+          .filter(name -> !fields().containsKey(name))
+          .ifPresent(name -> catalog.table(key.table()).ifPresent(target -> links.putIfAbsent(name, new CelTable.Link(
+              name, column, key.table(), key.referencedColumns().getFirst(), target.shape(), target.fields()))));
+    }
+    return List.copyOf(links.values());
   }
 
   String column(String field) {

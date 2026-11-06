@@ -46,6 +46,13 @@ public interface Ddl {
   ConstraintDdl constraint();
 
   /**
+   * Gives the statements of triggers.
+   *
+   * @return the statements
+   */
+  TriggerDdl trigger();
+
+  /**
    * Gives the statements of comments.
    *
    * @return the statements

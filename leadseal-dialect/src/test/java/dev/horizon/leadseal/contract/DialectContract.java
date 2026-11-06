@@ -90,4 +90,22 @@ public abstract class DialectContract {
       return fixture;
     }
   }
+
+  @Nested
+  class Rewrites extends RewriteContractTest {
+
+    @Override
+    protected TestDatabase database() {
+      return fixture;
+    }
+  }
+
+  @Nested
+  class Triggers extends TriggerContractTest {
+
+    @Override
+    protected TestDatabase database() {
+      return fixture;
+    }
+  }
 }

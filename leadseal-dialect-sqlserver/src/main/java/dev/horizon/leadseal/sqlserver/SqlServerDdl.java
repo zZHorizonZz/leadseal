@@ -6,6 +6,7 @@ import dev.horizon.leadseal.command.CommentDdl;
 import dev.horizon.leadseal.command.ConstraintDdl;
 import dev.horizon.leadseal.command.Ddl;
 import dev.horizon.leadseal.command.TableDdl;
+import dev.horizon.leadseal.command.TriggerDdl;
 
 record SqlServerDdl(Dialect dialect) implements Ddl {
 
@@ -22,6 +23,11 @@ record SqlServerDdl(Dialect dialect) implements Ddl {
   @Override
   public ConstraintDdl constraint() {
     return new SqlServerConstraintDdl(this);
+  }
+
+  @Override
+  public TriggerDdl trigger() {
+    return new SqlServerTriggerDdl(this);
   }
 
   @Override

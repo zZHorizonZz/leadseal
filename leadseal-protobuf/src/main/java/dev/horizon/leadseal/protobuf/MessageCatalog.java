@@ -3,9 +3,11 @@ package dev.horizon.leadseal.protobuf;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import dev.horizon.leadseal.InvalidSchemaException;
+import dev.horizon.leadseal.TableName;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 final class MessageCatalog {
 
@@ -20,6 +22,10 @@ final class MessageCatalog {
 
   List<TableMessage> tables() {
     return List.copyOf(tables.values());
+  }
+
+  Optional<TableMessage> table(TableName name) {
+    return tables.values().stream().filter(table -> table.name().equals(name)).findFirst();
   }
 
   TableMessage table(String name, String origin) {

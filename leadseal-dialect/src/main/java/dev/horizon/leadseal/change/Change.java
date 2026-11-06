@@ -91,6 +91,8 @@ public sealed interface Change permits TableChange, TypeChange {
 
   /** The phases of a migration, in the order they run. */
   enum Phase {
+    /** Drops triggers, before the tables and columns that they read. */
+    DROP_TRIGGERS,
     /** Drops foreign keys, before the tables and columns that they read. */
     DROP_FOREIGN_KEYS,
     /** Drops checks. */
@@ -129,6 +131,8 @@ public sealed interface Change permits TableChange, TypeChange {
     ADD_CHECKS,
     /** Adds foreign keys, after all the tables and columns that they read. */
     ADD_FOREIGN_KEYS,
+    /** Adds triggers, after all the tables and columns that they read. */
+    ADD_TRIGGERS,
     /** Changes the comments of tables. */
     COMMENT_TABLES,
     /** Drops enum types, after the tables and columns that used them. */

@@ -7,6 +7,7 @@ import dev.horizon.leadseal.command.CommentDdl;
 import dev.horizon.leadseal.command.ConstraintDdl;
 import dev.horizon.leadseal.command.Ddl;
 import dev.horizon.leadseal.command.Plan;
+import dev.horizon.leadseal.command.TriggerDdl;
 import java.util.List;
 
 record SqliteDdl(Dialect dialect) implements Ddl {
@@ -29,6 +30,11 @@ record SqliteDdl(Dialect dialect) implements Ddl {
   @Override
   public ConstraintDdl constraint() {
     return new SqliteConstraintDdl(this);
+  }
+
+  @Override
+  public TriggerDdl trigger() {
+    return new SqliteTriggerDdl(this);
   }
 
   @Override

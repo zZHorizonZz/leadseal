@@ -64,10 +64,10 @@ Use this page to support a database that leadseal has no module for.
 
    From `leadseal-dialect-postgres/src/main/java/dev/horizon/leadseal/postgres/PostgresDialect.java`.
 
-3. Implement `Ddl` with its four parts: tables, columns, constraints and comments:
+3. Implement `Ddl` with its parts: tables, columns, constraints, triggers and comments:
 
    ```java
-   record PostgresDdl(Dialect dialect) implements Ddl {
+   record PostgresDdl(PostgresDialect dialect) implements Ddl {
 
      @Override
      public TableDdl table() {
@@ -85,13 +85,18 @@ Use this page to support a database that leadseal has no module for.
      }
 
      @Override
+     public TriggerDdl trigger() {
+       return new PostgresTriggerDdl(this);
+     }
+
+     @Override
      public CommentDdl comment() {
        return new PostgresCommentDdl(dialect);
      }
    }
    ```
 
-   `TableDdl` needs `moveTable`, `ColumnDdl` needs `collate`, and `CommentDdl` needs `commentColumn` and `commentTable`.
+   `TableDdl` needs `moveTable`, `ColumnDdl` needs `collate`, `TriggerDdl` needs `createTriggers` and `dropTriggers`, and `CommentDdl` needs `commentColumn` and `commentTable`.
    Every other method has a default.
 
 4. Refuse a change that the database cannot make with an `UnsupportedChangeException`:

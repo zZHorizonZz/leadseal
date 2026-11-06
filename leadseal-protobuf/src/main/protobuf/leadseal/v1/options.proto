@@ -43,6 +43,10 @@ message TableOptions {
   // version parts of its package, such as `v1` or `v2beta1`: `shop.v1.Order` and `shop.v2.Order` are both
   // `shop.Order`.
   string id = 6;
+
+  // The triggers of the table, in the order they run. A trigger runs actions after each insert, update or delete of a
+  // row: it writes the rows of other tables, or refuses the mutation.
+  repeated TriggerOptions trigger = 7;
 }
 
 // An index of a table.
@@ -99,6 +103,13 @@ message ColumnOptions {
 
   // A foreign key from this column to a column of another table.
   ForeignKeyOptions foreign_key = 8;
+
+  // The value that the database writes into this column on each update of the row, in place of the value that the
+  // update writes, as an expression in a subset of CEL, for example `now()` or `old.revision + 1`. A field name, or
+  // `new.<field>`, reads the row as the update writes it, and `old.<field>` reads the row before the update. A field
+  // that another rewrite writes has its rewritten value. The value has the type of the column. An insert writes no
+  // rewrite: the default of the column gives its value.
+  string rewrite = 9;
 
   // The column type and its options. The default type follows from the field type. A field can only have a type that
   // holds all its values: for example a `string` field can be `uuid` or `date`, but an `int64` field cannot be an
@@ -236,6 +247,96 @@ message TimeColumn {
 message JsonColumn {
   // The default value, such as `{}`.
   optional string default_value = 1;
+}
+
+// A trigger of a table.
+message TriggerOptions {
+  // The name of the trigger, unique in its table.
+  string name = 1;
+
+  // The mutations that run the trigger, at least one.
+  repeated Event on = 2;
+
+  // The condition that a row must meet to run the actions, as an expression in a subset of CEL, for example
+  // `changed(state)`. A field name reads the row after the mutation: the new row of an insert or an update, and the
+  // old row of a delete. `new.<field>` reads the new row and `old.<field>` the old one. The default runs the actions
+  // for every row.
+  string when = 3;
+
+  // What the trigger does, at least one action, in the order the actions run.
+  repeated ActionOptions actions = 4;
+}
+
+// An action of a trigger.
+message ActionOptions {
+  oneof action {
+    // Writes a row into another table.
+    InsertAction insert = 1;
+
+    // Changes the rows of another table.
+    UpdateAction update = 2;
+
+    // Deletes the rows of another table.
+    DeleteAction delete = 3;
+
+    // Refuses the mutation when a condition does not hold.
+    AssertAction assert = 4;
+  }
+}
+
+// A row that a trigger writes into another table.
+message InsertAction {
+  // The full name of the table message of the other table, for example `shop.v1.OrderEvent`.
+  string message = 1;
+
+  // The value of each field of the row, by field name of the other message, as an expression that reads the row of
+  // the trigger, for example `{key: "order_id" value: "new.id"}`.
+  map<string, string> values = 2;
+}
+
+// A change of the rows of another table. Its expressions name the fields of the other message, and read the row of
+// the trigger as `new.<field>` and `old.<field>`.
+message UpdateAction {
+  // The full name of the table message of the other table, for example `shop.v1.Order`.
+  string message = 1;
+
+  // The condition that a row of the other table must meet to change, for example `id == new.order_id`.
+  string where = 2;
+
+  // The new value of each field that changes, by field name of the other message, for example
+  // `{key: "lines" value: "lines + 1"}`.
+  map<string, string> set = 3;
+}
+
+// A delete of the rows of another table. Its condition names the fields of the other message, and reads the row of
+// the trigger as `new.<field>` and `old.<field>`.
+message DeleteAction {
+  // The full name of the table message of the other table, for example `shop.v1.OrderLine`.
+  string message = 1;
+
+  // The condition that a row of the other table must meet to be deleted, for example `order_id == old.id`.
+  string where = 2;
+}
+
+// A condition that every row of a mutation must meet.
+message AssertAction {
+  // The condition, as an expression in a subset of CEL, for example `old.state != 'PAID'`. The mutation fails when it
+  // is false. A condition that is NULL holds.
+  string expression = 1;
+
+  // The message of the error.
+  string message = 2;
+}
+
+// A mutation of the rows of a table.
+enum Event {
+  EVENT_UNSPECIFIED = 0;
+  // An insert of a row.
+  EVENT_INSERT = 1;
+  // An update of a row.
+  EVENT_UPDATE = 2;
+  // A delete of a row.
+  EVENT_DELETE = 3;
 }
 
 // What happens to a row when the row that it references is deleted or its key changes.

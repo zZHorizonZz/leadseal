@@ -53,7 +53,7 @@ class SchemaTest {
         arguments("foreign key to a missing table", call(() -> Schema.of(Table.of("a", "a", List.of(ID),
             PrimaryKey.of("a", List.of("id")), ForeignKey.of("a", List.of("id"),
                 TableName.of("missing"), List.of("id"), ForeignKey.Action.CASCADE)))),
-            "does not have"),
+            "The foreign key 'fk_a_id' references the table 'missing'"),
         arguments("set null on a required column", call(() -> Table.of("a", "a", List.of(ID, Column.of("2", "b_id",
             BIGINT, NotNull.INSTANCE)), PrimaryKey.of("a", List.of("id")),
             ForeignKey.of("a", List.of("b_id"), TableName.of("b"), List.of("id"),

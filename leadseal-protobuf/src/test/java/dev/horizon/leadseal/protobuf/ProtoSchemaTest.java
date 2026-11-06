@@ -20,17 +20,33 @@ import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.Identity;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.attribute.LiteralDefault;
+import dev.horizon.leadseal.attribute.Mutation;
 import dev.horizon.leadseal.attribute.NotNull;
 import dev.horizon.leadseal.attribute.NowDefault;
 import dev.horizon.leadseal.attribute.RandomUuidDefault;
+import dev.horizon.leadseal.attribute.Rewrite;
+import dev.horizon.leadseal.attribute.Trigger;
+import dev.horizon.leadseal.attribute.Triggers;
+import dev.horizon.leadseal.expression.ColumnChange;
+import dev.horizon.leadseal.expression.ColumnReference;
+import dev.horizon.leadseal.expression.Comparison;
+import dev.horizon.leadseal.expression.ForeignColumn;
+import dev.horizon.leadseal.expression.Literal;
+import dev.horizon.leadseal.expression.Row;
+import dev.horizon.leadseal.protobuf.invalid.action.TriggerActionOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.defaults.BothDefaultsOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.enumdefault.UnknownEnumDefaultOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.identity.TextIdentityOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.index.UnknownIndexFieldOuterClass;
+import dev.horizon.leadseal.protobuf.invalid.key.RewriteKeyOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.nokey.NoPrimaryKeyOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.optional.OptionalKeyOuterClass;
+import dev.horizon.leadseal.protobuf.invalid.own.TriggerOwnOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.reference.UnknownReferenceOuterClass;
+import dev.horizon.leadseal.protobuf.invalid.rewrite.RewriteTypeOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.type.BadTypeOuterClass;
+import dev.horizon.leadseal.protobuf.invalid.where.TriggerWhereOuterClass;
+import dev.horizon.leadseal.protobuf.test.PostProto;
 import dev.horizon.leadseal.protobuf.test.ShopProto;
 import dev.horizon.leadseal.protobuf.test.v2.CatalogProto;
 import dev.horizon.leadseal.type.BooleanType;
@@ -147,7 +163,12 @@ class ProtoSchemaTest {
         arguments(UnknownIndexFieldOuterClass.getDescriptor(), "has no field 'missing'"),
         arguments(BothDefaultsOuterClass.getDescriptor(), "both a default_value and a generated default"),
         arguments(UnknownEnumDefaultOuterClass.getDescriptor(), "is not a value of"),
-        arguments(TextIdentityOuterClass.getDescriptor(), "cannot have the column type 32-bit integer"));
+        arguments(TextIdentityOuterClass.getDescriptor(), "cannot have the column type 32-bit integer"),
+        arguments(RewriteTypeOuterClass.getDescriptor(), "'first'"),
+        arguments(RewriteKeyOuterClass.getDescriptor(), "part of the primary key"),
+        arguments(TriggerOwnOuterClass.getDescriptor(), "writes into its own table"),
+        arguments(TriggerActionOuterClass.getDescriptor(), "has no action."),
+        arguments(TriggerWhereOuterClass.getDescriptor(), "has no where."));
   }
 
   @ParameterizedTest(name = "({0})")
@@ -225,5 +246,39 @@ class ProtoSchemaTest {
   void readEnumTypes() {
     assertThat(SCHEMA.enumTypes()).containsExactly(STATE, new EnumType("payment_method", METHODS,
         EnumType.Storage.NAME));
+  }
+
+  @Test
+  @DisplayName("Reads the rewrites of a table, by the names of its fields, in the order they run")
+  void readRewrites() {
+    Triggers triggers = new ProtoSchema().read(List.of(PostProto.getDescriptor())).table(TableName.of("post"))
+        .orElseThrow().attribute(Triggers.class).orElseThrow();
+
+    assertThat(triggers.ordered()).extracting(Rewrite::column).containsExactly("url_slug", "revision", "modified",
+        "label");
+    assertThat(triggers.ordered().getLast().reads()).containsExactly("label", "url_slug");
+  }
+
+  @Test
+  @DisplayName("Reads the triggers of a table, by the names of the fields of each message")
+  void readTriggers() {
+    Triggers triggers = new ProtoSchema().read(List.of(PostProto.getDescriptor())).table(TableName.of("post"))
+        .orElseThrow().attribute(Triggers.class).orElseThrow();
+
+    assertThat(triggers.triggers()).containsExactly(
+        new Trigger("log", List.of(Mutation.UPDATE), new ColumnChange("title"), List.of(new Trigger.Insert(TableName
+            .of("post_event"),
+            List.of(new Trigger.Assignment("post_id", ColumnReference.of("id")),
+                new Trigger.Assignment("title", new ColumnReference("title", Row.OLD)))))),
+        new Trigger("active", List.of(Mutation.INSERT), Trigger.ALWAYS, List.of(new Trigger.Assert(new ForeignColumn(
+            ColumnReference.of("author_id"), TableName.of("author"), "id", "active"), "The author is not active."))),
+        new Trigger("purge", List.of(Mutation.DELETE), Trigger.ALWAYS, List.of(new Trigger.Delete(TableName.of(
+            "post_event"),
+            new Comparison(Comparison.Operator.EQUALS, ColumnReference.of("post_id"), new ColumnReference(
+                "id", Row.OLD))),
+            new Trigger.Update(TableName.of("author"), new Comparison(Comparison.Operator.EQUALS,
+                ColumnReference.of("id"), new ColumnReference("author_id", Row.OLD)),
+                List.of(new Trigger.Assignment(
+                    "active", new Literal(new BooleanType(), "false")))))));
   }
 }

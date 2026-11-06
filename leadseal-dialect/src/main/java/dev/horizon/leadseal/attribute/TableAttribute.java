@@ -27,10 +27,10 @@ import java.util.Optional;
     @JsonSubTypes.Type(value = Index.class, name = "index"),
     @JsonSubTypes.Type(value = ForeignKey.class, name = "foreign_key"),
     @JsonSubTypes.Type(value = Check.class, name = "check"),
-    @JsonSubTypes.Type(value = Comment.class, name = "comment")
+    @JsonSubTypes.Type(value = Comment.class, name = "comment"),
+    @JsonSubTypes.Type(value = Triggers.class, name = "triggers")
 })
-public sealed interface TableAttribute permits PrimaryKey, Index, ForeignKey,
-    Check, Comment {
+public sealed interface TableAttribute permits PrimaryKey, Index, ForeignKey, Check, Comment, Triggers {
 
   /**
    * Returns the key of this attribute. A table has at most one attribute with each key.
@@ -49,6 +49,17 @@ public sealed interface TableAttribute permits PrimaryKey, Index, ForeignKey,
    * have
    */
   void validate(Table table);
+
+  /**
+   * Checks that this attribute fits the other tables of its schema, such as the table that a foreign key references.
+   *
+   * @param table the table that has this attribute
+   * @param schema the schema of the table
+   * @throws SchemaException if the attribute does not fit, for example a reference to a table that the schema does
+   * not have. The default does not throw.
+   */
+  default void validate(Table table, Schema schema) {
+  }
 
   /**
    * Tells if this attribute is a key or an index that covers a column.

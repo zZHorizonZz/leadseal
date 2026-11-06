@@ -14,6 +14,10 @@ Some databases cannot make a change in place, so the migration takes more steps 
 A migration renames the primary key constraint together with its table, so the key keeps the name `pk_<table>`.
 When a column becomes an identity column, the migration starts the identity after the largest existing value.
 
+Each trigger of a table runs a function with the same name, in the schema of the table.
+A migration that drops a trigger drops its function too.
+The triggers of a row run at the end of the statement, so they read the table after the whole statement.
+
 ## MariaDB
 
 MariaDB names every primary key `PRIMARY`.
@@ -25,6 +29,9 @@ Two changes of one column in one migration give one `MODIFY COLUMN`.
 
 A database schema is a MariaDB database.
 A migration that creates a table in a schema creates the database when it does not exist.
+
+The rewrites of a table run in a trigger before the update, and its triggers in one trigger for each mutation after it.
+The triggers of a table run after each row, so a trigger that reads other rows of its table during a statement reads them partly changed.
 
 ## SQL Server
 
@@ -39,6 +46,11 @@ A new column that does not accept `NULL` and has no default gets a temporary def
 SQL Server has no `RESTRICT` action.
 A foreign key with `ACTION_RESTRICT` uses `NO ACTION`, which also rejects the change.
 SQL Server cannot add `IDENTITY` to an existing column or remove it.
+
+The triggers of a table run once for all the rows of a statement, after it.
+The trigger of an update first updates the updated rows again with the rewrites, with an `UPDATE` that joins them by primary key, and then runs the triggers of the update.
+SQL Server does not run the trigger again for that `UPDATE`, because `RECURSIVE_TRIGGERS` is off by default.
+When an update changes the primary key of a row, `old` reads `NULL` for that row, because the old row cannot be found by its key.
 
 ## SQLite
 
@@ -77,6 +89,12 @@ An `INT` or `BIGINT` primary key of one column is the rowid of the table.
 SQLite generates its values with or without identity.
 SQLite cannot drop a default, so a new column that does not accept `NULL` and has no default keeps its zero value as its default.
 SQLite cannot rename a constraint, so a renamed table keeps the name of its primary key.
+
+SQLite cannot change the new row in a trigger, so the trigger of an update first updates the row again with the rewrites, and then runs the triggers of the update.
+SQLite does not run the trigger again for that `UPDATE` while `PRAGMA recursive_triggers` is off, which is the default.
+Keep it off on connections that update tables with rewrites.
+The triggers of a table run after each row, so a trigger that reads other rows of its table during a statement reads them partly changed.
+A rebuild creates the triggers again, together with the indexes.
 
 ## What a dialect is not
 
