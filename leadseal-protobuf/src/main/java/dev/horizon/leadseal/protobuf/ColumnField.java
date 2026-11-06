@@ -6,6 +6,7 @@ import dev.horizon.leadseal.InvalidSchemaException;
 import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.ColumnAttribute;
 import dev.horizon.leadseal.attribute.Comment;
+import dev.horizon.leadseal.attribute.Generated;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.attribute.NotNull;
 import dev.horizon.leadseal.attribute.Rewrite;
@@ -18,6 +19,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 final class ColumnField {
 
@@ -89,13 +91,26 @@ final class ColumnField {
     return !options.getRewrite().isBlank();
   }
 
+  boolean generates() {
+    return !options.getGenerated().isBlank();
+  }
+
+  Column generate(CelTable table, Column column) {
+    return generates() ? column.with(new Generated(table.parse(options.getGenerated(), Set.of(Row.CURRENT),
+        column.type()))) : column;
+  }
+
   Optional<Rewrite> rewrite(CelTable table, Type type) {
     return options.getRewrite().isBlank() ? Optional.empty()
         : Optional.of(new Rewrite(name, table.parse(options.getRewrite(), EnumSet.allOf(Row.class), type)));
   }
 
   private boolean nullable() {
-    return options.hasNullable() ? options.getNullable()
-        : field.isRepeated() || field.hasPresence() && !field.isRequired();
+    if (generates() && options.hasNullable() && !options.getNullable()) {
+      throw new InvalidSchemaException("The field " + field.getFullName() + " is generated and does not accept NULL."
+          + " A generated column accepts NULL: remove nullable.");
+    }
+    return generates() || (options.hasNullable() ? options.getNullable()
+        : field.isRepeated() || field.hasPresence() && !field.isRequired());
   }
 }

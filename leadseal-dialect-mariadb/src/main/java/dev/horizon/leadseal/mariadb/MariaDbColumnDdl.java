@@ -9,12 +9,14 @@ import dev.horizon.leadseal.Transition.ColumnTransition;
 import dev.horizon.leadseal.attribute.Collation;
 import dev.horizon.leadseal.attribute.Comment;
 import dev.horizon.leadseal.attribute.Default;
+import dev.horizon.leadseal.attribute.Generated;
 import dev.horizon.leadseal.attribute.Identity;
 import dev.horizon.leadseal.command.Clause;
 import dev.horizon.leadseal.command.ColumnDdl;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Command.FillNulls;
 import dev.horizon.leadseal.command.Ddl;
+import dev.horizon.leadseal.expression.SqlEnvironment;
 import java.util.List;
 import java.util.Optional;
 
@@ -79,6 +81,14 @@ record MariaDbColumnDdl(Ddl ddl) implements ColumnDdl {
     public void write(ScriptWriter script) {
       Dialect dialect = script.dialect();
       script.name(column.name()).append(" " + dialect.type(table, column));
+      Optional<Generated> generation = column.attribute(Generated.class);
+      if (generation.isPresent()) {
+        script.append(" GENERATED ALWAYS AS (" + generation.get().expression().value(SqlEnvironment.of(dialect))
+            + ") STORED");
+        column.attribute(Comment.class)
+            .ifPresent(comment -> script.append(" COMMENT " + dialect.string(comment.text())));
+        return;
+      }
       column.attributes(Collation.class).stream().filter(collation -> collation.appliesTo(dialect))
           .forEach(collation -> script.append(" COLLATE " + collation.bareName()));
       script.append(column.nullable() ? " NULL" : " NOT NULL");

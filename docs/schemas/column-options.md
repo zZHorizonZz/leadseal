@@ -25,6 +25,7 @@ Each field of a table message is a column, unless `ignore` is set.
 | `check`       | `string`            | none                                                                        | A check constraint on the column, such as `quantity >= 0`.                                                                                  |
 | `foreign_key` | `ForeignKeyOptions` | none                                                                        | A foreign key from this column to a column of another table.                                                                                |
 | `rewrite`     | `string`            | none                                                                        | The value that each update of a row writes into the column, as an expression such as `now()`. Refer to [About rewrites](about-rewrites.md). |
+| `generated`   | `string`            | none                                                                        | The value of the column, as an expression of the other fields of the row such as `price * quantity`. Refer to [About generated columns](about-generated-columns.md). |
 | `type`        | `oneof`             | follows from the field type                                                 | The column type and its options. Refer to [Column type options](column-type-options.md).                                                    |
 
 Every table needs at least one `primary_key` field.

@@ -4,6 +4,7 @@ import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.Transition;
 import dev.horizon.leadseal.Transition.TableTransition;
+import dev.horizon.leadseal.attribute.Generated;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Ddl;
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ public record AddColumn(TableName table, Column column) implements TableChange {
 
   @Override
   public Phase phase() {
-    return Phase.ADD_COLUMNS;
+    return column.attribute(Generated.class).isPresent() ? Phase.ADD_GENERATED_COLUMNS : Phase.ADD_COLUMNS;
   }
 
   @Override

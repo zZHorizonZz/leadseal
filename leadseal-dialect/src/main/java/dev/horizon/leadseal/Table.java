@@ -1,7 +1,9 @@
 package dev.horizon.leadseal;
 
 import dev.horizon.leadseal.attribute.Check;
+import dev.horizon.leadseal.attribute.Collation;
 import dev.horizon.leadseal.attribute.ForeignKey;
+import dev.horizon.leadseal.attribute.Generated;
 import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.attribute.TableAttribute;
 import dev.horizon.leadseal.attribute.Triggers;
@@ -11,6 +13,7 @@ import dev.horizon.leadseal.change.AlterTableAttribute;
 import dev.horizon.leadseal.change.Change;
 import dev.horizon.leadseal.change.CreateTable;
 import dev.horizon.leadseal.change.DropColumn;
+import dev.horizon.leadseal.change.DropGeneratedColumn;
 import dev.horizon.leadseal.change.DropTable;
 import dev.horizon.leadseal.change.DropTableAttribute;
 import dev.horizon.leadseal.change.MoveTable;
@@ -243,13 +246,46 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
   private List<Change> columnChanges(TableName targetName, Table target) {
     List<Change> changes = new ArrayList<>();
     for (Column column : columns) {
-      target.columnById(column.id()).ifPresentOrElse(targetColumn -> changes.addAll(column.changesTo(targetName,
-          targetColumn)),
-          () -> changes.add(new DropColumn(targetName, column.name())));
+      Optional<Generated> generation = column.attribute(Generated.class);
+      Optional<Column> match = target.columnById(column.id());
+      if (match.isEmpty()) {
+        changes.add(generation.isPresent() ? new DropGeneratedColumn(targetName, column.name())
+            : new DropColumn(targetName,
+                column.name()));
+        continue;
+      }
+      Column targetColumn = match.get();
+      Optional<Generated> targetGeneration = targetColumn.attribute(Generated.class);
+      if (generation.isPresent() && targetGeneration.isEmpty()) {
+        throw new UnsupportedChangeException("The migration makes the generated column " + targetName + "." + column
+            .name() + " a column that is not generated, which would lose its values. Add a new field for the values"
+            + " instead.");
+      }
+      if (targetGeneration.isPresent()
+          && (generation.isEmpty() || !column.equals(targetColumn) || readsChange(targetColumn, target))) {
+        changes.add(generation.isPresent() ? new DropGeneratedColumn(targetName, column.name())
+            : new DropColumn(targetName,
+                column.name()));
+        changes.add(new AddColumn(targetName, targetColumn));
+      } else if (targetGeneration.isEmpty()) {
+        changes.addAll(column.changesTo(targetName, targetColumn));
+      }
     }
     target.columns.stream().filter(column -> columnById(column.id()).isEmpty())
         .forEach(column -> changes.add(new AddColumn(targetName, column)));
     return changes;
+  }
+
+  private boolean readsChange(Column generated, Table target) {
+    for (String name : generated.attribute(Generated.class).orElseThrow().reads()) {
+      Column read = target.column(name).orElseThrow();
+      Optional<Column> origin = columnById(read.id());
+      if (origin.filter(column -> column.name().equals(read.name()) && column.type().equals(read.type())
+          && column.attributes(Collation.class).equals(read.attributes(Collation.class))).isEmpty()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private List<Change> attributeChanges(TableName name, TableName targetName, Table targetTable,

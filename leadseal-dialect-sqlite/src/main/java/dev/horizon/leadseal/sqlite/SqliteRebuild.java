@@ -7,6 +7,7 @@ import dev.horizon.leadseal.Table;
 import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.Transition;
 import dev.horizon.leadseal.attribute.Default;
+import dev.horizon.leadseal.attribute.Generated;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.Command.CreateIndex;
@@ -24,8 +25,9 @@ record SqliteRebuild(SqliteDdl ddl, Transition transition, String id) implements
     TableName name = transition.target().nameOf(id).orElseThrow();
     TableName scratch = name.withName(script.internal("new_" + name.name()));
     script.render(new CreateTable(scratch, ddl.table().elements(target))).end();
-    List<Column> copies = target.columns().stream().filter(column -> origin.columnById(column.id()).isPresent()
-        || column.attribute(Default.class).isEmpty()).toList();
+    List<Column> copies = target.columns().stream().filter(column -> column.attribute(Generated.class).isEmpty())
+        .filter(column -> origin.columnById(column.id()).isPresent() || column.attribute(Default.class).isEmpty())
+        .toList();
     script.append("INSERT INTO ").table(scratch).append(" (").names(copies.stream().map(Column::name).toList())
         .append(") SELECT ");
     for (int i = 0; i < copies.size(); i++) {

@@ -232,7 +232,7 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
           throw new InvalidSchemaException("A trigger of the table " + owner + " writes the column " + table + "."
               + value.column() + ", which the table does not have.");
         }
-        new Target(table).refuseIdentity(owner, target.column(value.column()).orElseThrow());
+        new Target(table).refuseGenerated(owner, target.column(value.column()).orElseThrow());
         if (!columns.add(value.column())) {
           throw new InvalidSchemaException("A trigger of the table " + owner + " writes the column " + table + "."
               + value.column() + " twice.");
@@ -310,7 +310,7 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
           throw new InvalidSchemaException("A trigger of the table " + owner + " changes the column " + table + "."
               + value.column() + ", which the table does not have or which it changes twice.");
         }
-        target.refuseIdentity(owner, destination.column(value.column()).orElseThrow());
+        target.refuseGenerated(owner, destination.column(value.column()).orElseThrow());
       }
     }
   }
@@ -438,10 +438,11 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
    */
   private record Target(TableName name) {
 
-    void refuseIdentity(TableName owner, Column column) {
-      if (column.attribute(Identity.class).isPresent()) {
+    void refuseGenerated(TableName owner, Column column) {
+      if (column.attribute(Identity.class).isPresent() || column.attribute(Generated.class).isPresent()) {
         throw new InvalidSchemaException("A trigger of the table " + owner + " writes the column " + name + "."
-            + column.name() + ", which is an identity column. The database writes its values, so leave it out.");
+            + column.name() + ", which is " + (column.attribute(Identity.class).isPresent() ? "an identity" : "a generated")
+            + " column. The database writes its values, so leave it out.");
       }
     }
 

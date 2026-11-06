@@ -36,6 +36,7 @@ import dev.horizon.leadseal.expression.Row;
 import dev.horizon.leadseal.protobuf.invalid.action.TriggerActionOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.defaults.BothDefaultsOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.enumdefault.UnknownEnumDefaultOuterClass;
+import dev.horizon.leadseal.protobuf.invalid.generated.GeneratedNullableOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.identity.TextIdentityOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.index.UnknownIndexFieldOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.key.RewriteKeyOuterClass;
@@ -171,6 +172,8 @@ class ProtoSchemaTest {
         arguments(TriggerOwnOuterClass.getDescriptor(), "writes into its own table"),
         arguments(TriggerActionOuterClass.getDescriptor(), "has no action."),
         arguments(TriggerWhereOuterClass.getDescriptor(), "has no where."),
+        arguments(GeneratedNullableOuterClass.getDescriptor(), "The field leadseal.invalid.GeneratedNullable.total is"
+            + " generated and does not accept NULL."),
         arguments(TriggerRowOuterClass.getDescriptor(), "The trigger trigger_row.keep is not valid. An expression of"
             + " the table trigger_row reads the column state of the old row"),
         arguments(TriggerTargetOuterClass.getDescriptor(), "An insert of the trigger log of leadseal.invalid.TriggerTarget"
