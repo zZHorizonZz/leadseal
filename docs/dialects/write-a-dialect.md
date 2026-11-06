@@ -22,12 +22,12 @@ Use this page to support a database that leadseal has no module for.
    <dependency>
      <groupId>dev.horizon</groupId>
      <artifactId>leadseal-dialect</artifactId>
-     <version>0.2.1-SNAPSHOT</version> <!-- x-release-please-version -->
+     <version>0.3.0</version> <!-- x-release-please-version -->
    </dependency>
    <dependency>
      <groupId>dev.horizon</groupId>
      <artifactId>leadseal-dialect</artifactId>
-     <version>0.2.1-SNAPSHOT</version> <!-- x-release-please-version -->
+     <version>0.3.0</version> <!-- x-release-please-version -->
      <type>test-jar</type>
      <scope>test</scope>
    </dependency>
