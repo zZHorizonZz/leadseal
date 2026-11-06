@@ -3,9 +3,11 @@ package dev.horizon.leadseal.protobuf;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import dev.horizon.leadseal.InvalidSchemaException;
+import dev.horizon.leadseal.TableName;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 final class MessageCatalog {
 
@@ -22,11 +24,15 @@ final class MessageCatalog {
     return List.copyOf(tables.values());
   }
 
-  TableMessage table(String name, String origin) {
+  Optional<TableMessage> table(TableName name) {
+    return tables.values().stream().filter(table -> table.name().equals(name)).findFirst();
+  }
+
+  TableMessage table(String name, String reference) {
     TableMessage message = tables.get(name);
     if (message == null) {
-      throw new InvalidSchemaException("The foreign key of " + origin + " references " + name + ", which is not a table"
-          + " message. Use the full message name of a message with the (leadseal.v1.table) option.");
+      throw new InvalidSchemaException(reference + " references " + name + ", which is not a table message. Use the"
+          + " full message name of a message with the (leadseal.v1.table) option.");
     }
     return message;
   }

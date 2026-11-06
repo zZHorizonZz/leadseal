@@ -4,6 +4,7 @@ import dev.horizon.leadseal.attribute.Check;
 import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.attribute.TableAttribute;
+import dev.horizon.leadseal.attribute.Triggers;
 import dev.horizon.leadseal.change.AddColumn;
 import dev.horizon.leadseal.change.AddTableAttribute;
 import dev.horizon.leadseal.change.AlterTableAttribute;
@@ -183,26 +184,29 @@ public record Table(String id, String name, List<Column> columns, List<TableAttr
   }
 
   /**
-   * Returns the changes that create this table: the table without its foreign keys, and then its foreign keys.
+   * Returns the changes that create this table: the table without its foreign keys and triggers, and then its foreign
+   * keys and triggers.
    *
    * @param name the table name
    * @return the changes
    */
   List<Change> createChanges(TableName name) {
     List<Change> changes = new ArrayList<>();
-    changes.add(new CreateTable(name.namespace(), without(ForeignKey.class)));
+    changes.add(new CreateTable(name.namespace(), without(ForeignKey.class).without(Triggers.class)));
     attributes(ForeignKey.class).forEach(key -> changes.add(new AddTableAttribute(name, key)));
+    attribute(Triggers.class).ifPresent(triggers -> changes.add(new AddTableAttribute(name, triggers)));
     return changes;
   }
 
   /**
-   * Returns the changes that drop this table: its foreign keys, and then the table.
+   * Returns the changes that drop this table: its triggers and foreign keys, and then the table.
    *
    * @param name the table name
    * @return the changes
    */
   List<Change> dropChanges(TableName name) {
     List<Change> changes = new ArrayList<>();
+    attribute(Triggers.class).ifPresent(triggers -> changes.add(new DropTableAttribute(name, triggers)));
     attributes(ForeignKey.class).forEach(key -> changes.add(new DropTableAttribute(name, key)));
     changes.add(new DropTable(name));
     return changes;

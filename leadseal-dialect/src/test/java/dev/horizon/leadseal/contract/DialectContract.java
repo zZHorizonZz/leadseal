@@ -11,60 +11,6 @@ public abstract class DialectContract {
   }
 
   @Nested
-  class Table extends TableContractTest {
-
-    @Override
-    protected TestDatabase database() {
-      return fixture;
-    }
-  }
-
-  @Nested
-  class Column extends ColumnContractTest {
-
-    @Override
-    protected TestDatabase database() {
-      return fixture;
-    }
-  }
-
-  @Nested
-  class Key extends KeyContractTest {
-
-    @Override
-    protected TestDatabase database() {
-      return fixture;
-    }
-  }
-
-  @Nested
-  class Default extends DefaultContractTest {
-
-    @Override
-    protected TestDatabase database() {
-      return fixture;
-    }
-  }
-
-  @Nested
-  class Identity extends IdentityContractTest {
-
-    @Override
-    protected TestDatabase database() {
-      return fixture;
-    }
-  }
-
-  @Nested
-  class Check extends CheckContractTest {
-
-    @Override
-    protected TestDatabase database() {
-      return fixture;
-    }
-  }
-
-  @Nested
   class Script extends ScriptContractTest {
 
     @Override
@@ -82,12 +28,4 @@ public abstract class DialectContract {
     }
   }
 
-  @Nested
-  class Expressions extends SqlExpressionContractTest {
-
-    @Override
-    protected TestDatabase database() {
-      return fixture;
-    }
-  }
 }

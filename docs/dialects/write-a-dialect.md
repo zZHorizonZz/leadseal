@@ -1,5 +1,5 @@
 ---
-description: Write a leadseal dialect for another database, register it for ServiceLoader, and test it with the dialect contract tests.
+description: Write a leadseal dialect for another database, register it for ServiceLoader, and test it with the contract tests and the behavior cases.
 content_type: how-to
 ---
 
@@ -64,10 +64,10 @@ Use this page to support a database that leadseal has no module for.
 
    From `leadseal-dialect-postgres/src/main/java/dev/horizon/leadseal/postgres/PostgresDialect.java`.
 
-3. Implement `Ddl` with its four parts: tables, columns, constraints and comments:
+3. Implement `Ddl` with its parts: tables, columns, constraints, triggers and comments:
 
    ```java
-   record PostgresDdl(Dialect dialect) implements Ddl {
+   record PostgresDdl(PostgresDialect dialect) implements Ddl {
 
      @Override
      public TableDdl table() {
@@ -85,13 +85,18 @@ Use this page to support a database that leadseal has no module for.
      }
 
      @Override
+     public TriggerDdl trigger() {
+       return new PostgresTriggerDdl(this);
+     }
+
+     @Override
      public CommentDdl comment() {
        return new PostgresCommentDdl(dialect);
      }
    }
    ```
 
-   `TableDdl` needs `moveTable`, `ColumnDdl` needs `collate`, and `CommentDdl` needs `commentColumn` and `commentTable`.
+   `TableDdl` needs `moveTable`, `ColumnDdl` needs `collate`, `TriggerDdl` needs `createTriggers` and `dropTriggers`, and `CommentDdl` needs `commentColumn` and `commentTable`.
    Every other method has a default.
 
 4. Refuse a change that the database cannot make with an `UnsupportedChangeException`:
@@ -154,10 +159,10 @@ Use this page to support a database that leadseal has no module for.
      }
    ```
 
-   Also implement `dialect`, `binaryCollation`, `flywayParser` and `trigger`.
+   Also implement `dialect`, `flywayParser` and `trigger`.
 
 9. Run the contract tests.
-   Extend `DialectContract`, and add the capability contracts that the database has:
+   Extend `DialectContract`, which checks that Flyway runs the statements of the dialect, including statements with a body such as a trigger:
 
    ```java
    class PostgresContractTest extends DialectContract {
@@ -165,22 +170,17 @@ Use this page to support a database that leadseal has no module for.
      PostgresContractTest() {
        super(new PostgresTestDatabase());
      }
-
-     @Nested
-     class Schemas extends SchemaContractTest {
-
-       @Override
-       protected TestDatabase database() {
-         return fixture;
-       }
-     }
+   }
    ```
 
-   The capability contracts are `SchemaContractTest`, `CommentContractTest`, `PartialIndexContractTest`, `IdentityChangeContractTest` and `IdentityRemovalContractTest`.
+10. Add the database to the behavior cases of `leadseal-it`.
+    The cases in `leadseal-it/src/test/cases` state what a generated schema does on each database: the columns, keys and indexes of each table, the rows after each migration, and the errors of the constraints and triggers.
+    Add a constant for the database to `Database` in `leadseal-it`, and a dependency on the dialect module.
+    A case that the database cannot run names the other databases in its `-- databases:` line.
 
 ## Check the result
 
-`mvn verify` runs every contract test against the database, and all of them pass.
+`mvn verify` runs the contract tests and every behavior case against the database, and all of them pass.
 `Dialect.of` finds the dialect by its name.
 
 ## Test the SQL of expressions

@@ -9,9 +9,18 @@ import dev.horizon.leadseal.attribute.Comment;
 import dev.horizon.leadseal.attribute.Identity;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.attribute.LiteralDefault;
+import dev.horizon.leadseal.attribute.Mutation;
 import dev.horizon.leadseal.attribute.NotNull;
 import dev.horizon.leadseal.attribute.NowDefault;
 import dev.horizon.leadseal.attribute.PrimaryKey;
+import dev.horizon.leadseal.attribute.Rewrite;
+import dev.horizon.leadseal.attribute.Trigger;
+import dev.horizon.leadseal.attribute.Triggers;
+import dev.horizon.leadseal.expression.Call;
+import dev.horizon.leadseal.expression.ColumnReference;
+import dev.horizon.leadseal.expression.Comparison;
+import dev.horizon.leadseal.expression.Literal;
+import dev.horizon.leadseal.expression.Row;
 import dev.horizon.leadseal.migration.MigrationDirectory;
 import dev.horizon.leadseal.migration.MigrationOptions;
 import dev.horizon.leadseal.migration.MigrationPlan;
@@ -134,6 +143,15 @@ class MigrationsTest {
   }
 
   @Test
+  @DisplayName("Generates a migration after one that drops every table")
+  void dropEveryTable() {
+    migrations("postgresql").generate(FIRST);
+    migrations("postgresql").generate(Schema.empty());
+
+    assertThat(migrations("postgresql").generate(FIRST).migration()).isPresent();
+  }
+
+  @Test
   @DisplayName("Reads every attribute back from its files")
   void readAttributesBack() {
     Column state = Column.of("2", "state", TextType.of(20), NotNull.INSTANCE,
@@ -151,7 +169,11 @@ class MigrationsTest {
         Index.of("orders", List.of("state", "created"), true).withDescending(List.of("created"))
             .withWhere("price IS NOT NULL"),
         Check.of("orders", "price >= 0"),
-        new Comment("The orders."));
+        new Comment("The orders."),
+        new Triggers(List.of(new Rewrite("state", new Call(Call.Function.LOWER, List.of(new ColumnReference("state",
+            Row.NEW))))), List.of(new Trigger("keep", List.of(Mutation.DELETE), Trigger.ALWAYS,
+                List.of(new Trigger.Assert(new Comparison(Comparison.Operator.GREATER, new ColumnReference("price", Row.OLD),
+                    new Literal(new DecimalType(12, 2), "0")), "Paid orders stay."))))));
     Schema schema = Schema.of(new Namespace("sales", List.of(orders)));
     migrations("postgresql").generate(schema);
 

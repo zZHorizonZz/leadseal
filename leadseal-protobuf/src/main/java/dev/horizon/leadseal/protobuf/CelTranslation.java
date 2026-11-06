@@ -1,11 +1,13 @@
 package dev.horizon.leadseal.protobuf;
 
+import dev.horizon.aquery.cel.Scope;
 import dev.horizon.aquery.cel.Type.Scalar;
 import dev.horizon.aquery.cel.expression.Expression;
 import dev.horizon.leadseal.expression.Arithmetic;
 import dev.horizon.leadseal.expression.ColumnReference;
 import dev.horizon.leadseal.expression.Comparison;
 import dev.horizon.leadseal.expression.Conditional;
+import dev.horizon.leadseal.expression.ForeignColumn;
 import dev.horizon.leadseal.expression.In;
 import dev.horizon.leadseal.expression.IsNull;
 import dev.horizon.leadseal.expression.Literal;
@@ -24,8 +26,9 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-record CelTranslation(String text) {
+record CelTranslation(String text, Map<String, CelTable.Link> links) {
 
   SqlExpression expression(Expression node) {
     if (node.type() == Scalar.DURATION) {
@@ -34,6 +37,7 @@ record CelTranslation(String text) {
     return switch (node) {
       case Expression.Literal literal -> literal(literal.value());
       case Expression.FieldReference field -> column(field);
+      case Expression.Related.Value value -> expression(value.body());
       case Expression.Presence presence -> new IsNull(expression(presence.operand())).negate();
       case Expression.Not not -> expression(not.operand()).negate();
       case Expression.Negative negative -> new Negative(expression(negative.operand()));
@@ -67,10 +71,18 @@ record CelTranslation(String text) {
   private SqlExpression column(Expression.FieldReference field) {
     String column = field.field().column();
     return switch (field.row()) {
-      case Expression.Row.Current _ -> ColumnReference.of(column);
-      case Expression.Row.Named(String row) -> new ColumnReference(column, Row.valueOf(row.toUpperCase(Locale.ROOT)));
-      case Expression.Row.Related _ ->
-        throw new UnsupportedExpressionException(this, "an expression reads only the fields of its table, not related rows");
+      case Expression.Row.Related(String name, Scope.Edge edge, Expression.Row from) -> new ForeignColumn(
+          new ColumnReference(edge.column(), row(from)), links.get(name).table(), edge.targetColumn(), column);
+      default -> new ColumnReference(column, row(field.row()));
+    };
+  }
+
+  private Row row(Expression.Row row) {
+    return switch (row) {
+      case Expression.Row.Current _ -> Row.CURRENT;
+      case Expression.Row.Named(String name) -> Row.valueOf(name.toUpperCase(Locale.ROOT));
+      case Expression.Row.Related _ -> throw new UnsupportedExpressionException(this, "an expression reads the rows"
+          + " that a key of its table references, not the rows that their keys reference");
     };
   }
 

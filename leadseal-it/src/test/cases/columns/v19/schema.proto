@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package columns.v19;
+
+import "leadseal/v1/options.proto";
+
+message Order {
+  option (leadseal.v1.table) = {
+    name: "orders"
+    index: {fields: ["count", "line"], name: "ix_orders_count_line"}
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  int32 count = 3;
+  int32 line = 4;
+}

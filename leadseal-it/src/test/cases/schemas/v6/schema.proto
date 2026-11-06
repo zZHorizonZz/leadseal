@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package schemas.v6;
+
+import "leadseal/v1/options.proto";
+
+message Customer {
+  option (leadseal.v1.table) = {
+    name: "customers"
+    schema: "crm"
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string name = 2 [(leadseal.v1.column) = {index: true, text: {length: 20}}];
+}
+
+message Order {
+  option (leadseal.v1.table) = {
+    name: "orders"
+    schema: "crm"
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  int64 customer_id = 2 [(leadseal.v1.column).foreign_key = {message: "schemas.v6.Customer", on_delete: ACTION_CASCADE}];
+}

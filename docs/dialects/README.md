@@ -35,7 +35,7 @@ Refer to [Troubleshooting dialects](troubleshooting-dialects.md).
 
 ### Your own dialect
 
-A dialect is a Java class and a `Ddl`, tested with the contract tests of `leadseal-dialect`.
+A dialect is a Java class and a `Ddl`, tested with the contract tests of `leadseal-dialect` and the behavior cases of `leadseal-it`.
 Refer to [Write a dialect](write-a-dialect.md).
 
 ## Related

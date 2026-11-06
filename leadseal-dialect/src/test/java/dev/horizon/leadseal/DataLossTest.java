@@ -58,7 +58,7 @@ class DataLossTest {
     return migrations(MigrationOptions.defaults());
   }
 
-  private static String script(MigrationPlan plan) {
+  private String script(MigrationPlan plan) {
     return plan.files().stream().filter(file -> file.path().toString().endsWith(".sql")).map(MigrationFile::content)
         .findFirst().orElseThrow();
   }

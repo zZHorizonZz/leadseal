@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package leadseal.test;
+
+import "google/protobuf/timestamp.proto";
+import "leadseal/v1/options.proto";
+
+option java_multiple_files = true;
+option java_package = "dev.horizon.leadseal.protobuf.test";
+option java_outer_classname = "PostProto";
+
+message Author {
+  option (leadseal.v1.table) = {};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  bool active = 2;
+}
+
+message PostEvent {
+  option (leadseal.v1.table) = {};
+
+  int64 id = 1 [(leadseal.v1.column) = {primary_key: true, integer: {identity: true}}];
+  int64 post_id = 2;
+  string title = 3 [(leadseal.v1.column).nullable = true];
+}
+
+message Post {
+  option (leadseal.v1.table) = {
+    trigger: {
+      name: "log"
+      on: [EVENT_UPDATE]
+      when: "changed(title)"
+      actions: [{
+        insert: {
+          message: "leadseal.test.PostEvent"
+          values: [{key: "title" value: "old.title"}, {key: "post_id" value: "id"}]
+        }
+      }]
+    }
+    trigger: {
+      name: "active"
+      on: [EVENT_INSERT]
+      actions: [{assert: {expression: "author.active", message: "The author is not active."}}]
+    }
+    trigger: {
+      name: "purge"
+      on: [EVENT_DELETE]
+      actions: [
+        {delete: {message: "leadseal.test.PostEvent", where: "post_id == old.id"}},
+        {update: {message: "leadseal.test.Author", where: "id == old.author_id", set: [{key: "active" value: "false"}]}}
+      ]
+    }
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string title = 2;
+  string label = 3 [(leadseal.v1.column).rewrite = "upper(slug)"];
+  string slug = 4 [(leadseal.v1.column) = {name: "url_slug", rewrite: "lower(title)"}];
+  int64 revision = 5 [(leadseal.v1.column).rewrite = "old.revision + 1"];
+  google.protobuf.Timestamp modified = 6 [(leadseal.v1.column).rewrite = "now()"];
+  optional int64 author_id = 7 [(leadseal.v1.column).foreign_key = {message: "leadseal.test.Author"}];
+}
+
+message Comment {
+  option (leadseal.v1.table) = {};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string author = 2;
+  optional int64 author_id = 3 [(leadseal.v1.column).foreign_key = {message: "leadseal.test.Author"}];
+}

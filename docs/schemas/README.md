@@ -21,6 +21,16 @@ Refer to [Table options](table-options.md), [Column options](column-options.md) 
 Each column has a leadseal column type, and each dialect writes it as a database type.
 Refer to [Column types](column-types.md).
 
+### Values that every update writes
+
+A rewrite sets a column on each update, such as the time of the last change.
+Refer to [About rewrites](about-rewrites.md).
+
+### Triggers
+
+A trigger writes a row into another table after a mutation, or refuses the mutation with a message.
+Refer to [About triggers](about-triggers.md).
+
 ### Stable identity
 
 Tables and columns are matched by id, so a rename keeps the rows.

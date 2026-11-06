@@ -192,6 +192,148 @@ Refer to [About data loss](../migrations/about-data-loss.md).
 
 **Verify**: The build writes no error.
 
+## The expression ... is not valid: ...
+
+```text
+--leadseal_out: Migration generation failed: The expression ''first'' is not valid: expected an expression of type int but it is of type string (at character 1).
+```
+
+**Cause**: An expression, such as a rewrite, does not parse, reads a field that the message does not have, or gives a value of another type than its column.
+The character is where the problem starts.
+
+**Fix**: Correct the expression, and give it the type of the column, such as `old.revision + 1` for an integer column.
+Refer to [About rewrites](about-rewrites.md#what-a-rewrite-reads).
+
+**Verify**: The build writes no error.
+
+## The rewrites read each other: ...
+
+```text
+--leadseal_out: Migration generation failed: The rewrites read each other: slug -> label -> slug.
+```
+
+**Cause**: The rewrite of one field reads a field whose rewrite reads the first field, directly or through other rewrites.
+Leadseal cannot tell which one to write first.
+
+**Fix**: Let one of the rewrites read the value before the update, such as `old.label`, or remove the loop.
+
+**Verify**: The build writes no error.
+
+## A rewrite of the table ... writes the column ..., which is part of the primary key.
+
+```text
+--leadseal_out: Migration generation failed: A rewrite of the table orders writes the column id, which is part of the primary key. A rewrite cannot change the key of a row.
+```
+
+**Cause**: A primary key field has a `rewrite`.
+
+**Fix**: Remove the rewrite from the key field.
+
+**Verify**: The build writes no error.
+
+## The table ... has a field named new or old, so an expression of a trigger cannot read it.
+
+```text
+--leadseal_out: Migration generation failed: The table posts has a field named new or old, so an expression of a trigger cannot read it.
+```
+
+**Cause**: A rewrite reads fields as `new.<field>` and `old.<field>`, so a field named `new` or `old` would be ambiguous.
+
+**Fix**: Rename the field, and keep its column name with the `name` column option.
+
+**Verify**: The build writes no error.
+
+## A trigger of the table ... writes into its own table.
+
+```text
+--leadseal_out: Migration generation failed: The trigger orders.copy is not valid. A trigger of the table orders writes into its own table. A trigger cannot change the rows of its table: use a rewrite for the values of the row.
+```
+
+**Cause**: An `insert` of a trigger names the message of its own table.
+
+**Fix**: To change the values of the row, use a `rewrite` on the column.
+To keep a history, write the rows into another table.
+Refer to [About rewrites](about-rewrites.md).
+
+**Verify**: The build writes no error.
+
+## The triggers write in a loop: ...
+
+```text
+--leadseal_out: Migration generation failed: The triggers write in a loop: orders.log -> order_events.touch -> orders. A trigger that writes a row runs the triggers of that table, so the loop would never end.
+```
+
+**Cause**: A trigger writes a row into a table whose triggers write, directly or through others, into the first table.
+
+**Fix**: Remove one of the `insert` actions of the loop.
+
+**Verify**: The build writes no error.
+
+## A trigger of the table ... writes a row into ... without the column ..., which is NOT NULL and has no default.
+
+```text
+--leadseal_out: Migration generation failed: The trigger orders.log is not valid. A trigger of the table orders writes a row into order_events without the column kind, which is NOT NULL and has no default. Give it a value.
+```
+
+**Cause**: The `insert` of a trigger has no value for a field of the other message that needs one.
+
+**Fix**: Add the field to `values`, or give it a default.
+
+**Verify**: The build writes no error.
+
+## A trigger of the table ... writes the column ..., which is an identity column.
+
+```text
+--leadseal_out: Migration generation failed: The trigger orders.archive is not valid. A trigger of the table orders writes the column order_archives.id, which is an identity column. The database writes its values, so leave it out.
+```
+
+**Cause**: An `insert` or an `update` of a trigger sets a column whose values the database generates.
+SQL Server refuses such a write, so the trigger would fail on every mutation.
+
+**Fix**: Remove the field from the `values` or the `set` of the action.
+
+**Verify**: The build writes no error.
+
+## The trigger ... of the message ... has no action.
+
+```text
+--leadseal_out: Migration generation failed: The trigger log of the message shop.v1.Order has no action. Set actions to insert, update, delete or assert actions.
+```
+
+**Cause**: A trigger has no `actions`.
+
+**Fix**: Give the trigger at least one action.
+Refer to [Table options](table-options.md#trigger).
+
+**Verify**: The build writes no error.
+
+## An update or a delete of the trigger ... has no where.
+
+```text
+--leadseal_out: Migration generation failed: An update or a delete of the trigger count of the message shop.v1.Order has no where. Set where to the condition of the rows, such as id == new.order_id.
+```
+
+**Cause**: An `update` or a `delete` action has no `where`.
+Without it, the action would change or delete every row of the other table.
+
+**Fix**: Set `where` to the condition of the rows to change, such as `id == new.customer_id`.
+
+**Verify**: The build writes no error.
+
+## The expression ... is not valid: '...' is an edge; read only the fields of the row 'new'.
+
+```text
+--leadseal_out: Migration generation failed: The expression 'new.author.active' is not valid: 'author' is an edge; read only the fields of the row 'new' (at character 5).
+```
+
+**Cause**: An expression reads a linked row through `new.` or `old.`.
+
+**Fix**: Read the link from the row itself, as in `author.active`.
+On an insert or an update it is the new row, and on a delete the old row.
+Refer to [About triggers](about-triggers.md#what-a-trigger-reads).
+
+**Verify**: The build writes no error.
+
 ## The identity column ... must be an integer column...
 
 ```text

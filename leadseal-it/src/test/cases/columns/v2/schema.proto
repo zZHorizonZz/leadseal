@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package columns.v2;
+
+import "leadseal/v1/options.proto";
+
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  bool bool_value = 10;
+  optional bool bool_optional = 11;
+  int32 int32_value = 12;
+  optional int32 int32_optional = 13;
+  int64 int64_value = 14;
+  optional int64 int64_optional = 15;
+  float float_value = 16;
+  optional float float_optional = 17;
+  double double_value = 18;
+  optional double double_optional = 19;
+  string decimal_value = 20 [(leadseal.v1.column).decimal = {precision: 12, scale: 2}];
+  optional string decimal_optional = 21 [(leadseal.v1.column).decimal = {precision: 12, scale: 2}];
+  string text_value = 22;
+  optional string text_optional = 23;
+  bytes bytes_value = 24;
+  optional bytes bytes_optional = 25;
+  string uuid_value = 26 [(leadseal.v1.column).uuid = {}];
+  optional string uuid_optional = 27 [(leadseal.v1.column).uuid = {}];
+  string timestamp_value = 28 [(leadseal.v1.column).timestamp = {}];
+  optional string timestamp_optional = 29 [(leadseal.v1.column).timestamp = {}];
+  string date_value = 30 [(leadseal.v1.column).date = {}];
+  optional string date_optional = 31 [(leadseal.v1.column).date = {}];
+  string time_value = 32 [(leadseal.v1.column).time = {}];
+  optional string time_optional = 33 [(leadseal.v1.column).time = {}];
+  string json_value = 34 [(leadseal.v1.column).json = {}];
+  optional string json_optional = 35 [(leadseal.v1.column).json = {}];
+}

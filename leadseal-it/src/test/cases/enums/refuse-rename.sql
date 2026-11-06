@@ -1,0 +1,5 @@
+-- Refuses to rename a value of an enum that stores names, where the database cannot rename it.
+-- databases: mariadb, sqlite, sqlserver
+-- migrate: v1
+-- migrate: v15
+-- error: renames the value SENT to SHIPPED

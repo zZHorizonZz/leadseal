@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package defaults.v6;
+
+import "leadseal/v1/options.proto";
+
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  int32 total = 2 [(leadseal.v1.column).integer = {default_value: 2}];
+}

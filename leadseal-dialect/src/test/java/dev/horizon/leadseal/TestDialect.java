@@ -4,12 +4,16 @@ import dev.horizon.leadseal.Transition.ColumnTransition;
 import dev.horizon.leadseal.Transition.TableTransition;
 import dev.horizon.leadseal.attribute.Collation;
 import dev.horizon.leadseal.attribute.Comment;
+import dev.horizon.leadseal.attribute.Triggers;
 import dev.horizon.leadseal.command.ColumnDdl;
 import dev.horizon.leadseal.command.Command;
 import dev.horizon.leadseal.command.CommentDdl;
 import dev.horizon.leadseal.command.ConstraintDdl;
 import dev.horizon.leadseal.command.Ddl;
 import dev.horizon.leadseal.command.TableDdl;
+import dev.horizon.leadseal.command.TriggerDdl;
+import dev.horizon.leadseal.expression.Row;
+import dev.horizon.leadseal.expression.SqlEnvironment;
 import dev.horizon.leadseal.type.BooleanType;
 import dev.horizon.leadseal.type.BytesType;
 import dev.horizon.leadseal.type.DateType;
@@ -28,6 +32,7 @@ import dev.horizon.leadseal.type.Type;
 import dev.horizon.leadseal.type.UuidType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 final class TestDialect implements Dialect {
 
@@ -122,8 +127,33 @@ final class TestDialect implements Dialect {
     }
 
     @Override
+    public TriggerDdl trigger() {
+      return new TestTriggerDdl(this);
+    }
+
+    @Override
     public CommentDdl comment() {
       return new TestCommentDdl(dialect);
+    }
+  }
+
+  private record TestTriggerDdl(Ddl ddl) implements TriggerDdl {
+
+    @Override
+    public List<Command> createTriggers(TableTransition table, Triggers triggers) {
+      SqlEnvironment environment = SqlEnvironment.of(ddl.dialect()).with(Row.CURRENT, "NEW").with(Row.NEW, "NEW")
+          .with(Row.OLD, "OLD");
+      return triggers.runs().stream().<Command> map(mutation -> script -> script.append("CREATE TRIGGER ")
+          .name(triggers.name(table.name(), mutation)).append(" AFTER " + mutation.name() + " ON ").table(table.name())
+          .append(" SET " + triggers.ordered().stream().map(rewrite -> "NEW." + ddl.dialect().quote(rewrite.column())
+              + " = " + rewrite.expression().value(environment)).collect(Collectors.joining(", "))))
+          .toList();
+    }
+
+    @Override
+    public List<Command> dropTriggers(TableTransition table, Triggers triggers) {
+      return triggers.runs().stream().<Command> map(mutation -> script -> script.append("DROP TRIGGER ")
+          .name(triggers.name(table.name(), mutation))).toList();
     }
   }
 

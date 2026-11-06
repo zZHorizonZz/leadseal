@@ -10,11 +10,13 @@
 
   <artifactId>leadseal-it</artifactId>
   <name>Leadseal - Integration tests</name>
-  <description>Runs protoc-gen-leadseal through protobuf-maven-plugin on a schema that changes in steps, and applies the migrations with Flyway.</description>
+  <description>Runs protoc-gen-leadseal through protobuf-maven-plugin on a schema that changes in steps, and runs the behavior cases of src/test/cases on each database.</description>
 
   <properties>
     <module.name>dev.horizon.leadseal.it</module.name>
     <leadseal.migrations>${project.build.directory}/migrations</leadseal.migrations>
+    <leadseal.cases>${project.basedir}/src/test/cases</leadseal.cases>
+    <leadseal.descriptors>${project.build.directory}/cases.binpb</leadseal.descriptors>
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.install.skip>true</maven.install.skip>
   </properties>
@@ -36,6 +38,30 @@
     <dependency>
       <groupId>dev.horizon</groupId>
       <artifactId>leadseal-protobuf</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.horizon</groupId>
+      <artifactId>leadseal-dialect-postgres</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.horizon</groupId>
+      <artifactId>leadseal-dialect-mariadb</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.horizon</groupId>
+      <artifactId>leadseal-dialect-sqlserver</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.horizon</groupId>
+      <artifactId>leadseal-dialect-sqlite</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
@@ -117,6 +143,22 @@
         </configuration>
         <executions>
           <execution>
+            <id>cases</id>
+            <goals>
+              <goal>generate-test</goal>
+            </goals>
+            <configuration>
+              <plugins combine.self="override"/>
+              <sourceDirectories>
+                <sourceDirectory>${leadseal.cases}</sourceDirectory>
+              </sourceDirectories>
+              <outputDescriptorFile>${leadseal.descriptors}</outputDescriptorFile>
+              <outputDescriptorIncludeImports>true</outputDescriptorIncludeImports>
+              <outputDescriptorIncludeSourceInfo>true</outputDescriptorIncludeSourceInfo>
+              <outputDescriptorRetainOptions>true</outputDescriptorRetainOptions>
+            </configuration>
+          </execution>
+          <execution>
             <id>step1</id>
             <goals>
               <goal>generate-test</goal>
@@ -175,6 +217,8 @@
         <configuration>
           <systemPropertyVariables>
             <leadseal.migrations>${leadseal.migrations}</leadseal.migrations>
+            <leadseal.cases>${leadseal.cases}</leadseal.cases>
+            <leadseal.descriptors>${leadseal.descriptors}</leadseal.descriptors>
           </systemPropertyVariables>
         </configuration>
       </plugin>

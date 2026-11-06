@@ -10,6 +10,7 @@ import dev.horizon.leadseal.Column;
 import dev.horizon.leadseal.InvalidSchemaException;
 import dev.horizon.leadseal.SchemaException;
 import dev.horizon.leadseal.Table;
+import dev.horizon.leadseal.TableName;
 import dev.horizon.leadseal.attribute.NotNull;
 import dev.horizon.leadseal.expression.Row;
 import dev.horizon.leadseal.expression.SqlExpression;
@@ -54,8 +55,10 @@ public final class CelTable {
 
   private final Table table;
   private final Map<String, String> fields;
+  private final Map<String, Link> links;
   private final Scope scope;
   private final CelGrammar grammar;
+  private final CelTable rows;
 
   /**
    * Reads the expressions of a table, whose text names the columns by their names.
@@ -76,16 +79,57 @@ public final class CelTable {
    * @throws IllegalArgumentException if the table has no column of a name
    */
   public CelTable(Table table, Map<String, String> fields) {
+    this(table, fields, List.of());
+  }
+
+  /**
+   * Reads the expressions of a table, whose text names the columns by other names and reads the rows that its keys
+   * reference, as in {@code new.customer.active}.
+   *
+   * @param table the table
+   * @param fields the name of the column of each name that the text can use
+   * @param links the rows that the text can read through a key of the table
+   * @throws IllegalArgumentException if the table or another table has no column of a name
+   */
+  public CelTable(Table table, Map<String, String> fields, List<Link> links) {
+    this(table, fields, links, null);
+  }
+
+  private CelTable(Table table, Map<String, String> fields, List<Link> links, CelTable rows) {
+    this.rows = rows == null ? this : rows;
     this.table = table;
     this.fields = Collections.unmodifiableMap(new LinkedHashMap<>(fields));
+    this.links = links.stream().collect(Collectors.toMap(Link::name, link -> link, (first, _) -> first,
+        LinkedHashMap::new));
     Scope.Builder builder = Scope.builder(table.name());
     fields.forEach((field, name) -> declare(builder, field, column(name)));
+    for (Link link : links) {
+      Scope.Builder target = Scope.builder(link.target().name());
+      link.fields().forEach((field, name) -> declare(target, field, link.target().column(name).orElseThrow(
+          () -> new IllegalArgumentException("The table " + link.target().name() + " has no column " + name + "."))));
+      Scope scope = target.build();
+      builder.edge(link.name(), false, column(link.column()).name(), link.reference(), () -> scope);
+    }
     this.scope = builder.build();
     CelGrammar functions = CelGrammar.standard();
     for (CelFunction function : CelFunction.all()) {
       functions = functions.with(function);
     }
     this.grammar = functions;
+  }
+
+  /**
+   * Reads the expressions of another table that a trigger of this table writes, as an update or a delete of the
+   * trigger reads them: the names of the fields of the other table read its row, and {@code new.field} and
+   * {@code old.field} read the row of the trigger in this table.
+   *
+   * @param table the other table
+   * @param fields the name of the column of the other table of each name that the text can use
+   * @return the expressions of the other table
+   * @throws IllegalArgumentException if the other table has no column of a name
+   */
+  public CelTable target(Table table, Map<String, String> fields) {
+    return new CelTable(table, fields, List.of(), this);
   }
 
   /**
@@ -104,12 +148,17 @@ public final class CelTable {
     if (!rows.contains(Row.CURRENT)) {
       throw new IllegalArgumentException("An expression always reads the current row.");
     }
-    CelTranslation translation = new CelTranslation(text);
+    CelTranslation translation = new CelTranslation(text, links);
     Scalar type = new CelScalar(result).scalar().orElseThrow(() -> new InvalidSchemaException(
         "An expression cannot give a value of the type " + result.example() + " yet."));
     SqlExpression expression = translation.expression(compile(translation, rows, type).root());
     try {
-      expression.validate(table, rows);
+      if (this.rows == this) {
+        expression.validate(table, rows);
+      } else {
+        expression.columns().forEach(reference -> reference.validate(reference.row() == Row.CURRENT ? table
+            : this.rows.table, rows));
+      }
     } catch (SchemaException invalid) {
       throw new InvalidSchemaException("The expression '" + text + "' is not valid. " + invalid.getMessage(), invalid);
     }
@@ -129,7 +178,7 @@ public final class CelTable {
     try {
       for (Row row : List.of(Row.NEW, Row.OLD)) {
         if (rows.contains(row)) {
-          environment = environment.with(row.name().toLowerCase(Locale.ROOT), scope);
+          environment = environment.with(row.name().toLowerCase(Locale.ROOT), this.rows.scope);
         }
       }
     } catch (IllegalArgumentException clash) {
@@ -149,6 +198,25 @@ public final class CelTable {
       }
     }
     return invalid.getMessage() + " (at character " + (invalid.position() + 1) + ")";
+  }
+
+  /**
+   * A row of another table that a key of the table references, which an expression reads by a name, as in
+   * {@code customer.active}.
+   *
+   * @param name the name in the text, for example {@code customer}
+   * @param column the column of the table that holds the key, for example {@code customer_id}
+   * @param table the name of the other table
+   * @param reference the column of the other table that the key matches, for example {@code id}
+   * @param target the other table
+   * @param fields the column of the other table of each name that the text can use
+   */
+  public record Link(String name, String column, TableName table, String reference, Table target,
+      Map<String, String> fields) {
+
+    public Link {
+      fields = Collections.unmodifiableMap(new LinkedHashMap<>(fields));
+    }
   }
 
   private void declare(Scope.Builder builder, String field, Column column) {

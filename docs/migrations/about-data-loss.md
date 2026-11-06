@@ -45,13 +45,6 @@ The plugin option `allow_unsafe=true` applies unsafe changes, with a warning for
 From Java, `MigrationOptions.allowUnsafe()` does the same.
 Use it for one build, after you check the rows, or while you prototype a schema that no shared database runs yet.
 
-## Gel
-
-Leadseal follows the migrations of [Gel](https://docs.geldata.com/reference/cli/gel_migration/gel_migration_create), with one difference.
-Gel compares schemas by name, so it asks at a prompt whether a missing property is dropped or renamed.
-Leadseal compares tables and columns by id, so a removed field is a drop and a renamed field is a rename, with no question.
-Like `gel migration create --non-interactive`, leadseal refuses unsafe changes, and like `--allow-unsafe`, `allow_unsafe` applies them.
-
 ## Related
 
 - [Protoc plugin options](protoc-plugin-options.md)

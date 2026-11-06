@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package tables.v1;
+
+import "leadseal/v1/options.proto";
+
+message Customer {
+  option (leadseal.v1.table) = {name: "customers"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string email = 2 [(leadseal.v1.column) = {unique: true, text: {length: 100}}];
+}
+
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  int64 customer_id = 2 [(leadseal.v1.column).foreign_key = {message: "tables.v1.Customer", on_delete: ACTION_CASCADE}];
+  string state = 3 [(leadseal.v1.column) = {index: true, text: {length: 20}}];
+}

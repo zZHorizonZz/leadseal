@@ -1,14 +1,14 @@
 package dev.horizon.leadseal.postgres;
 
-import dev.horizon.leadseal.Dialect;
 import dev.horizon.leadseal.command.ColumnDdl;
 import dev.horizon.leadseal.command.CommentDdl;
 import dev.horizon.leadseal.command.ConstraintDdl;
 import dev.horizon.leadseal.command.Ddl;
 import dev.horizon.leadseal.command.TableDdl;
+import dev.horizon.leadseal.command.TriggerDdl;
 import dev.horizon.leadseal.command.TypeDdl;
 
-record PostgresDdl(Dialect dialect) implements Ddl {
+record PostgresDdl(PostgresDialect dialect) implements Ddl {
 
   @Override
   public TableDdl table() {
@@ -28,6 +28,11 @@ record PostgresDdl(Dialect dialect) implements Ddl {
   @Override
   public TypeDdl type() {
     return new PostgresTypeDdl(this);
+  }
+
+  @Override
+  public TriggerDdl trigger() {
+    return new PostgresTriggerDdl(this);
   }
 
   @Override

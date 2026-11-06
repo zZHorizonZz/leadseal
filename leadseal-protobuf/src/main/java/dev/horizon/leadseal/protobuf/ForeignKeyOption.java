@@ -20,7 +20,7 @@ record ForeignKeyOption(String origin, String name, List<String> fields, String 
   }
 
   ForeignKey attribute(TableMessage owner, MessageCatalog catalog) {
-    TableMessage target = catalog.table(message, origin);
+    TableMessage target = catalog.table(message, "The foreign key of " + origin);
     List<String> targetColumns = references.isEmpty() ? target.primaryKey()
         : references.stream().map(target::column).toList();
     if (references.isEmpty() && targetColumns.size() != fields.size()) {

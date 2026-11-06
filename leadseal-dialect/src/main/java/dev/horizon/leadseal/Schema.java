@@ -1,6 +1,5 @@
 package dev.horizon.leadseal;
 
-import dev.horizon.leadseal.attribute.ForeignKey;
 import dev.horizon.leadseal.change.AlterEnumType;
 
 import dev.horizon.leadseal.change.Change;
@@ -28,7 +27,7 @@ import java.util.stream.Stream;
 public record Schema(List<Namespace> namespaces) {
 
   public Schema(List<Namespace> namespaces) {
-    this.namespaces = List.copyOf(namespaces);
+    this.namespaces = namespaces == null ? List.of() : List.copyOf(namespaces);
     Set<Namespace.Name> names = new HashSet<>();
     Set<String> ids = new HashSet<>();
     for (Namespace namespace : this.namespaces) {
@@ -43,9 +42,7 @@ public record Schema(List<Namespace> namespaces) {
     }
     for (TableName name : names()) {
       Table table = table(name).orElseThrow();
-      for (ForeignKey key : table.attributes(ForeignKey.class)) {
-        key.validate(table, this);
-      }
+      table.attributes().forEach(attribute -> attribute.validate(table, this));
     }
     Map<String, List<EnumType.Value>> types = new LinkedHashMap<>();
     for (EnumType type : columnTypes(EnumType.class).toList()) {

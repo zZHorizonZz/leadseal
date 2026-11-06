@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package defaults.v8;
+
+import "leadseal/v1/options.proto";
+
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  optional string state = 2;
+}

@@ -26,7 +26,7 @@ record MigrationChain(List<Migration> migrations) {
       return new MigrationChain(List.of());
     }
     try (Stream<Path> folders = Files.list(directory)) {
-      return new MigrationChain(folders.filter(folder -> Files.exists(Migration.file(folder)))
+      return new MigrationChain(folders.filter(folder -> Files.exists(folder.resolve(Migration.FILE)))
           .map(folder -> Migration.read(folder, json)).sorted(Comparator.comparing(Migration::version)).toList());
     } catch (IOException exception) {
       throw new UncheckedIOException(exception);

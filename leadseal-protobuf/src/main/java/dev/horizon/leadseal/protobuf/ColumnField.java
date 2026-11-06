@@ -8,11 +8,14 @@ import dev.horizon.leadseal.attribute.ColumnAttribute;
 import dev.horizon.leadseal.attribute.Comment;
 import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.attribute.NotNull;
+import dev.horizon.leadseal.attribute.Rewrite;
 import dev.horizon.leadseal.attribute.TableAttribute;
+import dev.horizon.leadseal.expression.Row;
 import dev.horizon.leadseal.protobuf.column.ColumnTypeOption;
 import dev.horizon.leadseal.protobuf.column.FieldKind;
 import dev.horizon.leadseal.type.Type;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,6 +46,10 @@ final class ColumnField {
 
   boolean named(String field) {
     return this.field.getName().equals(field);
+  }
+
+  String field() {
+    return field.getName();
   }
 
   boolean key() {
@@ -76,6 +83,15 @@ final class ColumnField {
       attributes.add(ForeignKeyOption.of(options.getForeignKey(), field).attribute(owner, catalog));
     }
     return attributes;
+  }
+
+  boolean rewrites() {
+    return !options.getRewrite().isBlank();
+  }
+
+  Optional<Rewrite> rewrite(CelTable table, Type type) {
+    return options.getRewrite().isBlank() ? Optional.empty()
+        : Optional.of(new Rewrite(name, table.parse(options.getRewrite(), EnumSet.allOf(Row.class), type)));
   }
 
   private boolean nullable() {

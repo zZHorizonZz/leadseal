@@ -5,6 +5,7 @@ import dev.horizon.leadseal.command.CommentDdl;
 import dev.horizon.leadseal.command.ConstraintDdl;
 import dev.horizon.leadseal.command.Ddl;
 import dev.horizon.leadseal.command.TableDdl;
+import dev.horizon.leadseal.command.TriggerDdl;
 
 record MariaDbDdl(Dialect dialect) implements Ddl {
 
@@ -21,6 +22,11 @@ record MariaDbDdl(Dialect dialect) implements Ddl {
   @Override
   public ConstraintDdl constraint() {
     return new MariaDbConstraintDdl(this);
+  }
+
+  @Override
+  public TriggerDdl trigger() {
+    return new MariaDbTriggerDdl(this);
   }
 
   @Override

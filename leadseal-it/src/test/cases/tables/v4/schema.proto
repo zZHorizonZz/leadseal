@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+package tables.v4;
+
+import "leadseal/v1/options.proto";
+

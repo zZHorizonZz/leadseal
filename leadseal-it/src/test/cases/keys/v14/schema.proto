@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package keys.v14;
+
+import "leadseal/v1/options.proto";
+
+message OrderLine {
+  option (leadseal.v1.table) = {name: "order_line"};
+
+  int64 id = 1;
+  int64 customer_id = 2 [(leadseal.v1.column).primary_key = true];
+  int32 line = 3 [(leadseal.v1.column).primary_key = true];
+}
+
+message Order {
+  option (leadseal.v1.table) = {
+    name: "orders"
+    foreign_key: {fields: ["customer_id", "line"], message: "keys.v14.OrderLine", on_delete: ACTION_CASCADE}
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  int64 customer_id = 2;
+  int32 line = 3;
+}

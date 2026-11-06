@@ -25,24 +25,24 @@ class ProtocMigrationTest {
 
   private static final Path MIGRATIONS = Path.of(System.getProperty("leadseal.migrations"));
 
-  private static List<Path> steps() throws IOException {
+  private List<Path> steps() throws IOException {
     try (Stream<Path> folders = Files.list(MIGRATIONS)) {
       return folders.filter(folder -> Files.exists(folder.resolve("migration.json"))).sorted().toList();
     }
   }
 
-  private static String version(Path step) {
+  private String version(Path step) {
     return step.getFileName().toString();
   }
 
-  private static int migrate(Database database, Database.Location location, Path step) {
+  private int migrate(Database database, Database.Location location, Path step) {
     String folders = MIGRATIONS.toAbsolutePath().toString().replace('\\', '/');
     return Flyway.configure().dataSource(location.url(), location.user(), location.password())
         .locations("filesystem:" + folders + "/**/" + database.dialect()).target(version(step)).load()
         .migrate().migrationsExecuted;
   }
 
-  private static List<List<String>> query(Database.Location location, String sql) throws SQLException {
+  private List<List<String>> query(Database.Location location, String sql) throws SQLException {
     List<List<String>> rows = new ArrayList<>();
     try (Connection connection = location.connect();
         PreparedStatement statement = connection.prepareStatement(sql);
@@ -58,13 +58,13 @@ class ProtocMigrationTest {
     return rows;
   }
 
-  private static void execute(Database.Location location, String sql) throws SQLException {
+  private void execute(Database.Location location, String sql) throws SQLException {
     try (Connection connection = location.connect(); PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.executeUpdate();
     }
   }
 
-  private static List<String> columns(Database.Location location, String table) throws SQLException {
+  private List<String> columns(Database.Location location, String table) throws SQLException {
     List<String> columns = new ArrayList<>();
     try (Connection connection = location.connect();
         ResultSet result = connection.getMetaData()

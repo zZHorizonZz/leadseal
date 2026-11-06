@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package identity.v2;
+
+import "leadseal/v1/options.proto";
+
+message SmallCustomer {
+  option (leadseal.v1.table) = {name: "small_customers"};
+
+  int32 id = 1 [(leadseal.v1.column).primary_key = true];
+  string name = 2 [(leadseal.v1.column).text = {length: 20}];
+}
+
+message Customer {
+  option (leadseal.v1.table) = {name: "customers"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string name = 2 [(leadseal.v1.column).text = {length: 20}];
+}

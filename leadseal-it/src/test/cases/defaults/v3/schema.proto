@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package defaults.v3;
+
+import "leadseal/v1/options.proto";
+
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string created = 2 [(leadseal.v1.column).timestamp = {default_now: true}];
+  string day = 3 [(leadseal.v1.column).date = {default_today: true}];
+}

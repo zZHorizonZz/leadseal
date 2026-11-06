@@ -111,6 +111,7 @@ public record ForeignKey(String name, List<String> columns, TableName table, Lis
    * @param schema the schema of both tables
    * @throws SchemaException if the reference is invalid
    */
+  @Override
   public void validate(Table owner, Schema schema) {
     Table target = schema.table(table).orElseThrow(() -> new InvalidSchemaException("The foreign key '" + name + "'"
         + " references the table '" + table + "', which the schema does not have."));

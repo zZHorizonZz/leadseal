@@ -54,6 +54,7 @@ A message option of type `TableOptions`.
 | `check`       | `repeated CheckOptions`           | none                                                           | The check constraints of the table.                                                                  |
 | `foreign_key` | `repeated TableForeignKeyOptions` | none                                                           | The foreign keys with more than one column.                                                          |
 | `id`          | `string`                          | the full message name without the version parts of its package | The stable identity of the table. Refer to [About table identity](about-table-identity.md).          |
+| `trigger`     | `repeated TriggerOptions`         | none                                                           | The triggers of the table, in the order they run. Refer to [About triggers](about-triggers.md).      |
 
 On MariaDB, a database schema is a database.
 
@@ -87,17 +88,52 @@ Use SQL that all your databases understand.
 | `foreign_key[].on_update`  | `Action`          | `ACTION_NO_ACTION`                     | What happens to the row when the referenced key changes.                |
 | `foreign_key[].name`       | `string`          | `fk_<table>_<columns>`                 | The constraint name.                                                    |
 
+### `trigger[]`
+
+| Name                | Type                     | Default            | Description                                                                                       |
+| ------------------- | ------------------------ | ------------------ | ------------------------------------------------------------------------------------------------- |
+| `trigger[].name`    | `string`                 | none, required     | The trigger name, unique in its table.                                                            |
+| `trigger[].on`      | `repeated Event`         | none, at least one | The mutations that run the trigger.                                                               |
+| `trigger[].when`    | `string`                 | every row          | The condition that a row must meet to run the actions, as an expression such as `changed(state)`. |
+| `trigger[].actions` | `repeated ActionOptions` | none, at least one | The actions, in the order they run. Each has one of `insert`, `update`, `delete` and `assert`.    |
+
+### `trigger[].actions[]`
+
+| Name                | Type                  | Default        | Description                                                                                     |
+| ------------------- | --------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| `insert.message`    | `string`              | none           | The full name of the table message to write a row into, such as `shop.v1.OrderEvent`.           |
+| `insert.values`     | `map<string, string>` | none           | The value of each field of that row, by field name, as an expression such as `new.id`.          |
+| `update.message`    | `string`              | none           | The full name of the table message whose rows change, such as `shop.v1.Customer`.               |
+| `update.where`      | `string`              | none, required | The condition of the rows that change, such as `id == new.customer_id`.                         |
+| `update.set`        | `map<string, string>` | none           | The new value of each field that changes, by field name, as an expression such as `orders + 1`. |
+| `delete.message`    | `string`              | none           | The full name of the table message whose rows are deleted, such as `shop.v1.OrderEvent`.        |
+| `delete.where`      | `string`              | none, required | The condition of the rows that are deleted, such as `order_id == old.id`.                       |
+| `assert.expression` | `string`              | none           | The condition that every row must meet, as an expression such as `old.state != 'PAID'`.         |
+| `assert.message`    | `string`              | none           | The message of the error when the condition is false.                                           |
+
+In `update` and `delete`, a field name reads the other table, and `new.<field>` and `old.<field>` read the row of the trigger.
+
+### `Event`
+
+| Name           | Description         |
+| -------------- | ------------------- |
+| `EVENT_INSERT` | An insert of a row. |
+| `EVENT_UPDATE` | An update of a row. |
+| `EVENT_DELETE` | A delete of a row.  |
+
 ## Generated names
 
-| Object                   | Name                   |
-| ------------------------ | ---------------------- |
-| Primary key              | `pk_<table>`           |
-| Index                    | `ix_<table>_<columns>` |
-| Unique index             | `ux_<table>_<columns>` |
-| Foreign key              | `fk_<table>_<columns>` |
-| Check                    | `ck_<table>_<hash>`    |
-| Enum check               | `ck_<table>_<column>`  |
-| Enum type, on PostgreSQL | `<enum>`               |
-| Default, on SQL Server   | `df_<table>_<column>`  |
+| Object                                             | Name                    |
+| -------------------------------------------------- | ----------------------- |
+| Primary key                                        | `pk_<table>`            |
+| Index                                              | `ix_<table>_<columns>`  |
+| Unique index                                       | `ux_<table>_<columns>`  |
+| Foreign key                                        | `fk_<table>_<columns>`  |
+| Check                                              | `ck_<table>_<hash>`     |
+| Enum check                                         | `ck_<table>_<column>`   |
+| Enum type, on PostgreSQL                           | `<enum>`                |
+| Default, on SQL Server                             | `df_<table>_<column>`   |
+| Trigger of a mutation                              | `tg_<table>_<mutation>` |
+| Trigger of the rewrites, on PostgreSQL and MariaDB | `rw_<table>`            |
 
 A name longer than 63 characters is shortened, and ends with a hash of the full name.

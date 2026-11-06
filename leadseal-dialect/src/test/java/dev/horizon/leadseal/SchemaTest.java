@@ -37,56 +37,61 @@ class SchemaTest {
 
   static Stream<Arguments> invalid() {
     return Stream.of(
-        arguments("no primary key", call(() -> Table.of("t", "t", List.of(ID))), "has no primary key"),
-        arguments("nullable primary key", call(() -> Table.of("t", "t", List.of(Column.of("1", "id", BIGINT)), KEY)),
+        arguments("no primary key", (ThrowingCallable) () -> Table.of("t", "t", List.of(ID)), "has no primary key"),
+        arguments("nullable primary key",
+            (ThrowingCallable) () -> Table.of("t", "t", List.of(Column.of("1", "id", BIGINT)), KEY),
             "must not accept NULL"),
-        arguments("unknown primary key column", call(() -> Table.of("t", "t", List.of(ID),
-            PrimaryKey.of("t", List.of("other")))), "does not have"),
-        arguments("duplicate column name", call(() -> Table.of("t", "t", List.of(ID, Column.of("2", "id", INT)),
-            KEY)), "column name id twice"),
-        arguments("duplicate attribute", call(() -> Column.of("1", "id", BIGINT, NotNull.INSTANCE,
-            NotNull.INSTANCE)), "two attributes with the key"),
-        arguments("duplicate table name", call(() -> Schema.of(Table.of("a", "t", List.of(ID), KEY),
-            Table.of("b", "t", List.of(ID), KEY))), "has the table 't' twice"),
-        arguments("duplicate table id", call(() -> Schema.of(Namespace.defaults(Table.of("a", "t", List.of(ID), KEY)),
-            new Namespace("sales", List.of(Table.of("a", "u", List.of(ID), KEY))))), "table id 'a' twice"),
-        arguments("foreign key to a missing table", call(() -> Schema.of(Table.of("a", "a", List.of(ID),
+        arguments("unknown primary key column", (ThrowingCallable) () -> Table.of("t", "t", List.of(ID),
+            PrimaryKey.of("t", List.of("other"))), "does not have"),
+        arguments("duplicate column name", (ThrowingCallable) () -> Table.of("t", "t", List.of(ID, Column.of("2", "id", INT)),
+            KEY), "column name id twice"),
+        arguments("duplicate attribute", (ThrowingCallable) () -> Column.of("1", "id", BIGINT, NotNull.INSTANCE,
+            NotNull.INSTANCE), "two attributes with the key"),
+        arguments("duplicate table name", (ThrowingCallable) () -> Schema.of(Table.of("a", "t", List.of(ID), KEY),
+            Table.of("b", "t", List.of(ID), KEY)), "has the table 't' twice"),
+        arguments("duplicate table id",
+            (ThrowingCallable) () -> Schema.of(Namespace.defaults(Table.of("a", "t", List.of(ID), KEY)),
+                new Namespace("sales", List.of(Table.of("a", "u", List.of(ID), KEY)))),
+            "table id 'a' twice"),
+        arguments("foreign key to a missing table", (ThrowingCallable) () -> Schema.of(Table.of("a", "a", List.of(ID),
             PrimaryKey.of("a", List.of("id")), ForeignKey.of("a", List.of("id"),
-                TableName.of("missing"), List.of("id"), ForeignKey.Action.CASCADE)))),
-            "does not have"),
-        arguments("set null on a required column", call(() -> Table.of("a", "a", List.of(ID, Column.of("2", "b_id",
-            BIGINT, NotNull.INSTANCE)), PrimaryKey.of("a", List.of("id")),
-            ForeignKey.of("a", List.of("b_id"), TableName.of("b"), List.of("id"),
-                ForeignKey.Action.SET_NULL))),
+                TableName.of("missing"), List.of("id"), ForeignKey.Action.CASCADE))),
+            "The foreign key 'fk_a_id' references the table 'missing'"),
+        arguments("set null on a required column",
+            (ThrowingCallable) () -> Table.of("a", "a", List.of(ID, Column.of("2", "b_id",
+                BIGINT, NotNull.INSTANCE)), PrimaryKey.of("a", List.of("id")),
+                ForeignKey.of("a", List.of("b_id"), TableName.of("b"), List.of("id"),
+                    ForeignKey.Action.SET_NULL)),
             "does not accept NULL"),
-        arguments("foreign key with another type", call(() -> Schema.of(
+        arguments("foreign key with another type", (ThrowingCallable) () -> Schema.of(
             Table.of("a", "a", List.of(ID, Column.of("2", "b_id", INT, NotNull.INSTANCE)),
                 PrimaryKey.of("a", List.of("id")), ForeignKey.of("a", List.of("b_id"),
                     TableName.of("b"), List.of("id"), ForeignKey.Action.CASCADE)),
-            Table.of("b", "b", List.of(ID), PrimaryKey.of("b", List.of("id"))))),
+            Table.of("b", "b", List.of(ID), PrimaryKey.of("b", List.of("id")))),
             "The types must be the same"),
-        arguments("identity outside the primary key", call(() -> Table.of("t", "t", List.of(ID, Column.of("2", "n",
-            INT, NotNull.INSTANCE, Identity.INSTANCE)), KEY)),
+        arguments("identity outside the primary key",
+            (ThrowingCallable) () -> Table.of("t", "t", List.of(ID, Column.of("2", "n",
+                INT, NotNull.INSTANCE, Identity.INSTANCE)), KEY),
             "must be the only column of the primary key"),
-        arguments("identity on text", call(() -> Column.of("1", "id", TextType.unlimited(), NotNull.INSTANCE,
-            Identity.INSTANCE)), "must be an integer column"),
-        arguments("scale above precision", call(() -> new DecimalType(4, 5)), "between 0 and its precision"),
-        arguments("default of another type", call(() -> Column.of("1", "n", INT, new LiteralDefault(
-            "many"))), "is not a value of its type"),
-        arguments("integer default out of range", call(() -> Column.of("1", "n", INT, new LiteralDefault(
-            "3000000000"))), "is not a value of its type"),
-        arguments("current time on a number", call(() -> Column.of("1", "n", INT, new NowDefault())),
+        arguments("identity on text", (ThrowingCallable) () -> Column.of("1", "id", TextType.unlimited(), NotNull.INSTANCE,
+            Identity.INSTANCE), "must be an integer column"),
+        arguments("scale above precision", (ThrowingCallable) () -> new DecimalType(4, 5), "between 0 and its precision"),
+        arguments("default of another type", (ThrowingCallable) () -> Column.of("1", "n", INT, new LiteralDefault(
+            "many")), "is not a value of its type"),
+        arguments("integer default out of range", (ThrowingCallable) () -> Column.of("1", "n", INT, new LiteralDefault(
+            "3000000000")), "is not a value of its type"),
+        arguments("current time on a number", (ThrowingCallable) () -> Column.of("1", "n", INT, new NowDefault()),
             "only timestamp and date columns"),
-        arguments("random uuid on text", call(() -> Column.of("1", "n", TextType.unlimited(),
-            new RandomUuidDefault())), "only UUID columns"),
-        arguments("invalid json default", call(() -> Column.of("1", "n", new JsonType(), new LiteralDefault(
-            "{"))), "is not a value of its type"),
-        arguments("collation on a number", call(() -> Column.of("1", "n", INT, new Collation("postgresql",
-            "C"))), "only text columns"),
-        arguments("descending column outside the index", call(() -> Index.of("t", List.of("a"), false)
-            .withDescending(List.of("b"))), "does not index it"),
-        arguments("duplicate check name", call(() -> Table.of("t", "t", List.of(ID), KEY,
-            new Check("ck", "id > 0"), new Check("ck", "id < 9"))), "twice"));
+        arguments("random uuid on text", (ThrowingCallable) () -> Column.of("1", "n", TextType.unlimited(),
+            new RandomUuidDefault()), "only UUID columns"),
+        arguments("invalid json default", (ThrowingCallable) () -> Column.of("1", "n", new JsonType(), new LiteralDefault(
+            "{")), "is not a value of its type"),
+        arguments("collation on a number", (ThrowingCallable) () -> Column.of("1", "n", INT, new Collation("postgresql",
+            "C")), "only text columns"),
+        arguments("descending column outside the index", (ThrowingCallable) () -> Index.of("t", List.of("a"), false)
+            .withDescending(List.of("b")), "does not index it"),
+        arguments("duplicate check name", (ThrowingCallable) () -> Table.of("t", "t", List.of(ID), KEY,
+            new Check("ck", "id > 0"), new Check("ck", "id < 9")), "twice"));
   }
 
   @ParameterizedTest(name = "({0})", quoteTextArguments = false)
@@ -114,9 +119,5 @@ class SchemaTest {
 
     assertThat(index.name()).hasSize(63).startsWith("ix_" + table);
     assertThat(Index.of(table, List.of("first_column_name", "second_column_name"), false)).isEqualTo(index);
-  }
-
-  private static ThrowingCallable call(ThrowingCallable call) {
-    return call;
   }
 }

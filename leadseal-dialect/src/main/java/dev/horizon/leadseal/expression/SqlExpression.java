@@ -37,7 +37,8 @@ import java.util.stream.Collectors;
     @JsonSubTypes.Type(value = Logic.class, name = "logic"),
     @JsonSubTypes.Type(value = IsNull.class, name = "is_null"),
     @JsonSubTypes.Type(value = In.class, name = "in"),
-    @JsonSubTypes.Type(value = ColumnChange.class, name = "change")
+    @JsonSubTypes.Type(value = ColumnChange.class, name = "change"),
+    @JsonSubTypes.Type(value = ForeignColumn.class, name = "foreign")
 })
 public sealed interface SqlExpression permits Condition, Value {
 
@@ -109,6 +110,15 @@ public sealed interface SqlExpression permits Condition, Value {
   default Set<ColumnReference> columns() {
     return operands().stream().flatMap(operand -> operand.columns().stream())
         .collect(Collectors.toCollection(LinkedHashSet::new));
+  }
+
+  /**
+   * Gives the columns of other tables that this expression reads.
+   *
+   * @return the columns, in the order the expression reads them
+   */
+  default List<ForeignColumn> foreignColumns() {
+    return operands().stream().flatMap(operand -> operand.foreignColumns().stream()).toList();
   }
 
   /**
