@@ -35,7 +35,7 @@ public interface TestDatabase {
     }
   }
 
-  private static String blank(String text) {
+  private String blank(String text) {
     return text == null || text.isEmpty() ? null : text;
   }
 

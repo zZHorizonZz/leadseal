@@ -32,12 +32,9 @@ public abstract class ScriptContractTest extends ContractTest {
     Dialect dialect = database.dialect();
     Schema schema = schema();
     ScriptWriter sql = new ScriptWriter(dialect, schema, schema);
-    insert(sql, 1).render(database.trigger(ITEMS, LOG)).end();
-    return insert(sql, 2);
-  }
-
-  private static ScriptWriter insert(ScriptWriter sql, int id) {
-    return sql.append("INSERT INTO ").table(ITEMS).append(" (").name("id").append(") VALUES (" + id + ")").end();
+    sql.append("INSERT INTO ").table(ITEMS).append(" (").name("id").append(") VALUES (1)").end();
+    sql.render(database.trigger(ITEMS, LOG)).end();
+    return sql.append("INSERT INTO ").table(ITEMS).append(" (").name("id").append(") VALUES (2)").end();
   }
 
   @Test

@@ -30,7 +30,7 @@ public abstract class ScriptParserTest {
     return statements;
   }
 
-  private static String trim(String statement) {
+  private String trim(String statement) {
     String sql = statement.strip();
     return sql.endsWith(";") ? sql.substring(0, sql.length() - 1).strip() : sql;
   }

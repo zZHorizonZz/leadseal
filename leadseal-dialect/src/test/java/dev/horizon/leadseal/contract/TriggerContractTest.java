@@ -235,6 +235,30 @@ public abstract class TriggerContractTest extends ContractTest {
   }
 
   @Test
+  @DisplayName("Keeps the triggers working after a migration rebuilds their table and drops a column that they wrote")
+  void changeBoth() throws SQLException {
+    apply(shop(true));
+
+    Table events = table("shop.OrderEvent", "order_events", List.of(ID.with(Identity.INSTANCE), column("2", "order_id",
+        BIGINT), nullable("3", "state", TextType.of(20))), "id");
+    Triggers triggers = triggers("order_events");
+    Triggers smaller = new Triggers(triggers.rewrites(), triggers.triggers().stream().map(trigger -> trigger.name()
+        .equals("log")
+            ? new Trigger("log", trigger.on(), trigger.when(), List.of(new Trigger.Insert(TableName.of(
+                "order_events"),
+                List.of(new Trigger.Assignment("order_id", ColumnReference.of("id")),
+                    new Trigger.Assignment("state", ColumnReference.of("state"))))))
+            : trigger)
+        .toList());
+    apply(schema(authors(), events, orders(text("2", "state", 40), "order_events", false).with(smaller)));
+    insert(1, "NEW");
+    execute("UPDATE " + q("orders") + " SET " + q("state") + " = ?", "PAID");
+
+    assertThat(query("SELECT " + q("state") + " FROM " + q("order_events") + " ORDER BY " + q("id")))
+        .containsExactly(List.of("NEW"), List.of("PAID"));
+  }
+
+  @Test
   @DisplayName("Keeps the triggers working after a migration changes the type of a column")
   void changeType() throws SQLException {
     apply(shop(true));

@@ -128,12 +128,14 @@ class SqlServerDialectTest {
                 CREATE TRIGGER [tg_posts_insert] ON [posts] AFTER INSERT AS
                 BEGIN
                   SET NOCOUNT ON;
+                  IF TRIGGER_NESTLEVEL(@@PROCID) > 1 RETURN;
                   IF EXISTS (SELECT 1 FROM [posts] AS [t] JOIN inserted AS [i] ON [t].[id] = [i].[id] WHERE (NOT ((SELECT [r].[active] FROM [authors] AS [r] WHERE [r].[id] = [t].[author_id]) = 1))) THROW 50000, N'The author is not active.', 1;
                 END""",
             """
                 CREATE TRIGGER [tg_posts_update] ON [posts] AFTER UPDATE AS
                 BEGIN
                   SET NOCOUNT ON;
+                  IF TRIGGER_NESTLEVEL(@@PROCID) > 1 RETURN;
                   UPDATE [t] SET [slug] = LOWER([t].[title]), [revision] = ([d].[revision] + 1) FROM [posts] AS [t] JOIN inserted AS [i] ON [t].[id] = [i].[id] LEFT JOIN deleted AS [d] ON [t].[id] = [d].[id];
                   UPDATE [t] SET [label] = UPPER([t].[slug]) FROM [posts] AS [t] JOIN inserted AS [i] ON [t].[id] = [i].[id] LEFT JOIN deleted AS [d] ON [t].[id] = [d].[id];
                   INSERT INTO [post_events] ([post_id], [title]) SELECT [t].[id], [d].[title] FROM [posts] AS [t] JOIN inserted AS [i] ON [t].[id] = [i].[id] LEFT JOIN deleted AS [d] ON [t].[id] = [d].[id] WHERE (([d].[title] <> [t].[title]) OR ([d].[title] IS NULL AND [t].[title] IS NOT NULL) OR ([d].[title] IS NOT NULL AND [t].[title] IS NULL));
@@ -142,6 +144,7 @@ class SqlServerDialectTest {
                 CREATE TRIGGER [tg_posts_delete] ON [posts] AFTER DELETE AS
                 BEGIN
                   SET NOCOUNT ON;
+                  IF TRIGGER_NESTLEVEL(@@PROCID) > 1 RETURN;
                   IF EXISTS (SELECT 1 FROM deleted AS [d] WHERE (NOT ([d].[revision] = 0))) THROW 50000, N'Revised posts stay.', 1;
                 END""");
     assertThat(new ScriptWriter(new SqlServerDialect(), after, before).write(after.changesTo(before)).statements())

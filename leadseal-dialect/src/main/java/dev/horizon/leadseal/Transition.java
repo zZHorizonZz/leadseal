@@ -15,8 +15,8 @@ public final class Transition {
 
   private final Schema origin;
   private final Schema target;
-  private final Map<String, TableName> originNames;
-  private final Map<String, TableName> targetNames;
+  private final Tables originTables;
+  private final Tables targetTables;
 
   /**
    * Creates the migration from one schema to another.
@@ -27,8 +27,8 @@ public final class Transition {
   public Transition(Schema origin, Schema target) {
     this.origin = Objects.requireNonNull(origin, "origin");
     this.target = Objects.requireNonNull(target, "target");
-    this.originNames = names(origin);
-    this.targetNames = names(target);
+    this.originTables = new Tables(origin);
+    this.targetTables = new Tables(target);
   }
 
   /**
@@ -57,7 +57,7 @@ public final class Transition {
    * @throws IllegalArgumentException if the origin schema has no table of the name
    */
   public Optional<TableName> targetName(TableName table) {
-    return Optional.ofNullable(targetNames.get(originDefinition(table).id()));
+    return targetTables.name(originDefinition(table).id());
   }
 
   /**
@@ -73,7 +73,7 @@ public final class Transition {
     Table definition = originDefinition(table);
     String id = definition.column(column).orElseThrow(() -> new IllegalArgumentException("The origin table " + table
         + " has no column " + column + ".")).id();
-    return tableById(target, targetNames, definition.id()).flatMap(targetTable -> targetTable.columnById(id)).map(Column::name);
+    return targetTables.table(definition.id()).flatMap(targetTable -> targetTable.columnById(id)).map(Column::name);
   }
 
   /**
@@ -121,14 +121,23 @@ public final class Transition {
         + "."));
   }
 
-  private static Map<String, TableName> names(Schema schema) {
-    Map<String, TableName> names = new HashMap<>();
-    schema.names().forEach(name -> names.put(schema.table(name).orElseThrow().id(), name));
-    return names;
-  }
+  private static final class Tables {
 
-  private static Optional<Table> tableById(Schema schema, Map<String, TableName> names, String id) {
-    return Optional.ofNullable(names.get(id)).flatMap(schema::table);
+    private final Schema schema;
+    private final Map<String, TableName> names = new HashMap<>();
+
+    Tables(Schema schema) {
+      this.schema = schema;
+      schema.names().forEach(name -> names.put(schema.table(name).orElseThrow().id(), name));
+    }
+
+    Optional<TableName> name(String id) {
+      return Optional.ofNullable(names.get(id));
+    }
+
+    Optional<Table> table(String id) {
+      return name(id).flatMap(schema::table);
+    }
   }
 
   /**
@@ -152,7 +161,7 @@ public final class Transition {
      * @return the table, or empty if the migration creates it
      */
     public Optional<Table> origin() {
-      return tableById(transition.origin, transition.originNames, id);
+      return transition.originTables.table(id);
     }
 
     /**
@@ -161,7 +170,7 @@ public final class Transition {
      * @return the table, or empty if the migration drops it
      */
     public Optional<Table> target() {
-      return tableById(transition.target, transition.targetNames, id);
+      return transition.targetTables.table(id);
     }
 
     /**
@@ -171,7 +180,7 @@ public final class Transition {
      * @throws InvalidSchemaException if the migration creates the table
      */
     public TableName originName() {
-      return Optional.ofNullable(transition.originNames.get(id)).orElseThrow(() -> new InvalidSchemaException("The table "
+      return transition.originTables.name(id).orElseThrow(() -> new InvalidSchemaException("The table "
           + name + " is not in the schema before the migration."));
     }
 

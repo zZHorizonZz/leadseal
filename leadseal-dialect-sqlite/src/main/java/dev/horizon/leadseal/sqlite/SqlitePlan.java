@@ -43,7 +43,6 @@ record SqlitePlan(SqliteDdl ddl, List<Change> changes, Transition transition) im
     all.addAll(typeCommands);
     List<ChangeCommands> remaining = changeCommands.stream().filter(change -> !tableRebuilds.contains(change.tableRebuild()))
         .filter(change -> !change.addsTriggers() || !dependents.contains(change.tableRebuild().id())).toList();
-    remaining.forEach(change -> all.addAll(change.commands()));
     Set<String> drops = remaining.stream().filter(ChangeCommands::dropsTriggers).map(change -> change.tableRebuild().id())
         .collect(Collectors.toSet());
     for (TableName name : transition.origin().names()) {
@@ -53,6 +52,7 @@ record SqlitePlan(SqliteDdl ddl, List<Change> changes, Transition transition) im
             new TableTransition(transition, name, table.id()), triggers)));
       }
     }
+    remaining.forEach(change -> all.addAll(change.commands()));
     transition.target().names().stream()
         .map(name -> new SqliteRebuild(ddl, transition, transition.target().table(name).orElseThrow().id()))
         .filter(tableRebuilds::contains).forEach(all::add);

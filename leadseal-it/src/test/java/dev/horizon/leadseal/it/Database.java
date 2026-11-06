@@ -69,7 +69,7 @@ enum Database {
     return new Location(url, container.getUsername(), container.getPassword());
   }
 
-  private static Path file(String name) {
+  private Path file(String name) {
     try {
       Path file = Files.createTempFile(name, ".db");
       file.toFile().deleteOnExit();

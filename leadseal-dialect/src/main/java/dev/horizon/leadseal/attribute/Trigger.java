@@ -135,6 +135,14 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
     Optional<TableName> writes();
 
     /**
+     * Gives the mutation that this action runs on the rows of the table of {@link #writes()}, which runs the triggers
+     * of that table on the mutation.
+     *
+     * @return the mutation, or empty for an action that writes no row
+     */
+    Optional<Mutation> mutation();
+
+    /**
      * Gives the columns of the table of {@link #writes()} that this action writes or reads.
      *
      * @return the names of the columns, or none for an action that writes no row
@@ -195,6 +203,11 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
     }
 
     @Override
+    public Optional<Mutation> mutation() {
+      return Optional.of(Mutation.INSERT);
+    }
+
+    @Override
     public Set<String> columns() {
       return values.stream().map(Assignment::column).collect(Collectors.toCollection(LinkedHashSet::new));
     }
@@ -219,6 +232,7 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
           throw new InvalidSchemaException("A trigger of the table " + owner + " writes the column " + table + "."
               + value.column() + ", which the table does not have.");
         }
+        new Target(table).refuseIdentity(owner, target.column(value.column()).orElseThrow());
         if (!columns.add(value.column())) {
           throw new InvalidSchemaException("A trigger of the table " + owner + " writes the column " + table + "."
               + value.column() + " twice.");
@@ -264,6 +278,11 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
     }
 
     @Override
+    public Optional<Mutation> mutation() {
+      return Optional.of(Mutation.UPDATE);
+    }
+
+    @Override
     public Set<String> columns() {
       Set<String> all = values.stream().map(Assignment::column).collect(Collectors.toCollection(LinkedHashSet::new));
       all.addAll(new Target(table).reads(expressions()));
@@ -291,6 +310,7 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
           throw new InvalidSchemaException("A trigger of the table " + owner + " changes the column " + table + "."
               + value.column() + ", which the table does not have or which it changes twice.");
         }
+        target.refuseIdentity(owner, destination.column(value.column()).orElseThrow());
       }
     }
   }
@@ -317,6 +337,11 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
     @Override
     public Optional<TableName> writes() {
       return Optional.of(table);
+    }
+
+    @Override
+    public Optional<Mutation> mutation() {
+      return Optional.of(Mutation.DELETE);
     }
 
     @Override
@@ -368,6 +393,11 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
     }
 
     @Override
+    public Optional<Mutation> mutation() {
+      return Optional.empty();
+    }
+
+    @Override
     public Set<String> columns() {
       return Set.of();
     }
@@ -407,6 +437,13 @@ public record Trigger(String name, List<Mutation> on, SqlExpression when, List<A
    * @param name the name of the other table
    */
   private record Target(TableName name) {
+
+    void refuseIdentity(TableName owner, Column column) {
+      if (column.attribute(Identity.class).isPresent()) {
+        throw new InvalidSchemaException("A trigger of the table " + owner + " writes the column " + name + "."
+            + column.name() + ", which is an identity column. The database writes its values, so leave it out.");
+      }
+    }
 
     Table table(TableName owner, Schema schema) {
       if (name.equals(owner)) {

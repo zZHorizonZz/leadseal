@@ -61,7 +61,7 @@ class SqliteDialectTest {
     return new ScriptWriter(new SqliteDialect(), before, after).write(before.changesTo(after));
   }
 
-  private static void run(Statement statement, ScriptWriter script) throws SQLException {
+  private void run(Statement statement, ScriptWriter script) throws SQLException {
     for (String sql : script.statements()) {
       statement.execute(sql);
     }

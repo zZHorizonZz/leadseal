@@ -28,11 +28,11 @@ final class MessageCatalog {
     return tables.values().stream().filter(table -> table.name().equals(name)).findFirst();
   }
 
-  TableMessage table(String name, String origin) {
+  TableMessage table(String name, String reference) {
     TableMessage message = tables.get(name);
     if (message == null) {
-      throw new InvalidSchemaException("The foreign key of " + origin + " references " + name + ", which is not a table"
-          + " message. Use the full message name of a message with the (leadseal.v1.table) option.");
+      throw new InvalidSchemaException(reference + " references " + name + ", which is not a table message. Use the"
+          + " full message name of a message with the (leadseal.v1.table) option.");
     }
     return message;
   }

@@ -269,7 +269,7 @@ public abstract class ContractTest {
     return connection.getMetaData();
   }
 
-  private static String lower(String name) {
+  private String lower(String name) {
     return name == null ? null : name.toLowerCase(Locale.ROOT);
   }
 }

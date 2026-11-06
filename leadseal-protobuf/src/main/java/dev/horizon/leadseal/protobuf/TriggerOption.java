@@ -28,7 +28,6 @@ record TriggerOption(TriggerOptions options, String message) {
           + " action. Set actions to insert, update, delete or assert actions.");
     }
     Set<Row> rows = EnumSet.allOf(Row.class);
-    on.forEach(mutation -> rows.retainAll(mutation.rows()));
     SqlExpression when = options.getWhen().isBlank() ? Trigger.ALWAYS
         : expressions.parse(options.getWhen(), rows,
             new BooleanType());
@@ -49,19 +48,22 @@ record TriggerOption(TriggerOptions options, String message) {
   }
 
   private Trigger.Insert insert(InsertAction insert, CelTable expressions, MessageCatalog catalog, Set<Row> rows) {
-    TableMessage target = catalog.table(insert.getMessage(), message);
+    TableMessage target = catalog.table(insert.getMessage(), "An insert of the trigger "
+        + options.getName() + " of " + message);
     return new Trigger.Insert(target.name(), values(target, insert.getValuesMap(), expressions, rows));
   }
 
   private Trigger.Update update(UpdateAction update, CelTable expressions, MessageCatalog catalog, Set<Row> rows) {
-    TableMessage target = catalog.table(update.getMessage(), message);
+    TableMessage target = catalog.table(update.getMessage(), "An update of the trigger "
+        + options.getName() + " of " + message);
     CelTable destination = expressions.target(target.shape(), target.fields());
     return new Trigger.Update(target.name(), where(update.getWhere(), destination, rows), values(target, update.getSetMap(),
         destination, rows));
   }
 
   private Trigger.Delete delete(DeleteAction delete, CelTable expressions, MessageCatalog catalog, Set<Row> rows) {
-    TableMessage target = catalog.table(delete.getMessage(), message);
+    TableMessage target = catalog.table(delete.getMessage(), "A delete of the trigger "
+        + options.getName() + " of " + message);
     return new Trigger.Delete(target.name(), where(delete.getWhere(), expressions.target(target.shape(), target
         .fields()), rows));
   }

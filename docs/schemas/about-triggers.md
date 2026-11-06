@@ -58,6 +58,7 @@ An `assert` that fails stops the mutation, and the database rolls back what the 
 In an `update` or a `delete`, a field name reads the row of the other table, and `new.<field>` and `old.<field>` read the row of the trigger.
 In `where: "id == old.customer_id"`, `id` is the id of the customer, and `old.customer_id` is the customer of the deleted order.
 An `update` or a `delete` needs a `where`, so that it never changes every row of the other table by accident.
+An `insert` or an `update` cannot write an identity column, because the database writes its values.
 
 A trigger cannot change its own table.
 To change the values of the row that a mutation writes, use a rewrite.
@@ -92,7 +93,9 @@ The triggers of a mutation run in the order of the table option.
 An `assert` that fails stops the mutation, and the database rolls back the rows that it changed.
 
 An action that writes the rows of another table runs the triggers of that table.
-Triggers that write in a loop, such as an order that writes an event whose trigger changes an order, stop the build.
+An `insert` runs the insert triggers of the other table, an `update` its update triggers, and a `delete` its delete triggers.
+Triggers that write in a loop, such as an insert of an order that writes an event whose insert trigger updates the order, stop the build.
+Triggers that only write each other's tables on other mutations, such as a delete of an author that deletes its posts and an insert of a post that updates its author, can never run each other, so they are fine.
 
 ## How the database writes a trigger
 
@@ -113,7 +116,8 @@ PostgreSQL runs the triggers of a row at the end of the statement, and SQL Serve
 On SQL Server, an `update` or a `delete` runs once for each row of the statement, so two inserted lines of one order count two, as on the other databases.
 MariaDB and SQLite run them after each row, so a trigger that reads other rows of its table during a statement that changes many rows reads them partly changed.
 
-A migration that renames a column or a table that the triggers read or write, or that changes the primary key, drops the database triggers and creates them again.
+A migration that renames a column or a table that the triggers read or write, changes the primary key, or changes a column of the table, drops the database triggers before its other statements and creates them again after them.
+So the statements of the migration, such as the update that fills a column that becomes NOT NULL, run no trigger.
 Refer to [About database differences](../dialects/about-database-differences.md).
 
 ## Related

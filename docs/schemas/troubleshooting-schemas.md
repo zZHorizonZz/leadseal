@@ -281,6 +281,19 @@ Refer to [About rewrites](about-rewrites.md).
 
 **Verify**: The build writes no error.
 
+## A trigger of the table ... writes the column ..., which is an identity column.
+
+```text
+--leadseal_out: Migration generation failed: The trigger orders.archive is not valid. A trigger of the table orders writes the column order_archives.id, which is an identity column. The database writes its values, so leave it out.
+```
+
+**Cause**: An `insert` or an `update` of a trigger sets a column whose values the database generates.
+SQL Server refuses such a write, so the trigger would fail on every mutation.
+
+**Fix**: Remove the field from the `values` or the `set` of the action.
+
+**Verify**: The build writes no error.
+
 ## The trigger ... of the message ... has no action.
 
 ```text

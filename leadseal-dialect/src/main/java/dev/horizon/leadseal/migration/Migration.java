@@ -14,7 +14,7 @@ import java.util.List;
 record Migration(Version version, String name, @JsonProperty("from") SchemaHash origin,
     @JsonProperty("to") SchemaHash target, String created, List<Change> changes) {
 
-  private static final String FILE = "migration.json";
+  static final String FILE = "migration.json";
 
   Migration {
     origin = origin == null ? SchemaHash.INITIAL : origin;
@@ -26,16 +26,12 @@ record Migration(Version version, String name, @JsonProperty("from") SchemaHash 
   }
 
   static Migration read(Path folder, MigrationJson json) {
-    Migration migration = json.read(file(folder), Migration.class);
+    Migration migration = json.read(folder.resolve(FILE), Migration.class);
     if (!folder.getFileName().equals(migration.folder())) {
       throw new BrokenHistoryException("The migration folder " + folder.getFileName() + " has the migration "
           + migration.folder() + ". Rename the folder to " + migration.folder() + ".");
     }
     return migration;
-  }
-
-  static Path file(Path folder) {
-    return folder.resolve(FILE);
   }
 
   Path folder() {
@@ -58,7 +54,7 @@ record Migration(Version version, String name, @JsonProperty("from") SchemaHash 
   }
 
   MigrationFile file(MigrationJson json) {
-    return new MigrationFile(file(folder()), json.write(this));
+    return new MigrationFile(folder().resolve(FILE), json.write(this));
   }
 
   Path script(Dialect dialect) {

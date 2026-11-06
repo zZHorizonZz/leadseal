@@ -128,10 +128,10 @@ public record Triggers(List<Rewrite> rewrites, List<Trigger> triggers) implement
    * Tells if a mutation runs the rewrites.
    *
    * @param mutation the mutation
-   * @return true if this attribute has rewrites and the mutation is {@link Rewrite#MUTATION}
+   * @return true if this attribute has rewrites and the mutation is an update
    */
   public boolean rewrites(Mutation mutation) {
-    return !rewrites.isEmpty() && mutation == Rewrite.MUTATION;
+    return !rewrites.isEmpty() && mutation == Mutation.UPDATE;
   }
 
   /**
@@ -220,32 +220,49 @@ public record Triggers(List<Rewrite> rewrites, List<Trigger> triggers) implement
             + invalid.getMessage(), invalid);
       }
     }
-    loop(name, schema, new ArrayList<>(List.of(name.toString())));
-  }
-
-  private void loop(TableName start, Schema schema, List<String> path) {
-    for (Trigger trigger : triggers) {
-      Set<TableName> targets = trigger.actions().stream().flatMap(action -> action.writes().stream())
-          .collect(Collectors.toCollection(LinkedHashSet::new));
-      for (TableName target : targets) {
-        List<String> chain = new ArrayList<>(path);
-        chain.set(chain.size() - 1, chain.getLast() + "." + trigger.name());
-        chain.add(target.toString());
-        if (target.equals(start)) {
-          throw new InvalidSchemaException("The triggers write in a loop: " + String.join(" -> ", chain) + ". A"
-              + " trigger that writes a row runs the triggers of that table, so the loop would never end.");
-        }
-        if (path.size() <= schema.names().size()) {
-          schema.table(target).flatMap(table -> table.attribute(Triggers.class))
-              .ifPresent(attribute -> attribute.loop(start, schema, chain));
-        }
-      }
-    }
+    Set<Node> visits = new HashSet<>();
+    mutations().forEach(mutation -> new Node(name, mutation).visit(schema, new ArrayList<>(), new ArrayList<>(), visits));
   }
 
   private Stream<SqlExpression> expressions() {
     return Stream.concat(rewrites.stream().map(Rewrite::expression), triggers.stream()
         .flatMap(trigger -> trigger.expressions().stream()));
+  }
+
+  /**
+   * A mutation of the rows of a table, which runs the triggers of the table on that mutation, and so the mutations of
+   * the tables that their actions write.
+   *
+   * @param table the name of the table
+   * @param mutation the mutation
+   */
+  private record Node(TableName table, Mutation mutation) {
+
+    void visit(Schema schema, List<Node> stack, List<String> path, Set<Node> visits) {
+      if (visits.contains(this)) {
+        return;
+      }
+      int start = stack.indexOf(this);
+      if (start >= 0) {
+        throw new InvalidSchemaException("The triggers write in a loop: " + String.join(" -> ", path.subList(start,
+            path.size())) + " -> " + table + ". A trigger that writes a row runs the triggers of that table, so the"
+            + " loop would never end.");
+      }
+      stack.add(this);
+      schema.table(table).flatMap(owner -> owner.attribute(Triggers.class)).ifPresent(attribute -> {
+        for (Trigger trigger : attribute.triggers(mutation)) {
+          for (Trigger.Action action : trigger.actions()) {
+            action.writes().ifPresent(target -> action.mutation().ifPresent(write -> {
+              path.add(table + "." + trigger.name());
+              new Node(target, write).visit(schema, stack, path, visits);
+              path.removeLast();
+            }));
+          }
+        }
+      });
+      stack.removeLast();
+      visits.add(this);
+    }
   }
 
   @Override
@@ -271,7 +288,7 @@ public record Triggers(List<Rewrite> rewrites, List<Trigger> triggers) implement
         target -> tables.computeIfAbsent(target, _ -> new LinkedHashSet<>()).addAll(action.columns())));
     tables.computeIfAbsent(table, _ -> new LinkedHashSet<>()).addAll(reads);
     boolean same = transition.targetName(table).flatMap(name -> transition.target().table(name))
-        .filter(target -> key(target).equals(key(origin))).isPresent()
+        .filter(target -> key(target).equals(key(origin)) && target.columns().equals(origin.columns())).isPresent()
         && tables.entrySet().stream().allMatch(entry -> same(transition, entry.getKey(), entry.getValue()));
     return same ? Optional.of(this) : Optional.empty();
   }

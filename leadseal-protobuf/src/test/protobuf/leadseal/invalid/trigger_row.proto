@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package leadseal.invalid;
+
+import "leadseal/v1/options.proto";
+
+option java_multiple_files = true;
+option java_package = "dev.horizon.leadseal.protobuf.invalid.row";
+
+message TriggerRow {
+  option (leadseal.v1.table) = {
+    trigger: {
+      name: "keep"
+      on: [EVENT_INSERT]
+      actions: [{assert: {expression: "old.state != 'PAID'", message: "Paid rows stay."}}]
+    }
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string state = 2;
+}

@@ -174,8 +174,17 @@ class TriggersTest {
                 TextType.unlimited(), NotNull.INSTANCE))),
             "without the column kind"),
         arguments("triggers that write in a loop", List.of(posts(ID, TITLE).with(new Triggers(List.of(), List.of(
-            LOG))), events().with(new Triggers(List.of(), List.of(back)))),
-            "write in a loop: posts.log -> post_events.back -> posts"),
+            copy()))), events().with(new Triggers(List.of(), List.of(back)))),
+            "write in a loop: posts.copy -> post_events.back -> posts"),
+        arguments("an identity column in an insert", List.of(posts(ID, TITLE).with(new Triggers(List.of(), List.of(
+            action("archive", Mutation.INSERT, new Trigger.Insert(EVENTS, List.of(new Trigger.Assignment("id",
+                ColumnReference.of("id")), new Trigger.Assignment("post_id", ColumnReference.of("id")))))))),
+            events()),
+            "post_events.id, which is an identity column"),
+        arguments("an identity column in an update", List.of(posts(ID, TITLE).with(new Triggers(List.of(), List.of(
+            action("touch", Mutation.INSERT, new Trigger.Update(EVENTS, Trigger.ALWAYS, List.of(new Trigger.Assignment(
+                "id", new ColumnReference("id", Row.NEW)))))))),
+            events()), "post_events.id, which is an identity column"),
         arguments("a read of a table the schema does not have", List.of(posts(ID, TITLE, AUTHOR).with(new Triggers(
             List.of(), List.of(author)))), "reads the table authors"),
         arguments("an update of its own table", List.of(posts(ID, TITLE).with(new Triggers(List.of(), List.of(
@@ -200,6 +209,11 @@ class TriggersTest {
             "write in a loop: posts.log -> post_events.touch -> posts"));
   }
 
+  private static Trigger copy() {
+    return action("copy", Mutation.INSERT, new Trigger.Insert(EVENTS, List.of(new Trigger.Assignment("post_id",
+        ColumnReference.of("id")))));
+  }
+
   private static Trigger action(String name, Mutation mutation, Trigger.Action action) {
     return new Trigger(name, List.of(mutation), Trigger.ALWAYS, List.of(action));
   }
@@ -215,6 +229,46 @@ class TriggersTest {
   void refuseSchema(String reason, List<Table> tables, String message) {
     assertThatThrownBy(() -> Schema.of(tables.toArray(Table[]::new))).isInstanceOf(InvalidSchemaException.class)
         .hasMessageContaining(message);
+  }
+
+  @Test
+  @DisplayName("Accepts triggers that write each other's tables on mutations that do not run each other")
+  void acceptCrossedMutations() {
+    Trigger purge = action("purge", Mutation.DELETE, new Trigger.Delete(EVENTS, new Comparison(
+        Comparison.Operator.EQUALS, ColumnReference.of("post_id"), new ColumnReference("id", Row.OLD))));
+    Trigger count = action("count", Mutation.INSERT, new Trigger.Update(POSTS, new Comparison(
+        Comparison.Operator.EQUALS, ColumnReference.of("id"), new ColumnReference("post_id", Row.NEW)),
+        List.of(
+            new Trigger.Assignment("title", ColumnReference.of("title")))));
+
+    assertThat(Schema.of(posts(ID, TITLE).with(new Triggers(List.of(), List.of(purge))), events().with(new Triggers(
+        List.of(), List.of(count)))).names()).hasSize(2);
+  }
+
+  @Test
+  @DisplayName("Finds a loop that a table reaches without being part of it")
+  void findLoopAhead() {
+    Table comments = Table.of("blog.Comment", "comments", List.of(ID, Column.of("2", "post_id", BIGINT,
+        NotNull.INSTANCE)), PrimaryKey.of("comments", List.of("id"))).with(new Triggers(List.of(), List.of(
+            action(
+                "log", Mutation.INSERT, new Trigger.Insert(EVENTS, List.of(new Trigger.Assignment("post_id",
+                    ColumnReference.of("post_id"))))))));
+
+    assertThatThrownBy(() -> Schema.of(comments, posts(ID, TITLE).with(new Triggers(List.of(), List.of(copy()))),
+        events().with(new Triggers(List.of(), List.of(new Trigger("back", List.of(Mutation.INSERT), Trigger.ALWAYS,
+            List.of(new Trigger.Insert(POSTS, List.of(new Trigger.Assignment("id", ColumnReference.of("id")),
+                new Trigger.Assignment("title", ColumnReference.of("id")))))))))))
+        .isInstanceOf(InvalidSchemaException.class).hasMessageContaining("post_events.back -> posts.copy");
+  }
+
+  @Test
+  @DisplayName("Creates the triggers again when a migration changes a column, so that its statements run no trigger")
+  void changeColumn() {
+    Triggers triggers = new Triggers(List.of(MODIFIED_NOW), List.of());
+
+    assertThat(Schema.of(posts(triggers)).changesTo(Schema.of(posts(ID, TITLE, SLUG.with(NotNull.INSTANCE), LABEL,
+        MODIFIED).with(triggers)))).contains(new DropTableAttribute(POSTS, triggers), new AddTableAttribute(POSTS,
+            triggers));
   }
 
   @Test

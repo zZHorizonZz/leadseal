@@ -45,7 +45,7 @@ record SqlServerTriggerDdl(Ddl ddl) implements TriggerDdl {
         + join(key, target, inserts) + (mutation.rows().contains(Row.OLD) ? " LEFT JOIN deleted AS " + old + " ON "
             + join(key, target, old) : "")
         : "deleted AS " + old;
-    StringBuilder body = new StringBuilder("BEGIN\n  SET NOCOUNT ON;\n");
+    StringBuilder body = new StringBuilder("BEGIN\n  SET NOCOUNT ON;\n  IF TRIGGER_NESTLEVEL(@@PROCID) > 1 RETURN;\n");
     if (triggers.rewrites(mutation)) {
       for (List<Rewrite> level : triggers.levels()) {
         body.append("  UPDATE ").append(target).append(" SET ").append(level.stream().map(rewrite -> dialect.quote(

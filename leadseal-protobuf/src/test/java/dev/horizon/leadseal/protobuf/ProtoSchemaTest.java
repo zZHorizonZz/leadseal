@@ -44,6 +44,8 @@ import dev.horizon.leadseal.protobuf.invalid.optional.OptionalKeyOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.own.TriggerOwnOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.reference.UnknownReferenceOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.rewrite.RewriteTypeOuterClass;
+import dev.horizon.leadseal.protobuf.invalid.row.TriggerRowOuterClass;
+import dev.horizon.leadseal.protobuf.invalid.target.TriggerTargetOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.type.BadTypeOuterClass;
 import dev.horizon.leadseal.protobuf.invalid.where.TriggerWhereOuterClass;
 import dev.horizon.leadseal.protobuf.test.PostProto;
@@ -168,7 +170,11 @@ class ProtoSchemaTest {
         arguments(RewriteKeyOuterClass.getDescriptor(), "part of the primary key"),
         arguments(TriggerOwnOuterClass.getDescriptor(), "writes into its own table"),
         arguments(TriggerActionOuterClass.getDescriptor(), "has no action."),
-        arguments(TriggerWhereOuterClass.getDescriptor(), "has no where."));
+        arguments(TriggerWhereOuterClass.getDescriptor(), "has no where."),
+        arguments(TriggerRowOuterClass.getDescriptor(), "The trigger trigger_row.keep is not valid. An expression of"
+            + " the table trigger_row reads the column state of the old row"),
+        arguments(TriggerTargetOuterClass.getDescriptor(), "An insert of the trigger log of leadseal.invalid.TriggerTarget"
+            + " references leadseal.invalid.Missing"));
   }
 
   @ParameterizedTest(name = "({0})")

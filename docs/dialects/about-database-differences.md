@@ -49,7 +49,7 @@ SQL Server cannot add `IDENTITY` to an existing column or remove it.
 
 The triggers of a table run once for all the rows of a statement, after it.
 The trigger of an update first updates the updated rows again with the rewrites, with an `UPDATE` that joins them by primary key, and then runs the triggers of the update.
-SQL Server does not run the trigger again for that `UPDATE`, because `RECURSIVE_TRIGGERS` is off by default.
+The trigger returns at once when that `UPDATE` runs it again, so it works with `RECURSIVE_TRIGGERS` on or off.
 When an update changes the primary key of a row, `old` reads `NULL` for that row, because the old row cannot be found by its key.
 
 ## SQLite

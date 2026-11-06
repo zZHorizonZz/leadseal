@@ -21,10 +21,6 @@ import java.util.Set;
  */
 public record Rewrite(String column, SqlExpression expression) {
 
-  public static final Mutation MUTATION = Mutation.UPDATE;
-
-  public static final Set<Row> ROWS = MUTATION.rows();
-
   public Rewrite {
     Objects.requireNonNull(expression, "expression");
     if (column == null || column.isBlank()) {
@@ -64,7 +60,7 @@ public record Rewrite(String column, SqlExpression expression) {
           + ", which is part of the primary key. A rewrite cannot change the key of a row.");
     }
     try {
-      expression.validate(table, ROWS);
+      expression.validate(table, Mutation.UPDATE.rows());
     } catch (SchemaException invalid) {
       throw new InvalidSchemaException("The rewrite of the column " + table.name() + "." + column + " is not valid. "
           + invalid.getMessage(), invalid);

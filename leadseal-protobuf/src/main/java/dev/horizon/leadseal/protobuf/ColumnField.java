@@ -10,10 +10,12 @@ import dev.horizon.leadseal.attribute.Index;
 import dev.horizon.leadseal.attribute.NotNull;
 import dev.horizon.leadseal.attribute.Rewrite;
 import dev.horizon.leadseal.attribute.TableAttribute;
+import dev.horizon.leadseal.expression.Row;
 import dev.horizon.leadseal.protobuf.column.ColumnTypeOption;
 import dev.horizon.leadseal.protobuf.column.FieldKind;
 import dev.horizon.leadseal.type.Type;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -89,7 +91,7 @@ final class ColumnField {
 
   Optional<Rewrite> rewrite(CelTable table, Type type) {
     return options.getRewrite().isBlank() ? Optional.empty()
-        : Optional.of(new Rewrite(name, table.parse(options.getRewrite(), Rewrite.ROWS, type)));
+        : Optional.of(new Rewrite(name, table.parse(options.getRewrite(), EnumSet.allOf(Row.class), type)));
   }
 
   private boolean nullable() {
