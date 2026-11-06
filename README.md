@@ -52,10 +52,12 @@ The [documentation](docs/README.md) covers every option, dialect and error.
 
 ## Run the tests
 
-Each dialect module runs the contract tests of `leadseal-dialect` against its database. The contract tests generate
-migrations step by step, apply them with Flyway and check the tables through JDBC. `leadseal-it` runs
+Each dialect module runs the contract tests of `leadseal-dialect` against its database, which check that Flyway runs
+the statements of the dialect. `leadseal-it` runs
 `protoc-gen-leadseal` through protobuf-maven-plugin on a schema that changes in three steps, and applies the
-migrations to every database. Testcontainers starts PostgreSQL, MariaDB and SQL Server in Docker, and SQLite runs in process.
+migrations to every database. It also runs the behavior cases of
+[`leadseal-it/src/test/cases`](leadseal-it/src/test/cases/README.md): SQL files that state what the generated schema
+does on each database, such as its columns and keys, the rows after a migration, or the error of an assert. Testcontainers starts PostgreSQL, MariaDB and SQL Server in Docker, and SQLite runs in process.
 Start Docker, then run:
 
 ```sh

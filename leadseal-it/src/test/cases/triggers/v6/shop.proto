@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package triggers.v6;
+
+import "leadseal/v1/options.proto";
+
+message Author {
+  option (leadseal.v1.table) = {name: "authors"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  bool active = 2;
+  int32 orders = 3 [(leadseal.v1.column).integer = {default_value: 0}];
+}
+
+message OrderEvent {
+  option (leadseal.v1.table) = {name: "order_events"};
+
+  int64 id = 1 [(leadseal.v1.column) = {primary_key: true, integer: {identity: true}}];
+  int64 order_id = 2;
+  optional string state = 3 [(leadseal.v1.column).text = {length: 20}];
+  optional int32 revision = 4;
+}
+
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string state = 2 [(leadseal.v1.column).text = {length: 20}];
+  int32 total = 3 [(leadseal.v1.column).integer = {default_value: 0}];
+  optional int64 author_id = 4 [(leadseal.v1.column).foreign_key = {message: "triggers.v6.Author"}];
+  int32 revision = 5 [(leadseal.v1.column).integer = {default_value: 0}];
+}

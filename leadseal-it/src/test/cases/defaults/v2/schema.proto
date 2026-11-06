@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package defaults.v2;
+
+import "leadseal/v1/options.proto";
+
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  bool bool_value = 2 [(leadseal.v1.column).boolean = {default_value: true}];
+  int32 int32_value = 3 [(leadseal.v1.column).integer = {default_value: 42}];
+  int64 int64_value = 4 [(leadseal.v1.column).integer = {default_value: 5000000000}];
+  float float_value = 5 [(leadseal.v1.column).number = {default_value: 1.5}];
+  double double_value = 6 [(leadseal.v1.column).number = {default_value: 2.25}];
+  string decimal_value = 7 [(leadseal.v1.column).decimal = {precision: 12, scale: 2, default_value: "12.50"}];
+  string text_value = 8 [(leadseal.v1.column).text = {default_value: "it's a \\ test"}];
+  bytes bytes_value = 9 [(leadseal.v1.column).bytes = {default_value: "\x0a\xff"}];
+  string uuid_value = 10 [(leadseal.v1.column).uuid = {default_value: "123e4567-e89b-12d3-a456-426614174000"}];
+  string timestamp_value = 11 [(leadseal.v1.column).timestamp = {default_value: {seconds: 1791963000}}];
+  string date_value = 12 [(leadseal.v1.column).date = {default_value: "2026-10-14"}];
+  string time_value = 13 [(leadseal.v1.column).time = {default_value: "07:30:00"}];
+  string json_value = 14 [(leadseal.v1.column).json = {default_value: "{\"a\": 1}"}];
+}

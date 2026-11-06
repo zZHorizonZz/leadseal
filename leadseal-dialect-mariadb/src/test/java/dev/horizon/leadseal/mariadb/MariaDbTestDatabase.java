@@ -25,11 +25,6 @@ final class MariaDbTestDatabase extends ContainerDatabase {
   }
 
   @Override
-  public String binaryCollation() {
-    return "utf8mb4_bin";
-  }
-
-  @Override
   public Parser flywayParser() {
     return new MariaDBParser(new ClassicConfiguration(), new ParsingContext());
   }

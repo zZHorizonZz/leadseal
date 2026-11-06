@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package comments.v2;
+
+import "leadseal/v1/options.proto";
+
+// Orders.
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  // State.
+  string state = 2 [(leadseal.v1.column).text = {length: 20}];
+}

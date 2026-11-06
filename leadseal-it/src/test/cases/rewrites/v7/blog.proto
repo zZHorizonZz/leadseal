@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package rewrites.v7;
+
+import "google/protobuf/timestamp.proto";
+import "leadseal/v1/options.proto";
+
+message Post {
+  option (leadseal.v1.table) = {name: "posts"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string title = 2;
+  optional string slug = 3 [(leadseal.v1.column).rewrite = "lower(title)"];
+  optional string label = 4 [(leadseal.v1.column).rewrite = "upper(slug)"];
+  int32 revision = 5 [(leadseal.v1.column) = {integer: {default_value: 0}, rewrite: "old.revision + 1"}];
+  google.protobuf.Timestamp modified = 6 [(leadseal.v1.column).rewrite = "now()"];
+}

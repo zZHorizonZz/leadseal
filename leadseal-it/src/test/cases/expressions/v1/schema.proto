@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package expressions.v1;
+
+import "leadseal/v1/options.proto";
+
+message Sample {
+  option (leadseal.v1.table) = {name: "samples"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  int32 quantity = 2;
+  double price = 3;
+  string name = 4 [(leadseal.v1.column).text = {length: 40}];
+  optional string nickname = 5 [(leadseal.v1.column).text = {length: 40}];
+  bool paid = 6;
+  string created = 7 [(leadseal.v1.column).timestamp = {}];
+  optional bool positive = 10 [(leadseal.v1.column).rewrite = "quantity > 0"];
+  optional bool many_paid = 11 [(leadseal.v1.column).rewrite = "quantity >= 7 && paid"];
+  optional bool unpaid_or_negative = 12 [(leadseal.v1.column).rewrite = "!paid || quantity < 0"];
+  optional bool is_paid = 13 [(leadseal.v1.column).rewrite = "paid"];
+  optional bool not_paid = 14 [(leadseal.v1.column).rewrite = "!paid"];
+  optional bool paid_false = 15 [(leadseal.v1.column).rewrite = "paid == false"];
+  optional bool always = 16 [(leadseal.v1.column).rewrite = "true"];
+  optional bool sign_matches = 17 [(leadseal.v1.column).rewrite = "(quantity > 0) == paid"];
+  optional bool no_nickname = 18 [(leadseal.v1.column).rewrite = "nickname == null"];
+  optional bool has_nickname = 19 [(leadseal.v1.column).rewrite = "nickname != null"];
+  optional bool not_bob = 20 [(leadseal.v1.column).rewrite = "name != 'Bob'"];
+  optional bool at_most = 21 [(leadseal.v1.column).rewrite = "quantity <= -3"];
+  optional bool listed = 22 [(leadseal.v1.column).rewrite = "quantity in [7, 8]"];
+  optional bool in_none = 23 [(leadseal.v1.column).rewrite = "quantity in []"];
+  optional bool abs_price = 24 [(leadseal.v1.column).rewrite = "abs(price) == 2.5"];
+  optional bool abs_quantity = 25 [(leadseal.v1.column).rewrite = "abs(quantity) == 3"];
+  optional bool trimmed = 26 [(leadseal.v1.column).rewrite = "lower(trim(name)) == 'ana'"];
+  optional bool upper_bob = 27 [(leadseal.v1.column).rewrite = "upper(name) == 'BOB'"];
+  optional bool length_five = 28 [(leadseal.v1.column).rewrite = "length(name) == 5"];
+  optional bool bob_bang = 29 [(leadseal.v1.column).rewrite = "name + '!' == 'Bob!'"];
+  optional bool coalesce_name = 30 [(leadseal.v1.column).rewrite = "coalesce(nickname, name) == 'Bobby'"];
+  optional bool coalesce_none = 31 [(leadseal.v1.column).rewrite = "coalesce(nickname, 'none') == 'none'"];
+  optional bool half_three = 32 [(leadseal.v1.column).rewrite = "quantity / 2 == 3"];
+  optional bool half_minus = 33 [(leadseal.v1.column).rewrite = "quantity / 2 == -1"];
+  optional bool mod_four = 34 [(leadseal.v1.column).rewrite = "quantity % 4 == 3"];
+  optional bool mod_two = 35 [(leadseal.v1.column).rewrite = "quantity % 2 == -1"];
+  optional bool price_half = 36 [(leadseal.v1.column).rewrite = "price / 2.0 == 2.0"];
+  optional bool negated = 37 [(leadseal.v1.column).rewrite = "-quantity == 3"];
+  optional bool twice = 38 [(leadseal.v1.column).rewrite = "quantity * 2 - 1 == 13"];
+  optional bool price_plus = 39 [(leadseal.v1.column).rewrite = "price + 0.5 == 4.5"];
+  optional bool chosen = 40 [(leadseal.v1.column).rewrite = "(paid ? quantity : 0) == 7"];
+  optional bool neg_label = 41 [(leadseal.v1.column).rewrite = "(quantity > 0 ? 'pos' : 'neg') == 'neg'"];
+  optional bool past = 42 [(leadseal.v1.column).rewrite = "created < now()"];
+  optional bool uuids = 43 [(leadseal.v1.column).rewrite = "uuid() != uuid()"];
+  optional int64 v_arith = 60 [(leadseal.v1.column).rewrite = "quantity * 2 + 1"];
+  optional string v_concat = 61 [(leadseal.v1.column).rewrite = "name + '?'"];
+  optional string v_coalesce = 62 [(leadseal.v1.column).rewrite = "coalesce(nickname, 'none')"];
+  optional int64 v_length = 63 [(leadseal.v1.column).rewrite = "length(name)"];
+  optional int64 v_half = 64 [(leadseal.v1.column).rewrite = "quantity / 2"];
+  optional string v_choice = 65 [(leadseal.v1.column).rewrite = "paid ? 'y' : 'n'"];
+  optional string v_unset = 66 [(leadseal.v1.column).rewrite = "nickname == null ? 'unset' : nickname"];
+}

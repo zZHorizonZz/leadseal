@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package triggers.v4;
+
+import "leadseal/v1/options.proto";
+
+message Author {
+  option (leadseal.v1.table) = {name: "authors"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  bool active = 2;
+  int32 orders = 3 [(leadseal.v1.column).integer = {default_value: 0}];
+}
+
+message OrderEvent {
+  option (leadseal.v1.table) = {name: "order_events"};
+
+  int64 id = 1 [(leadseal.v1.column) = {primary_key: true, integer: {identity: true}}];
+  int64 order_id = 2;
+  optional string state = 3 [(leadseal.v1.column).text = {length: 20}];
+}
+
+message Order {
+  option (leadseal.v1.table) = {
+    name: "orders"
+    trigger: {
+      name: "created"
+      on: [EVENT_INSERT]
+      actions: [{insert: {message: "triggers.v4.OrderEvent", values: [{key: "order_id" value: "id"}, {key: "state" value: "state"}]}}]
+    }
+    trigger: {
+      name: "log"
+      on: [EVENT_UPDATE]
+      when: "changed(state)"
+      actions: [{insert: {message: "triggers.v4.OrderEvent", values: [{key: "order_id" value: "id"}, {key: "state" value: "state"}]}}]
+    }
+    trigger: {
+      name: "positive"
+      on: [EVENT_INSERT, EVENT_UPDATE]
+      actions: [{assert: {expression: "total >= 0", message: "The total is negative."}}]
+    }
+    trigger: {
+      name: "active"
+      on: [EVENT_INSERT]
+      actions: [{assert: {expression: "author.active", message: "The author is not active."}}]
+    }
+    trigger: {
+      name: "paid"
+      on: [EVENT_DELETE]
+      actions: [{assert: {expression: "old.state != 'PAID'", message: "Paid orders stay."}}]
+    }
+    trigger: {
+      name: "count"
+      on: [EVENT_INSERT]
+      actions: [{update: {message: "triggers.v4.Author", where: "id == new.author_id", set: [{key: "orders" value: "orders + 1"}]}}]
+    }
+    trigger: {
+      name: "purge"
+      on: [EVENT_DELETE]
+      actions: [
+        {delete: {message: "triggers.v4.OrderEvent", where: "order_id == old.id"}},
+        {update: {message: "triggers.v4.Author", where: "id == old.author_id", set: [{key: "orders" value: "orders - 1"}]}}
+      ]
+    }
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string state = 2 [(leadseal.v1.column).text = {length: 40}];
+  int32 total = 3 [(leadseal.v1.column).integer = {default_value: 0}];
+  optional int64 author_id = 4 [(leadseal.v1.column).foreign_key = {message: "triggers.v4.Author"}];
+  int32 revision = 5 [(leadseal.v1.column) = {integer: {default_value: 0}, rewrite: "old.revision + 1"}];
+}

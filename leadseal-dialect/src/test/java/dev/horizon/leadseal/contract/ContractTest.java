@@ -9,21 +9,11 @@ import dev.horizon.leadseal.attribute.PrimaryKey;
 import dev.horizon.leadseal.attribute.TableAttribute;
 import dev.horizon.leadseal.migration.MigrationDirectory;
 import dev.horizon.leadseal.migration.MigrationOptions;
-import dev.horizon.leadseal.type.BooleanType;
-import dev.horizon.leadseal.type.BytesType;
-import dev.horizon.leadseal.type.DateType;
-import dev.horizon.leadseal.type.DecimalType;
-import dev.horizon.leadseal.type.FloatType;
 import dev.horizon.leadseal.type.IntegerType;
-import dev.horizon.leadseal.type.JsonType;
 import dev.horizon.leadseal.type.TextType;
-import dev.horizon.leadseal.type.TimeType;
-import dev.horizon.leadseal.type.TimestampType;
 import dev.horizon.leadseal.type.Type;
-import dev.horizon.leadseal.type.UuidType;
 import java.nio.file.Path;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -32,14 +22,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,20 +33,7 @@ import org.junit.jupiter.api.io.TempDir;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ContractTest {
 
-  protected static final Type BOOLEAN = new BooleanType();
-  protected static final Type INT = new IntegerType(IntegerType.Size.INT32);
   protected static final Type BIGINT = new IntegerType(IntegerType.Size.INT64);
-  protected static final Type REAL = new FloatType(FloatType.Size.FLOAT32);
-  protected static final Type DOUBLE = new FloatType(FloatType.Size.FLOAT64);
-  protected static final Type DECIMAL = new DecimalType(12, 2);
-  protected static final Type TEXT = TextType.unlimited();
-  protected static final Type BYTES = BytesType.unlimited();
-  protected static final Type UUID = new UuidType();
-  protected static final Type TIMESTAMP = new TimestampType();
-  protected static final Type DATE = new DateType();
-  protected static final Type TIME = new TimeType();
-  protected static final Type JSON = new JsonType();
-  private static final AtomicInteger SCHEMAS = new AtomicInteger();
 
   protected Dialect dialect;
   protected Path migrations;
@@ -123,30 +93,8 @@ public abstract class ContractTest {
     return dialect.quote(identifier);
   }
 
-  protected String q(String schema, String table) {
-    return dialect.quote(schema) + "." + dialect.quote(table);
-  }
-
   protected TestDatabase testDatabase() {
     return testDatabase;
-  }
-
-  protected Connection connection() {
-    return connection;
-  }
-
-  protected String uniqueSchema() {
-    return "s" + SCHEMAS.incrementAndGet();
-  }
-
-  protected long count(String sql, Object... params) throws SQLException {
-    return Long.parseLong(query(sql, params).getFirst().getFirst());
-  }
-
-  protected int execute(String sql, Object... params) throws SQLException {
-    try (PreparedStatement statement = prepare(sql, params)) {
-      return statement.executeUpdate();
-    }
   }
 
   protected List<List<String>> query(String sql, Object... params) throws SQLException {
@@ -164,64 +112,8 @@ public abstract class ContractTest {
     return rows;
   }
 
-  protected Map<String, Boolean> columns(String table) throws SQLException {
-    Map<String, Boolean> columns = new LinkedHashMap<>();
-    try (ResultSet result = metadata().getColumns(connection.getCatalog(), connection.getSchema(), table, null)) {
-      while (result.next()) {
-        columns.put(lower(result.getString("COLUMN_NAME")), "YES".equals(result.getString("IS_NULLABLE")));
-      }
-    }
-    return columns;
-  }
-
-  protected List<String> primaryKey(String table) throws SQLException {
-    Map<Integer, String> columns = new TreeMap<>();
-    try (ResultSet result = metadata().getPrimaryKeys(connection.getCatalog(), connection.getSchema(), table)) {
-      while (result.next()) {
-        columns.put(result.getInt("KEY_SEQ"), lower(result.getString("COLUMN_NAME")));
-      }
-    }
-    return List.copyOf(columns.values());
-  }
-
-  protected Map<String, Boolean> indexes(String table) throws SQLException {
-    Map<String, Boolean> indexes = new TreeMap<>();
-    try (ResultSet result = metadata().getIndexInfo(connection.getCatalog(), connection.getSchema(), table, false,
-        false)) {
-      while (result.next()) {
-        String name = lower(result.getString("INDEX_NAME"));
-        if (name != null && (name.startsWith("ix_") || name.startsWith("ux_"))) {
-          indexes.put(name, !result.getBoolean("NON_UNIQUE"));
-        }
-      }
-    }
-    return indexes;
-  }
-
-  protected List<String> foreignKeys(String table) throws SQLException {
-    TreeSet<String> keys = new TreeSet<>();
-    try (ResultSet result = metadata().getImportedKeys(connection.getCatalog(), connection.getSchema(), table)) {
-      while (result.next()) {
-        keys.add(lower(result.getString("FKCOLUMN_NAME")) + " -> " + lower(result.getString("PKTABLE_NAME")) + "."
-            + lower(result.getString("PKCOLUMN_NAME")));
-      }
-    }
-    return List.copyOf(keys);
-  }
-
-  protected boolean tableExists(String table) throws SQLException {
-    try (ResultSet result = metadata().getTables(connection.getCatalog(), connection.getSchema(), table,
-        new String[] { "TABLE" })) {
-      return result.next();
-    }
-  }
-
   protected static Column column(String id, String name, Type type) {
     return Column.of(id, name, type, NotNull.INSTANCE);
-  }
-
-  protected static Column nullable(String id, String name, Type type) {
-    return Column.of(id, name, type);
   }
 
   protected static Column text(String id, String name, int length) {
@@ -245,31 +137,11 @@ public abstract class ContractTest {
     return Schema.of(tables);
   }
 
-  static Stream<Type> types() {
-    return Stream.of(BOOLEAN, INT, BIGINT, REAL, DOUBLE, DECIMAL, TEXT, BYTES, UUID, TIMESTAMP, DATE, TIME, JSON);
-  }
-
-  static Stream<Type> integers() {
-    return Stream.of(INT, BIGINT);
-  }
-
-  static Stream<Type> dates() {
-    return Stream.of(TIMESTAMP, DATE);
-  }
-
   private PreparedStatement prepare(String sql, Object... params) throws SQLException {
     PreparedStatement statement = connection.prepareStatement(sql);
     for (int i = 0; i < params.length; i++) {
       statement.setObject(i + 1, params[i]);
     }
     return statement;
-  }
-
-  private DatabaseMetaData metadata() throws SQLException {
-    return connection.getMetaData();
-  }
-
-  private String lower(String name) {
-    return name == null ? null : name.toLowerCase(Locale.ROOT);
   }
 }

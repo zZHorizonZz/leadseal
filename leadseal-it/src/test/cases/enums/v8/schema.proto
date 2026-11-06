@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package enums.v8;
+
+import "leadseal/v1/options.proto";
+
+enum ShipmentState {
+  NEW = 0;
+  SENT = 1;
+}
+
+message Shipment {
+  option (leadseal.v1.table) = {name: "parcels"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  ShipmentState status = 2 [(leadseal.v1.column).integer = {}];
+}

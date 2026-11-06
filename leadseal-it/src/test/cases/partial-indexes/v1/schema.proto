@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package partial_indexes.v1;
+
+import "leadseal/v1/options.proto";
+
+message Order {
+  option (leadseal.v1.table) = {
+    name: "orders"
+    index: {fields: ["customer_id"], unique: true, where: "line = 1"}
+  };
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  int64 customer_id = 2;
+  int32 line = 3;
+}

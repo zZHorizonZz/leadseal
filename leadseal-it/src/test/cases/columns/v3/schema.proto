@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package columns.v3;
+
+import "leadseal/v1/options.proto";
+
+message Order {
+  option (leadseal.v1.table) = {name: "orders"};
+
+  int64 id = 1 [(leadseal.v1.column).primary_key = true];
+  string state = 2 [(leadseal.v1.column).text = {length: 20}];
+  bool bool_value = 10;
+  int32 int32_value = 11;
+  int64 int64_value = 12;
+  float float_value = 13;
+  double double_value = 14;
+  string decimal_value = 15 [(leadseal.v1.column).decimal = {precision: 12, scale: 2}];
+  string text_value = 16;
+  bytes bytes_value = 17;
+  string uuid_value = 18 [(leadseal.v1.column).uuid = {}];
+  string timestamp_value = 19 [(leadseal.v1.column).timestamp = {}];
+  string date_value = 20 [(leadseal.v1.column).date = {}];
+  string time_value = 21 [(leadseal.v1.column).time = {}];
+  string json_value = 22 [(leadseal.v1.column).json = {}];
+}

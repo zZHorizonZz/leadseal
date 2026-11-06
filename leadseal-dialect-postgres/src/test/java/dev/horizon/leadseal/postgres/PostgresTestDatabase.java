@@ -25,11 +25,6 @@ final class PostgresTestDatabase extends ContainerDatabase {
   }
 
   @Override
-  public String binaryCollation() {
-    return "C";
-  }
-
-  @Override
   public Parser flywayParser() {
     return new PostgreSQLParser(new ClassicConfiguration(), new ParsingContext());
   }
