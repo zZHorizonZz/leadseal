@@ -17,7 +17,7 @@ Use it when your tables are not protobuf messages, or when your own tool writes 
    <dependency>
      <groupId>dev.horizon</groupId>
      <artifactId>leadseal-dialect-postgres</artifactId>
-     <version>0.3.1</version> <!-- x-release-please-version -->
+     <version>0.3.2-SNAPSHOT</version> <!-- x-release-please-version -->
    </dependency>
    ```
 
