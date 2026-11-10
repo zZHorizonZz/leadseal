@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/zZHorizonZz/leadseal/compare/v0.3.0...v0.3.1) (2026-11-10)
+
+
+### Fixes
+
+* give the current time default of SQLite six digits of fraction, so that it compares as text with the times of clients. ([#25](https://github.com/zZHorizonZz/leadseal/issues/25)) ([d7c9567](https://github.com/zZHorizonZz/leadseal/commit/d7c9567b750c4f6bf6fab2b2d8a97f2950665134))
+
 ## [0.3.0](https://github.com/zZHorizonZz/leadseal/compare/v0.2.0...v0.3.0) (2026-11-06)
 
 

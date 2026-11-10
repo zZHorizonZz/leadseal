@@ -51,7 +51,7 @@ The build runs protoc 4.36.2 through protobuf-maven-plugin 5.1.11, so you do not
    <dependency>
      <groupId>dev.horizon</groupId>
      <artifactId>leadseal-protobuf</artifactId>
-     <version>0.3.1-SNAPSHOT</version>
+     <version>0.3.1</version>
      <scope>provided</scope>
    </dependency>
    ```
@@ -93,7 +93,7 @@ The build runs protoc 4.36.2 through protobuf-maven-plugin 5.1.11, so you do not
          <plugin kind="jvm-maven">
            <groupId>dev.horizon</groupId>
            <artifactId>leadseal-protoc</artifactId>
-           <version>0.3.1-SNAPSHOT</version> <!-- x-release-please-version -->
+           <version>0.3.1</version> <!-- x-release-please-version -->
            <options>migrations=${project.basedir}/src/main/resources/db/migration,dialect=postgresql</options>
            <outputDirectory>${project.basedir}/src/main/resources/db/migration</outputDirectory>
            <registerAsCompilationRoot>false</registerAsCompilationRoot>
