@@ -95,7 +95,7 @@ public final class SqliteDialect implements Dialect {
 
   @Override
   public String currentTimestamp() {
-    return "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))";
+    return "(strftime('%Y-%m-%dT%H:%M:%f', 'now') || '000Z')";
   }
 
   @Override

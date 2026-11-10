@@ -162,7 +162,7 @@ class SqliteDialectTest {
           INTEGER_DIVIDE_VALUE           | (NEW."quantity" / 2)
           LENGTH_VALUE                   | length(NEW."name")
           CHANGE_CONDITION               | (OLD."name" IS NOT NEW."name")
-          NOW_VALUE                      | (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+          NOW_VALUE                      | (strftime('%Y-%m-%dT%H:%M:%f', 'now') || '000Z')
           UUID_VALUE                     | (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))))
           """;
     }
