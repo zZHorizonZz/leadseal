@@ -24,7 +24,7 @@ To build the schema in Java instead, refer to [Generate migrations from Java](ge
    <dependency>
      <groupId>dev.horizon</groupId>
      <artifactId>leadseal-protobuf</artifactId>
-     <version>0.3.0</version> <!-- x-release-please-version -->
+     <version>0.3.1-SNAPSHOT</version> <!-- x-release-please-version -->
      <scope>provided</scope>
    </dependency>
    ```
@@ -43,7 +43,7 @@ To build the schema in Java instead, refer to [Generate migrations from Java](ge
          <plugin kind="jvm-maven">
            <groupId>dev.horizon</groupId>
            <artifactId>leadseal-protoc</artifactId>
-           <version>0.3.0</version> <!-- x-release-please-version -->
+           <version>0.3.1-SNAPSHOT</version> <!-- x-release-please-version -->
            <options>migrations=${project.basedir}/src/main/resources/db/migration,dialect=postgresql</options>
            <outputDirectory>${project.basedir}/src/main/resources/db/migration</outputDirectory>
            <registerAsCompilationRoot>false</registerAsCompilationRoot>
