@@ -56,7 +56,7 @@ jobs:
           MAVEN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy
-        run: mvn --batch-mode --no-transfer-progress -DskipTests deploy
+        run: mvn --batch-mode --no-transfer-progress -DskipTests clean deploy
         env:
           MAVEN_USERNAME: ${{ github.actor }}
           MAVEN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
