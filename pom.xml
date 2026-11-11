@@ -56,7 +56,7 @@
 
     <protobuf.version>4.36.2</protobuf.version>
     <aquery.version>0.4.0</aquery.version>
-    <jackson.version>2.22.4</jackson.version>
+    <jackson.version>2.23.0</jackson.version>
     <picocli.version>4.7.7</picocli.version>
 
     <flyway.version>13.10.3</flyway.version>
